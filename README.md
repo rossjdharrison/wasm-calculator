@@ -116,6 +116,22 @@ The first deploy creates a Pages project named `wasm-calculator` (from
 > Cloudflare Pages serves `.wasm` with the correct `application/wasm` type, and
 > the app instantiates from an `ArrayBuffer`, so it works regardless.
 
+### Custom domain — `quote.rowblaa.com`
+
+The site is served at **https://quote.rowblaa.com** (a subdomain of the
+Cloudflare-managed zone `rowblaa.com`). Because the zone is in the same
+Cloudflare account, the DNS record and TLS certificate are created
+automatically — there is no manual DNS step.
+
+1. Deploy at least once (Option A or B) so the `wasm-calculator` Pages project
+   exists.
+2. Dashboard → **Workers & Pages → `wasm-calculator` → Custom domains → Set up a
+   domain** → enter `quote.rowblaa.com` → **Activate domain**.
+3. Cloudflare adds the proxied `CNAME quote → wasm-calculator.pages.dev` in the
+   `rowblaa.com` zone and issues the certificate. Live within a few minutes.
+
+No repo changes are needed for the custom domain; it's Cloudflare-side config.
+
 ## The WASM boundary (contract)
 
 The interface is **pure-numeric** — numbers in, numbers out — so there's no
