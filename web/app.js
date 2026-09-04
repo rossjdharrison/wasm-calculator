@@ -38,9 +38,11 @@ const pct = (r) => `${Math.round(r * 100)}%`;
 // bytes. The `env` stubs cover imports AssemblyScript may emit (abort/trace/seed);
 // extra entries are harmless if the module doesn't import them.
 async function loadEngine() {
-  const res = await fetch('/build/quote.wasm');
+  // Relative URL: resolves to /quote.wasm both in local dev (served from the
+  // build/ dir) and in production (flat dist/ served at the site root).
+  const res = await fetch('quote.wasm');
   if (!res.ok) {
-    throw new Error(`Could not load quote.wasm (${res.status}). Run "npm run asbuild" first.`);
+    throw new Error(`Could not load quote.wasm (${res.status}). Run "npm start" (or "npm run build") first.`);
   }
   const bytes = await res.arrayBuffer();
   const imports = { env: { abort() {}, trace() {}, seed: () => 0 } };

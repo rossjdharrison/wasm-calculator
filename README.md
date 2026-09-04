@@ -36,18 +36,24 @@ flowchart LR
 assembly/
   quote.ts          # THE LOGIC — pricing, discounts, option rules (→ WASM)
   tsconfig.json     # AssemblyScript editor config
-build/              # compiled output (git-ignored; run `npm run asbuild`)
+build/              # compiled wasm output (git-ignored; run `npm run asbuild`)
   quote.wasm        #   release build used by the app + tests
   quote.debug.wasm  #   debug build
   quote.wat         #   human-readable WebAssembly text (handy for inspection)
-web/
+web/                # authored front-end (paths are relative, e.g. app.js)
   index.html        # the form + live quote panel
   app.js            # thin glue: read form → call WASM → paint results & options
   styles.css        # theme-aware styling (light + dark)
+dist/               # DEPLOYABLE site (git-ignored; run `npm run build`)
+                    #   flat: index.html, app.js, styles.css, quote.wasm
+scripts/
+  build-site.mjs    # assembles web/ + build/quote.wasm → dist/
 test/
   quote.test.mjs    # node:test suite that loads the WASM and checks the maths
-server.mjs          # zero-dependency static server (serves .wasm correctly)
+server.mjs          # zero-dep dev server (serves web/ + build/ with prod URLs)
 asconfig.json       # AssemblyScript build targets (debug / release)
+wrangler.jsonc      # Cloudflare Pages project config
+.nvmrc              # Node version for the Cloudflare build
 package.json
 ```
 
@@ -58,16 +64,57 @@ npm install          # installs the AssemblyScript compiler (dev dependency)
 npm start            # builds quote.wasm, then serves http://localhost:8080/
 ```
 
+The dev server serves `web/` and `build/` together using the **same flat URLs
+as production** (`/`, `/app.js`, `/quote.wasm`), so what you see locally matches
+what Cloudflare serves.
+
 Other scripts:
 
 ```bash
 npm run asbuild      # compile assembly/quote.ts → build/*.wasm (debug + release)
+npm run build        # compile release wasm + assemble the deployable dist/
 npm test             # build the release wasm, then run the test suite
-npm run serve        # serve the current build without rebuilding
+npm run serve        # serve web/ + build/ without rebuilding
+npm run preview      # build, then serve dist/ via the Cloudflare Pages emulator
+npm run deploy       # build, then deploy dist/ to Cloudflare Pages (wrangler)
 ```
 
-> The `build/` folder is git-ignored. After cloning, run `npm run asbuild`
-> (or `npm start`) once before opening the app.
+> `build/` and `dist/` are git-ignored (build outputs). After cloning, run
+> `npm start` (dev) or `npm run build` (deploy) once to generate them.
+
+## Deploy to Cloudflare Pages
+
+The site is a **built artifact**: `dist/` is assembled from `assembly/quote.ts`
+(→ `build/quote.wasm`) plus `web/`. Nothing binary is committed — `dist/` is
+produced by the build. Two ways to ship it:
+
+### Option A — Git integration (auto-deploy on push, recommended)
+
+In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to
+Git**, pick this repo, then set:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Node version | pinned by `.nvmrc` (22) — or set `NODE_VERSION=22` |
+
+Every push to `main` builds the wasm from source and publishes `dist/`.
+(`wrangler.jsonc` already declares `pages_build_output_dir`, so the output dir
+is taken from the repo.)
+
+### Option B — Wrangler CLI (manual / one-off)
+
+```bash
+npx wrangler login          # once, to authenticate
+npm run deploy              # builds dist/, then `wrangler pages deploy dist`
+```
+
+The first deploy creates a Pages project named `wasm-calculator` (from
+`wrangler.jsonc`) and prints the live `*.pages.dev` URL.
+
+> Cloudflare Pages serves `.wasm` with the correct `application/wasm` type, and
+> the app instantiates from an `ArrayBuffer`, so it works regardless.
 
 ## The WASM boundary (contract)
 
