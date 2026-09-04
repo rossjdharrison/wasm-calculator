@@ -7,16 +7,31 @@
     {
       "id": "model",
       "type": "choice",
-      "default": "city",
+      "default": "gtCoupe",
       "options": [
         {
-          "id": "city"
+          "id": "hotHatch"
         },
         {
-          "id": "cruiser"
+          "id": "sleekEstate"
         },
         {
-          "id": "trail"
+          "id": "gtCoupe"
+        },
+        {
+          "id": "ruggedOffroader"
+        },
+        {
+          "id": "luxuryPickup"
+        },
+        {
+          "id": "flagshipSuv"
+        },
+        {
+          "id": "midSupercar"
+        },
+        {
+          "id": "hypercar"
         }
       ]
     },
@@ -37,48 +52,6 @@
         {
           "id": "offRoad",
           "availableWhen": {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "model"
-                ]
-              },
-              "trail"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "engine",
-      "type": "choice",
-      "default": "petrol15",
-      "options": [
-        {
-          "id": "petrol15",
-          "availableWhen": {
-            "op": "not",
-            "args": [
-              {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "trim"
-                    ]
-                  },
-                  "offRoad"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "petrol20turbo",
-          "availableWhen": {
             "op": "or",
             "args": [
               {
@@ -87,10 +60,10 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "sport"
+                  "ruggedOffroader"
                 ]
               },
               {
@@ -99,10 +72,10 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "luxury"
+                  "luxuryPickup"
                 ]
               },
               {
@@ -111,20 +84,39 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "offRoad"
+                  "flagshipSuv"
                 ]
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "choice",
+      "default": "hybrid",
+      "options": [
+        {
+          "id": "petrol15",
+          "availableWhen": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "hotHatch"
+            ]
+          }
         },
         {
-          "id": "hybrid"
-        },
-        {
-          "id": "electric",
+          "id": "petrol20turbo",
           "availableWhen": {
             "op": "not",
             "args": [
@@ -137,11 +129,17 @@
                       "model"
                     ]
                   },
-                  "trail"
+                  "hotHatch"
                 ]
               }
             ]
           }
+        },
+        {
+          "id": "hybrid"
+        },
+        {
+          "id": "electric"
         }
       ]
     },
@@ -526,31 +524,7 @@
             "op": "and",
             "args": [
               {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "model"
-                    ]
-                  },
-                  "trail"
-                ]
-              },
-              {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "drivetrain"
-                    ]
-                  },
-                  "awd"
-                ]
-              },
-              {
-                "op": "not",
+                "op": "or",
                 "args": [
                   {
                     "op": "eq",
@@ -558,10 +532,34 @@
                       {
                         "op": "field",
                         "args": [
-                          "wheels"
+                          "model"
                         ]
                       },
-                      "w20"
+                      "luxuryPickup"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "model"
+                        ]
+                      },
+                      "flagshipSuv"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "model"
+                        ]
+                      },
+                      "ruggedOffroader"
                     ]
                   }
                 ]
@@ -682,15 +680,80 @@
   "effects": [
     {
       "when": {
-        "op": "eq",
+        "op": "or",
         "args": [
           {
-            "op": "field",
+            "op": "eq",
             "args": [
-              "trim"
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              },
+              "offRoad"
             ]
           },
-          "offRoad"
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "ruggedOffroader"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "luxuryPickup"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "flagshipSuv"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "midSupercar"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "hypercar"
+            ]
+          }
         ]
       },
       "setField": "drivetrain",
@@ -701,23 +764,53 @@
     "modelTrimPrice": {
       "kind": "2d",
       "rows": {
-        "city": {
-          "standard": 22000,
-          "sport": 25500,
-          "luxury": 28000,
-          "offRoad": 26500
+        "hotHatch": {
+          "standard": 36000,
+          "sport": 41500,
+          "luxury": 46000,
+          "offRoad": 42500
         },
-        "cruiser": {
-          "standard": 27000,
-          "sport": 30500,
-          "luxury": 33000,
-          "offRoad": 31500
+        "sleekEstate": {
+          "standard": 58000,
+          "sport": 66500,
+          "luxury": 74000,
+          "offRoad": 68500
         },
-        "trail": {
-          "standard": 31000,
-          "sport": 34500,
-          "luxury": 37000,
-          "offRoad": 35500
+        "gtCoupe": {
+          "standard": 74000,
+          "sport": 85000,
+          "luxury": 94500,
+          "offRoad": 87500
+        },
+        "ruggedOffroader": {
+          "standard": 68000,
+          "sport": 78000,
+          "luxury": 87000,
+          "offRoad": 80000
+        },
+        "luxuryPickup": {
+          "standard": 82000,
+          "sport": 94500,
+          "luxury": 105000,
+          "offRoad": 97000
+        },
+        "flagshipSuv": {
+          "standard": 98000,
+          "sport": 112500,
+          "luxury": 125500,
+          "offRoad": 115500
+        },
+        "midSupercar": {
+          "standard": 240000,
+          "sport": 276000,
+          "luxury": 307000,
+          "offRoad": 283000
+        },
+        "hypercar": {
+          "standard": 1450000,
+          "sport": 1667500,
+          "luxury": 1856000,
+          "offRoad": 1711000
         }
       }
     },
@@ -791,6 +884,45 @@
         "t36": 0.55,
         "t48": 0.48,
         "t60": 0.42
+      }
+    },
+    "specHp": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 296,
+        "sleekEstate": 375,
+        "gtCoupe": 429,
+        "ruggedOffroader": 395,
+        "luxuryPickup": 562,
+        "flagshipSuv": 523,
+        "midSupercar": 710,
+        "hypercar": 1350
+      }
+    },
+    "specTopSpeed": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 155,
+        "sleekEstate": 168,
+        "gtCoupe": 178,
+        "ruggedOffroader": 118,
+        "luxuryPickup": 130,
+        "flagshipSuv": 155,
+        "midSupercar": 205,
+        "hypercar": 250
+      }
+    },
+    "specZeroTo60": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 5.4,
+        "sleekEstate": 4.6,
+        "gtCoupe": 4.2,
+        "ruggedOffroader": 6.1,
+        "luxuryPickup": 4.1,
+        "flagshipSuv": 4.3,
+        "midSupercar": 2.9,
+        "hypercar": 2.4
       }
     }
   },
@@ -1337,6 +1469,51 @@
               },
               0.95,
               1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hp",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specHp",
+          {
+            "op": "field",
+            "args": [
+              "model"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "topSpeed",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specTopSpeed",
+          {
+            "op": "field",
+            "args": [
+              "model"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "zeroToSixty",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specZeroTo60",
+          {
+            "op": "field",
+            "args": [
+              "model"
             ]
           }
         ]

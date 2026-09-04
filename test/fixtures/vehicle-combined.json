@@ -1,10 +1,14 @@
 {
   "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
   "id": "vehicle-configurator",
-  "name": "Vehicle Configurator",
-  "brand": { "mark": "ROWBLAA", "rest": "LUXURY EXPERIENCES", "tagline": "Haarlem" },
   "version": "1.0.0",
   "currency": "GBP",
+  "name": "Vehicle Configurator",
+  "brand": {
+    "mark": "ROWBLAA",
+    "rest": "LUXURY EXPERIENCES",
+    "tagline": "Haarlem"
+  },
   "sections": [
     {
       "id": "s_model",
@@ -35,37 +39,58 @@
   "fields": [
     {
       "id": "model",
-      "label": "Model",
       "type": "choice",
-      "control": "buttons",
-      "section": "s_model",
-      "width": "full",
-      "default": "city",
+      "default": "gtCoupe",
       "options": [
         {
-          "id": "city",
-          "label": "City (hatch)",
-          "priceDelta": 22000
+          "id": "hotHatch",
+          "label": "Hot Hatchback",
+          "image": "cars/hot-hatchback.png"
         },
         {
-          "id": "cruiser",
-          "label": "Cruiser (sedan)",
-          "priceDelta": 27000
+          "id": "sleekEstate",
+          "label": "Sleek Estate",
+          "image": "cars/sleek-estate.png"
         },
         {
-          "id": "trail",
-          "label": "Trail (SUV)",
-          "priceDelta": 31000
+          "id": "gtCoupe",
+          "label": "GT Coupe",
+          "image": "cars/gt-coupe.png"
+        },
+        {
+          "id": "ruggedOffroader",
+          "label": "Rugged Off-roader",
+          "image": "cars/rugged-offroader.png"
+        },
+        {
+          "id": "luxuryPickup",
+          "label": "Luxury Pickup",
+          "image": "cars/luxury-pickup.png"
+        },
+        {
+          "id": "flagshipSuv",
+          "label": "Flagship SUV",
+          "image": "cars/flagship-suv.png"
+        },
+        {
+          "id": "midSupercar",
+          "label": "Mid-engine Supercar",
+          "image": "cars/mid-engine-supercar.png"
+        },
+        {
+          "id": "hypercar",
+          "label": "Hyper-car",
+          "image": "cars/hypercar.png"
         }
-      ]
+      ],
+      "label": "Model",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full"
     },
     {
       "id": "trim",
-      "label": "Trim",
       "type": "choice",
-      "control": "buttons",
-      "section": "s_model",
-      "width": "full",
       "default": "standard",
       "options": [
         {
@@ -85,58 +110,6 @@
         },
         {
           "id": "offRoad",
-          "label": "Off-road",
-          "priceDelta": 4500,
-          "availableWhen": {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "model"
-                ]
-              },
-              "trail"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "engine",
-      "label": "Engine",
-      "type": "choice",
-      "control": "radio",
-      "section": "s_powertrain",
-      "width": "full",
-      "default": "petrol15",
-      "options": [
-        {
-          "id": "petrol15",
-          "label": "Petrol 1.5",
-          "priceDelta": 0,
-          "availableWhen": {
-            "op": "not",
-            "args": [
-              {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "trim"
-                    ]
-                  },
-                  "offRoad"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "petrol20turbo",
-          "label": "Petrol 2.0 Turbo",
-          "priceDelta": 2500,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -146,10 +119,10 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "sport"
+                  "ruggedOffroader"
                 ]
               },
               {
@@ -158,10 +131,10 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "luxury"
+                  "luxuryPickup"
                 ]
               },
               {
@@ -170,24 +143,47 @@
                   {
                     "op": "field",
                     "args": [
-                      "trim"
+                      "model"
                     ]
                   },
-                  "offRoad"
+                  "flagshipSuv"
                 ]
               }
             ]
-          }
+          },
+          "label": "Off-road",
+          "priceDelta": 4500
+        }
+      ],
+      "label": "Trim",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full"
+    },
+    {
+      "id": "engine",
+      "type": "choice",
+      "default": "hybrid",
+      "options": [
+        {
+          "id": "petrol15",
+          "availableWhen": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "hotHatch"
+            ]
+          },
+          "label": "Turbocharged Four",
+          "priceDelta": 0
         },
         {
-          "id": "hybrid",
-          "label": "Hybrid",
-          "priceDelta": 3000
-        },
-        {
-          "id": "electric",
-          "label": "Electric",
-          "priceDelta": 6000,
+          "id": "petrol20turbo",
           "availableWhen": {
             "op": "not",
             "args": [
@@ -200,44 +196,37 @@
                       "model"
                     ]
                   },
-                  "trail"
+                  "hotHatch"
                 ]
               }
             ]
-          }
+          },
+          "label": "Twin-Turbo V8",
+          "priceDelta": 2500
+        },
+        {
+          "id": "hybrid",
+          "label": "E-Hybrid",
+          "priceDelta": 3000
+        },
+        {
+          "id": "electric",
+          "label": "All-Electric",
+          "priceDelta": 6000
         }
-      ]
+      ],
+      "label": "Engine",
+      "control": "radio",
+      "section": "s_powertrain",
+      "width": "full"
     },
     {
       "id": "drivetrain",
-      "label": "Drivetrain",
       "type": "choice",
-      "control": "buttons",
-      "section": "s_powertrain",
-      "width": "full",
       "default": "fwd",
-      "enabledWhen": {
-        "op": "not",
-        "args": [
-          {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "trim"
-                ]
-              },
-              "offRoad"
-            ]
-          }
-        ]
-      },
       "options": [
         {
           "id": "fwd",
-          "label": "Front-wheel drive",
-          "priceDelta": 0,
           "availableWhen": {
             "op": "not",
             "args": [
@@ -254,12 +243,12 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "Front-wheel drive",
+          "priceDelta": 0
         },
         {
           "id": "awd",
-          "label": "All-wheel drive",
-          "priceDelta": 0,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -300,23 +289,40 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "All-wheel drive",
+          "priceDelta": 0
         }
-      ]
+      ],
+      "label": "Drivetrain",
+      "control": "buttons",
+      "section": "s_powertrain",
+      "width": "full",
+      "enabledWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              },
+              "offRoad"
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "wheels",
-      "label": "Wheels",
       "type": "choice",
-      "control": "buttons",
-      "section": "s_appearance",
-      "width": "full",
       "default": "w17",
       "options": [
         {
           "id": "w17",
-          "label": "17-inch",
-          "priceDelta": 0,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -345,12 +351,12 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "17-inch",
+          "priceDelta": 0
         },
         {
           "id": "w18",
-          "label": "18-inch",
-          "priceDelta": 600,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -391,12 +397,12 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "18-inch",
+          "priceDelta": 600
         },
         {
           "id": "w19",
-          "label": "19-inch",
-          "priceDelta": 1200,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -425,12 +431,12 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "19-inch",
+          "priceDelta": 1200
         },
         {
           "id": "w20",
-          "label": "20-inch",
-          "priceDelta": 1800,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -459,17 +465,19 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "20-inch",
+          "priceDelta": 1800
         }
-      ]
+      ],
+      "label": "Wheels",
+      "control": "buttons",
+      "section": "s_appearance",
+      "width": "full"
     },
     {
       "id": "colour",
-      "label": "Colour",
       "type": "choice",
-      "control": "dropdown",
-      "section": "s_appearance",
-      "width": "half",
       "default": "solid",
       "options": [
         {
@@ -489,8 +497,6 @@
         },
         {
           "id": "matte",
-          "label": "Matte",
-          "priceDelta": 1200,
           "availableWhen": {
             "op": "or",
             "args": [
@@ -519,17 +525,19 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "Matte",
+          "priceDelta": 1200
         }
-      ]
+      ],
+      "label": "Colour",
+      "control": "dropdown",
+      "section": "s_appearance",
+      "width": "half"
     },
     {
       "id": "packages",
-      "label": "Packages",
       "type": "multichoice",
-      "control": "buttons",
-      "section": "s_packages",
-      "width": "full",
       "default": [],
       "options": [
         {
@@ -544,32 +552,30 @@
         },
         {
           "id": "driverAssist",
-          "label": "Driver-Assist",
-          "priceDelta": 1900,
           "availableWhen": {
             "op": "has",
             "args": [
               "packages",
               "tech"
             ]
-          }
+          },
+          "label": "Driver-Assist",
+          "priceDelta": 1900
         },
         {
           "id": "premiumAudio",
-          "label": "Premium Audio",
-          "priceDelta": 1100,
           "availableWhen": {
             "op": "has",
             "args": [
               "packages",
               "tech"
             ]
-          }
+          },
+          "label": "Premium Audio",
+          "priceDelta": 1100
         },
         {
           "id": "performance",
-          "label": "Performance",
-          "priceDelta": 3200,
           "availableWhen": {
             "op": "and",
             "args": [
@@ -644,41 +650,17 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "Performance",
+          "priceDelta": 3200
         },
         {
           "id": "towing",
-          "label": "Towing",
-          "priceDelta": 1300,
           "availableWhen": {
             "op": "and",
             "args": [
               {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "model"
-                    ]
-                  },
-                  "trail"
-                ]
-              },
-              {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "drivetrain"
-                    ]
-                  },
-                  "awd"
-                ]
-              },
-              {
-                "op": "not",
+                "op": "or",
                 "args": [
                   {
                     "op": "eq",
@@ -686,10 +668,34 @@
                       {
                         "op": "field",
                         "args": [
-                          "wheels"
+                          "model"
                         ]
                       },
-                      "w20"
+                      "luxuryPickup"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "model"
+                        ]
+                      },
+                      "flagshipSuv"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "model"
+                        ]
+                      },
+                      "ruggedOffroader"
                     ]
                   }
                 ]
@@ -702,12 +708,12 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "Towing",
+          "priceDelta": 1300
         },
         {
           "id": "panoramicRoof",
-          "label": "Panoramic Roof",
-          "priceDelta": 1600,
           "availableWhen": {
             "op": "and",
             "args": [
@@ -736,17 +742,19 @@
                 ]
               }
             ]
-          }
+          },
+          "label": "Panoramic Roof",
+          "priceDelta": 1600
         }
-      ]
+      ],
+      "label": "Packages",
+      "control": "buttons",
+      "section": "s_packages",
+      "width": "full"
     },
     {
       "id": "financing",
-      "label": "Payment method",
       "type": "choice",
-      "control": "buttons",
-      "section": "s_finance",
-      "width": "full",
       "default": "cash",
       "options": [
         {
@@ -764,16 +772,42 @@
           "label": "Lease",
           "priceDelta": 0
         }
-      ]
+      ],
+      "label": "Payment method",
+      "control": "buttons",
+      "section": "s_finance",
+      "width": "full"
     },
     {
       "id": "term",
-      "label": "Term (months)",
       "type": "choice",
+      "default": "t36",
+      "options": [
+        {
+          "id": "t24",
+          "label": "24",
+          "priceDelta": 0
+        },
+        {
+          "id": "t36",
+          "label": "36",
+          "priceDelta": 0
+        },
+        {
+          "id": "t48",
+          "label": "48",
+          "priceDelta": 0
+        },
+        {
+          "id": "t60",
+          "label": "60",
+          "priceDelta": 0
+        }
+      ],
+      "label": "Term (months)",
       "control": "buttons",
       "section": "s_finance",
       "width": "half",
-      "default": "t36",
       "visibleWhen": {
         "op": "or",
         "args": [
@@ -802,40 +836,11 @@
             ]
           }
         ]
-      },
-      "options": [
-        {
-          "id": "t24",
-          "label": "24",
-          "priceDelta": 0
-        },
-        {
-          "id": "t36",
-          "label": "36",
-          "priceDelta": 0
-        },
-        {
-          "id": "t48",
-          "label": "48",
-          "priceDelta": 0
-        },
-        {
-          "id": "t60",
-          "label": "60",
-          "priceDelta": 0
-        }
-      ]
+      }
     },
     {
       "id": "deposit",
-      "label": "Deposit",
       "type": "number",
-      "control": "stepper",
-      "section": "s_finance",
-      "width": "half",
-      "unit": "GBP",
-      "decimals": 0,
-      "step": 100,
       "min": {
         "op": "mul",
         "args": [
@@ -854,6 +859,13 @@
           "otr"
         ]
       },
+      "step": 100,
+      "unit": "GBP",
+      "label": "Deposit",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "decimals": 0,
       "visibleWhen": {
         "op": "eq",
         "args": [
@@ -869,17 +881,17 @@
     },
     {
       "id": "annualMileage",
-      "label": "Annual mileage",
       "type": "number",
-      "control": "stepper",
-      "section": "s_finance",
-      "width": "half",
-      "unit": "mi",
-      "decimals": 0,
+      "default": 10000,
       "min": 5000,
       "max": 30000,
       "step": 1000,
-      "default": 10000,
+      "unit": "mi",
+      "label": "Annual mileage",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "decimals": 0,
       "visibleWhen": {
         "op": "eq",
         "args": [
@@ -897,15 +909,80 @@
   "effects": [
     {
       "when": {
-        "op": "eq",
+        "op": "or",
         "args": [
           {
-            "op": "field",
+            "op": "eq",
             "args": [
-              "trim"
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              },
+              "offRoad"
             ]
           },
-          "offRoad"
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "ruggedOffroader"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "luxuryPickup"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "flagshipSuv"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "midSupercar"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "hypercar"
+            ]
+          }
         ]
       },
       "setField": "drivetrain",
@@ -916,23 +993,53 @@
     "modelTrimPrice": {
       "kind": "2d",
       "rows": {
-        "city": {
-          "standard": 22000,
-          "sport": 25500,
-          "luxury": 28000,
-          "offRoad": 26500
+        "hotHatch": {
+          "standard": 36000,
+          "sport": 41500,
+          "luxury": 46000,
+          "offRoad": 42500
         },
-        "cruiser": {
-          "standard": 27000,
-          "sport": 30500,
-          "luxury": 33000,
-          "offRoad": 31500
+        "sleekEstate": {
+          "standard": 58000,
+          "sport": 66500,
+          "luxury": 74000,
+          "offRoad": 68500
         },
-        "trail": {
-          "standard": 31000,
-          "sport": 34500,
-          "luxury": 37000,
-          "offRoad": 35500
+        "gtCoupe": {
+          "standard": 74000,
+          "sport": 85000,
+          "luxury": 94500,
+          "offRoad": 87500
+        },
+        "ruggedOffroader": {
+          "standard": 68000,
+          "sport": 78000,
+          "luxury": 87000,
+          "offRoad": 80000
+        },
+        "luxuryPickup": {
+          "standard": 82000,
+          "sport": 94500,
+          "luxury": 105000,
+          "offRoad": 97000
+        },
+        "flagshipSuv": {
+          "standard": 98000,
+          "sport": 112500,
+          "luxury": 125500,
+          "offRoad": 115500
+        },
+        "midSupercar": {
+          "standard": 240000,
+          "sport": 276000,
+          "luxury": 307000,
+          "offRoad": 283000
+        },
+        "hypercar": {
+          "standard": 1450000,
+          "sport": 1667500,
+          "luxury": 1856000,
+          "offRoad": 1711000
         }
       }
     },
@@ -1006,6 +1113,45 @@
         "t36": 0.55,
         "t48": 0.48,
         "t60": 0.42
+      }
+    },
+    "specHp": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 296,
+        "sleekEstate": 375,
+        "gtCoupe": 429,
+        "ruggedOffroader": 395,
+        "luxuryPickup": 562,
+        "flagshipSuv": 523,
+        "midSupercar": 710,
+        "hypercar": 1350
+      }
+    },
+    "specTopSpeed": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 155,
+        "sleekEstate": 168,
+        "gtCoupe": 178,
+        "ruggedOffroader": 118,
+        "luxuryPickup": 130,
+        "flagshipSuv": 155,
+        "midSupercar": 205,
+        "hypercar": 250
+      }
+    },
+    "specZeroTo60": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 5.4,
+        "sleekEstate": 4.6,
+        "gtCoupe": 4.2,
+        "ruggedOffroader": 6.1,
+        "luxuryPickup": 4.1,
+        "flagshipSuv": 4.3,
+        "midSupercar": 2.9,
+        "hypercar": 2.4
       }
     }
   },
@@ -1556,6 +1702,51 @@
           }
         ]
       }
+    },
+    {
+      "id": "hp",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specHp",
+          {
+            "op": "field",
+            "args": [
+              "model"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "topSpeed",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specTopSpeed",
+          {
+            "op": "field",
+            "args": [
+              "model"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "zeroToSixty",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specZeroTo60",
+          {
+            "op": "field",
+            "args": [
+              "model"
+            ]
+          }
+        ]
+      }
     }
   ],
   "validations": [
@@ -1752,6 +1943,33 @@
         "type": "unit",
         "unit": "mi",
         "decimals": 0
+      }
+    },
+    {
+      "id": "hp",
+      "label": "Power",
+      "format": {
+        "type": "unit",
+        "unit": "hp",
+        "decimals": 0
+      }
+    },
+    {
+      "id": "topSpeed",
+      "label": "Top speed",
+      "format": {
+        "type": "unit",
+        "unit": "mph",
+        "decimals": 0
+      }
+    },
+    {
+      "id": "zeroToSixty",
+      "label": "0–60",
+      "format": {
+        "type": "unit",
+        "unit": "s",
+        "decimals": 1
       }
     }
   ]

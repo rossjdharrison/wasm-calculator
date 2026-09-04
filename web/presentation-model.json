@@ -1,6 +1,10 @@
 {
   "name": "Vehicle Configurator",
-  "brand": { "mark": "ROWBLAA", "rest": "LUXURY EXPERIENCES", "tagline": "Haarlem" },
+  "brand": {
+    "mark": "ROWBLAA",
+    "rest": "LUXURY EXPERIENCES",
+    "tagline": "Haarlem"
+  },
   "sections": [
     {
       "id": "s_model",
@@ -37,19 +41,44 @@
       "width": "full",
       "options": [
         {
-          "id": "city",
-          "label": "City (hatch)",
-          "priceDelta": 22000
+          "id": "hotHatch",
+          "label": "Hot Hatchback",
+          "image": "cars/hot-hatchback.png"
         },
         {
-          "id": "cruiser",
-          "label": "Cruiser (sedan)",
-          "priceDelta": 27000
+          "id": "sleekEstate",
+          "label": "Sleek Estate",
+          "image": "cars/sleek-estate.png"
         },
         {
-          "id": "trail",
-          "label": "Trail (SUV)",
-          "priceDelta": 31000
+          "id": "gtCoupe",
+          "label": "GT Coupe",
+          "image": "cars/gt-coupe.png"
+        },
+        {
+          "id": "ruggedOffroader",
+          "label": "Rugged Off-roader",
+          "image": "cars/rugged-offroader.png"
+        },
+        {
+          "id": "luxuryPickup",
+          "label": "Luxury Pickup",
+          "image": "cars/luxury-pickup.png"
+        },
+        {
+          "id": "flagshipSuv",
+          "label": "Flagship SUV",
+          "image": "cars/flagship-suv.png"
+        },
+        {
+          "id": "midSupercar",
+          "label": "Mid-engine Supercar",
+          "image": "cars/mid-engine-supercar.png"
+        },
+        {
+          "id": "hypercar",
+          "label": "Hyper-car",
+          "image": "cars/hypercar.png"
         }
       ]
     },
@@ -91,22 +120,22 @@
       "options": [
         {
           "id": "petrol15",
-          "label": "Petrol 1.5",
+          "label": "Turbocharged Four",
           "priceDelta": 0
         },
         {
           "id": "petrol20turbo",
-          "label": "Petrol 2.0 Turbo",
+          "label": "Twin-Turbo V8",
           "priceDelta": 2500
         },
         {
           "id": "hybrid",
-          "label": "Hybrid",
+          "label": "E-Hybrid",
           "priceDelta": 3000
         },
         {
           "id": "electric",
-          "label": "Electric",
+          "label": "All-Electric",
           "priceDelta": 6000
         }
       ]
@@ -425,6 +454,33 @@
         "type": "unit",
         "unit": "mi",
         "decimals": 0
+      }
+    },
+    {
+      "id": "hp",
+      "label": "Power",
+      "format": {
+        "type": "unit",
+        "unit": "hp",
+        "decimals": 0
+      }
+    },
+    {
+      "id": "topSpeed",
+      "label": "Top speed",
+      "format": {
+        "type": "unit",
+        "unit": "mph",
+        "decimals": 0
+      }
+    },
+    {
+      "id": "zeroToSixty",
+      "label": "0–60",
+      "format": {
+        "type": "unit",
+        "unit": "s",
+        "decimals": 1
       }
     }
   ]

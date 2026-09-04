@@ -108,9 +108,8 @@ export async function objectURL(id) {
 // Resolve any option.image reference to a usable <img src>.
 export async function resolve(ref) {
   if (!ref || typeof ref !== 'string') return null;
-  if (isAssetRef(ref)) return objectURL(refId(ref));
-  if (/^(https?:|data:|blob:|\/)/.test(ref)) return ref; // external URL / data URI / absolute path
-  return null;
+  if (isAssetRef(ref)) return objectURL(refId(ref)); // design-time blob in IndexedDB
+  return ref; // http(s)/data/blob/absolute OR a committed relative path (e.g. "cars/x.jpg")
 }
 
 export async function remove(id) {

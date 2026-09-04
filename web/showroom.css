@@ -74,12 +74,15 @@
   .carwrap img.carimg { object-fit: contain; }
   .reflection { position: absolute; left: 0; right: 0; top: 99%; transform: scaleY(-1); opacity: .16; filter: blur(3px);
     pointer-events: none; -webkit-mask-image: linear-gradient(180deg, #000, transparent 58%); mask-image: linear-gradient(180deg, #000, transparent 58%); }
-  .disc { position: absolute; left: 50%; bottom: 3%; width: 72%; height: 76px; transform: translateX(-50%); border-radius: 50%;
-    background: radial-gradient(50% 62% at 50% 45%, var(--spot), rgba(216,162,74,.10) 52%, transparent 74%); }
-  .disc::before { content: ""; position: absolute; inset: -32% 0; border-radius: 50%;
-    background: conic-gradient(from 0deg, transparent, rgba(255,240,220,.20), transparent 38%, transparent 62%, rgba(216,162,74,.16), transparent);
-    animation: turn 9s linear infinite; }
-  @keyframes turn { to { transform: rotate(360deg); } }
+  /* a clean static spotlight pool grounds the car... */
+  .disc { position: absolute; left: 50%; bottom: 1%; width: 84%; height: 98px; transform: translateX(-50%); border-radius: 50%;
+    background: radial-gradient(52% 60% at 50% 44%, rgba(255,240,220,.22), rgba(216,162,74,.10) 46%, transparent 72%);
+    overflow: hidden; }
+  /* ...and a soft horizontal light rakes across it — premium studio light, a hint of speed (no spin) */
+  .disc::before { content: ""; position: absolute; left: -35%; right: -35%; top: 32%; height: 34%; border-radius: 50%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,245,228,0) 32%, rgba(255,245,228,.5) 50%, rgba(255,245,228,0) 68%, transparent 100%);
+    filter: blur(7px); animation: rake 6.5s cubic-bezier(.45,.05,.55,.95) infinite; }
+  @keyframes rake { 0% { transform: translateX(-26%); opacity: .18; } 50% { transform: translateX(26%); opacity: .62; } 100% { transform: translateX(-26%); opacity: .18; } }
   @keyframes float { 0%,100% { transform: translateZ(40px) translateY(0); } 50% { transform: translateZ(40px) translateY(-1.6%); } }
   .badges { position: absolute; top: 8%; right: 4%; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; z-index: 4; }
   .badge { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--text);
@@ -103,7 +106,7 @@
   .car-card .cfrom b { color: var(--accent); font-weight: 600; }
 
   /* ---- glass rail ---- */
-  .rail { position: relative; display: grid; grid-template-rows: auto 1fr auto; min-height: 0;
+  .rail { position: relative; display: grid; grid-template-rows: auto auto 1fr auto; min-height: 0;
     background: var(--glass); backdrop-filter: blur(22px) saturate(120%);
     border-left: 1px solid var(--border-strong); }
   @supports not (backdrop-filter: blur(2px)) { .rail { background: var(--surface); } }
@@ -111,6 +114,14 @@
   @media (max-width: 900px) { .rail { border-left: 0; border-top: 1px solid var(--border-strong); } }
 
   .rail-hd { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+  /* spec sheet — read-only headline figures */
+  .specsheet { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--border); }
+  .specsheet:empty { display: none; }
+  .spec { display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 12px 6px; border-left: 1px solid var(--border); text-align: center; }
+  .spec:first-child { border-left: 0; }
+  .spec-v { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--text); line-height: 1.1; }
+  .spec-l { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+  @media (max-width: 900px) { .spec-v { font-size: 15px; } }
   .rail-hd .marque { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
   .rail-hd h1 { font-family: var(--display); font-weight: 600; font-size: 26px; margin: 3px 0 4px; text-wrap: balance; }
   .rail-hd .sub { font-size: 13px; color: var(--text-soft); }

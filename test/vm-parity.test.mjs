@@ -61,10 +61,10 @@ function compare(label, inputs) {
 
 // ---- named golden scenarios (same as ref-eval) ----
 const scenarios = {
-  Ex1: { model: 'city', trim: 'standard', engine: 'petrol15', drivetrain: 'fwd', wheels: 'w17', colour: 'solid', packages: [], financing: 'cash' },
-  Ex2: { model: 'trail', trim: 'offRoad', engine: 'hybrid', drivetrain: 'fwd', wheels: 'w18', colour: 'metallic', packages: ['winter', 'tech', 'towing'], financing: 'finance', term: 't48', deposit: 5000 },
-  Ex3: { model: 'cruiser', trim: 'sport', engine: 'petrol20turbo', drivetrain: 'awd', wheels: 'w19', colour: 'matte', packages: ['tech', 'performance', 'driverAssist', 'premiumAudio'], financing: 'finance', term: 't36', deposit: 4429 },
-  Ex4: { model: 'cruiser', trim: 'luxury', engine: 'electric', drivetrain: 'awd', wheels: 'w20', colour: 'premium', packages: ['winter', 'tech', 'premiumAudio', 'panoramicRoof'], financing: 'lease', term: 't36', annualMileage: 15000 },
+  Ex1: { model: 'hotHatch', trim: 'standard', engine: 'electric', drivetrain: 'fwd', wheels: 'w17', colour: 'solid', packages: [], financing: 'cash' },
+  Ex2: { model: 'ruggedOffroader', trim: 'offRoad', engine: 'hybrid', drivetrain: 'fwd', wheels: 'w18', colour: 'metallic', packages: ['winter', 'tech', 'towing'], financing: 'finance', term: 't48', deposit: 9000 },
+  Ex3: { model: 'gtCoupe', trim: 'sport', engine: 'petrol20turbo', drivetrain: 'awd', wheels: 'w19', colour: 'matte', packages: ['tech', 'performance', 'driverAssist', 'premiumAudio'], financing: 'finance', term: 't36', deposit: 12000 },
+  Ex4: { model: 'hypercar', trim: 'luxury', engine: 'electric', drivetrain: 'awd', wheels: 'w20', colour: 'premium', packages: ['winter', 'tech', 'premiumAudio', 'panoramicRoof'], financing: 'lease', term: 't36', annualMileage: 15000 },
 };
 for (const [name, inputs] of Object.entries(scenarios)) {
   test(`parity — ${name}`, () => compare(name, inputs));

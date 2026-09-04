@@ -13,7 +13,7 @@
 // Run `npm run asbuild:release` first (npm run build does both).
 // Cross-platform: pure Node, no shell assumptions.
 
-import { rm, mkdir, copyFile, access } from 'node:fs/promises';
+import { rm, mkdir, copyFile, access, readdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -74,6 +74,17 @@ async function main() {
   for (const [src, name] of FILES) {
     await copyFile(src, join(DIST, name));
     console.log(`  + dist/${name}`);
+  }
+
+  // Copy the car image folder (web/cars/*) if present — the model references
+  // these by relative path (option.image = "cars/<name>.jpg").
+  const carsSrc = join(ROOT, 'web', 'cars');
+  if (await exists(carsSrc)) {
+    const imgs = (await readdir(carsSrc)).filter((n) => /\.(jpe?g|png|webp|avif|svg)$/i.test(n));
+    if (imgs.length) {
+      await mkdir(join(DIST, 'cars'), { recursive: true });
+      for (const n of imgs) { await copyFile(join(carsSrc, n), join(DIST, 'cars', n)); console.log(`  + dist/cars/${n}`); }
+    }
   }
   console.log('✓ dist/ ready to deploy');
 }

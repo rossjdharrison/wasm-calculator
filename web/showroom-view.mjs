@@ -64,7 +64,9 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
 
   // ---------- car visuals (image asset, else silhouette) ----------
   const PAINT = { solid: ['#8a9099', '#6d737c'], metallic: ['#aeb7c4', '#7c8794'], premium: ['#3a4c6b', '#243149'], matte: ['#4a4d52', '#3a3d42'] };
-  const carType = (id) => (id === 'city' ? 'hatch' : id === 'trail' ? 'suv' : id === 'gt' ? 'coupe' : 'sedan');
+  // silhouette fallback per model id (used only until an image is attached)
+  const CAR_SHAPE = { hotHatch: 'hatch', sleekEstate: 'sedan', gtCoupe: 'coupe', ruggedOffroader: 'suv', luxuryPickup: 'suv', flagshipSuv: 'suv', midSupercar: 'coupe', hypercar: 'coupe' };
+  const carType = (id) => CAR_SHAPE[id] || 'sedan';
   function carSVG(type, opts = {}) {
     const paint = PAINT[opts.colour] || PAINT.solid, gid = 'g' + Math.random().toString(36).slice(2, 7);
     const wheelR = { w17: 20, w18: 22, w19: 24, w20: 26 }[opts.wheels] || 20;
@@ -85,7 +87,29 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const state = {};
   for (const f of ir.fields) state[f.id] = f.type === 'multichoice' ? (f.defaultRaw ? f.defaultRaw.slice() : []) : f.type === 'boolean' ? !!f.defaultRaw : f.type === 'number' ? (f.defaultRaw ?? null) : (f.defaultRaw ?? f.options[0].id);
   const primaryOpts = () => modelFieldById[primary.id].options || [];
-  const fromPrice = (id) => { const base = Object.assign({}, state, { [primary.id]: id, packages: [], financing: 'cash' }); const r = compute(base); const em = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0]; return r.out[em.id].value; };
+  const emOutput = () => ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
+  // a config built from field DEFAULTS (not the live selection) — the base every
+  // "from" price starts from, so it's independent of what's currently selected.
+  const defaultsConfig = () => {
+    const b = {};
+    for (const f of ir.fields) b[f.id] = f.type === 'multichoice' ? [] : f.type === 'boolean' ? !!f.defaultRaw : f.type === 'number' ? (f.defaultRaw ?? null) : (f.defaultRaw ?? f.options[0].id);
+    return b;
+  };
+  // "from" = the genuine entry price: base/default config with the cheapest AVAILABLE engine
+  const fromPrice = (id) => {
+    const em = emOutput();
+    const engField = ir.fields.find((f) => f.id === 'engine');
+    const engines = engField ? engField.options.map((o) => o.id) : [null];
+    let best = Infinity;
+    for (const e of engines) {
+      const base = Object.assign(defaultsConfig(), { [primary.id]: id, packages: [], financing: 'cash' });
+      if (e) base.engine = e;
+      const r = compute(base);
+      if (e && r.avail.engine && r.avail.engine[e] === false) continue;
+      best = Math.min(best, r.out[em.id].value);
+    }
+    return best === Infinity ? compute(Object.assign(defaultsConfig(), { [primary.id]: id })).out[em.id].value : best;
+  };
 
   // ---------- shell ----------
   root.innerHTML = '';
@@ -104,6 +128,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   stage.append(turntable, dock);
   const rail = el('aside', 'rail'); rail.setAttribute('aria-label', 'Specification');
   rail.innerHTML = `<div class="rail-hd"><div class="marque" id="sh-marque"></div><h1 id="sh-name">—</h1><div class="sub" id="sh-sub"></div></div>
+    <div class="specsheet" id="sh-specsheet"></div>
     <div class="rail-body" id="sh-specs"></div>
     <div class="plate"><div class="micro"><span id="sh-veh">—</span><span style="display:flex;align-items:center;gap:8px"><span id="sh-range" class="num">—</span><span class="gauge"><i id="sh-rangebar" style="width:0"></i></span></span></div>
       <div class="otr-label">On-the-road</div><div class="otr"><span class="fig num" id="sh-otr">—</span></div>
@@ -230,6 +255,9 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     otrEl.textContent = otrStr; prevOtr = otrStr;
     const mo = ir.outputs.find((o) => /month/i.test(o.id)); const rec = mo && res.out[mo.id];
     $('sh-monthly').innerHTML = rec && rec.visible ? `from <b>${fmt(rec)}</b> / mo` : '';
+    // spec sheet: headline figures (read-only)
+    const specIds = ['hp', 'topSpeed', 'zeroToSixty', 'range'].filter((id) => res.out[id] && res.out[id].visible);
+    $('sh-specsheet').innerHTML = specIds.map((id) => { const o = res.out[id]; return `<div class="spec"><span class="spec-v num">${fmt(o)}</span><span class="spec-l">${o.label}</span></div>`; }).join('');
   }
 
   function setField(id, v) { state[id] = v; render(); }
@@ -241,8 +269,18 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   $('sh-cta').addEventListener('click', () => { const res = compute(state); const emOut = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0]; $('sh-cta').textContent = 'Enquiry drafted — ' + fmt(res.out[emOut.id]) + ' ✓'; setTimeout(() => { $('sh-cta').textContent = 'Request this build ▸'; }, 2200); });
 
   render();
-  // resolve associated images, then repaint the stage with real renders
-  Promise.all(primaryOpts().map(async (o) => { if (o.image) { const u = await resolveImage(o.image); if (u) imgUrl[o.id] = u; } })).then(() => { stageModel = null; render(); });
+  // resolve associated images and TEST-LOAD each independently — repaint as each
+  // one arrives (so the default car shows first, not after all 8), and a missing
+  // image simply never loads, leaving its silhouette (no broken icons).
+  for (const o of primaryOpts()) {
+    if (!o.image) continue;
+    resolveImage(o.image).then((u) => {
+      if (!u) return;
+      const im = new Image();
+      im.onload = () => { imgUrl[o.id] = u; render(); }; // in-place repaint (no re-swap)
+      im.src = u;
+    }).catch(() => {});
+  }
 
   return { recompute: render };
 }

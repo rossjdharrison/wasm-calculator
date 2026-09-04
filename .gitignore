@@ -16,3 +16,11 @@ Thumbs.db
 
 # local editor/agent settings
 .claude/settings.local.json
+
+# car images — served locally in dev; to be hosted on Cloudflare R2 in production
+# (kept out of git history). web/cars/README.md documents the expected filenames.
+web/cars/*.png
+web/cars/*.jpg
+web/cars/*.jpeg
+web/cars/*.webp
+web/cars/*.avif

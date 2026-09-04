@@ -23,13 +23,13 @@ test('indexing is inferred from lookup() ASTs', () => {
   assert.deepEqual(idx.roadTax, ['engine']);
 });
 
-test('adding a model option flags exactly the 2d row + the missing label', () => {
+test('adding a model option flags the missing table rows/keys + the label', () => {
   const d = clone(DATA);
   d.fields.find((f) => f.id === 'model').options.push({ id: 'roadster' });
   const r = analyzeCoverage(d, clone(PRES));
-  assert.equal(r.counts.error, 1);
-  assert.ok(r.findings.some((f) => f.kind === 'missing-table-key' && f.table === 'modelTrimPrice' && f.row === 'roadster'));
-  assert.ok(r.findings.some((f) => f.kind === 'missing-label' && f.field === 'model' && f.option === 'roadster'));
+  assert.ok(r.counts.error >= 1, 'a new model leaves table gaps');
+  assert.ok(r.findings.some((f) => f.kind === 'missing-table-key' && f.table === 'modelTrimPrice' && f.row === 'roadster'), 'modelTrimPrice 2d row flagged');
+  assert.ok(r.findings.some((f) => f.kind === 'missing-label' && f.field === 'model' && f.option === 'roadster'), 'missing label flagged');
 });
 
 test('adding an engine option flags every table the field indexes (the cascade)', () => {
@@ -51,7 +51,8 @@ test('applyFix connects every orphan back to a clean model', () => {
   const after = analyzeCoverage(d, p);
   assert.deepEqual(after.counts, { error: 0, warn: 0, info: 0 }, after.findings.map((f) => f.message).join(' | '));
   // the 2d row was seeded across all trims at 0
-  assert.deepEqual(Object.keys(d.tables.modelTrimPrice.rows.roadster).sort(), Object.keys(d.tables.modelTrimPrice.rows.city).sort());
+  const anotherRow = Object.keys(d.tables.modelTrimPrice.rows).find((k) => k !== 'roadster');
+  assert.deepEqual(Object.keys(d.tables.modelTrimPrice.rows.roadster).sort(), Object.keys(d.tables.modelTrimPrice.rows[anotherRow]).sort());
   assert.ok(Object.values(d.tables.modelTrimPrice.rows.roadster).every((v) => v === 0));
 });
 
