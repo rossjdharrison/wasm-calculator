@@ -114,6 +114,78 @@
   --qc-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
 }
 
+/* =============================================================================
+   SKIN: "dusk" — the Rowblaa luxury-showroom aesthetic. A committed dark world:
+   charcoal ground, warm-white ink, amber reserved for selection/price/primary.
+   Set data-skin="dusk" on <html>; it overrides the palette in every theme state
+   (placed after the dark blocks so it wins on specificity ties). Pairs with the
+   Fraunces + Inter web fonts linked in the editor pages.
+   ============================================================================= */
+:root[data-skin="dusk"] {
+  color-scheme: dark;
+  --qc-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --qc-font-display: "Fraunces", Georgia, "Times New Roman", serif;
+
+  --qc-color-bg: #0b0c0e;
+  --qc-color-surface: #14161a;
+  --qc-color-surface-2: #1b1e23;
+  --qc-color-text: #f4efe7;
+  --qc-color-text-soft: #a9a296;
+  --qc-color-border: rgba(255, 255, 255, 0.08);
+  --qc-color-border-strong: rgba(255, 255, 255, 0.16);
+  --qc-color-accent: #d8a24a;
+  --qc-color-accent-hover: #e7b45e;
+  --qc-color-accent-contrast: #17120a;
+  --qc-color-accent-soft: rgba(216, 162, 74, 0.14);
+  --qc-color-ok: #6fb89a;
+  --qc-color-error: #e38b7e;
+  --qc-color-error-bg: rgba(227, 139, 126, 0.12);
+  --qc-color-warn: #e7c58a;
+  --qc-color-warn-bg: rgba(216, 162, 74, 0.12);
+  --qc-color-info: #d8a24a;
+  --qc-color-info-bg: rgba(216, 162, 74, 0.12);
+  --qc-ring: color-mix(in srgb, #e7b45e 60%, transparent);
+  --qc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --qc-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --qc-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* dusk polish — a few skin-scoped flourishes over the token swap (kept restrained) */
+:root[data-skin="dusk"] body {
+  background:
+    radial-gradient(130% 72% at 50% -12%, rgba(216, 162, 74, 0.10), transparent 58%),
+    var(--qc-color-bg);
+}
+:root[data-skin="dusk"] .qc-app__head { position: relative; }
+:root[data-skin="dusk"] .qc-app__head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: repeating-linear-gradient(90deg, rgba(216, 162, 74, 0.28) 0 3px, transparent 3px 10px);
+}
+:root[data-skin="dusk"] .qc-app__head h1,
+:root[data-skin="dusk"] .de-title h3,
+:root[data-skin="dusk"] .rail-hd h1 {
+  font-family: var(--qc-font-display); font-weight: 600; letter-spacing: 0.005em;
+}
+:root[data-skin="dusk"] .qc-app__head h1 { text-shadow: 0 0 26px rgba(216, 162, 74, 0.22); }
+:root[data-skin="dusk"] .qc-nav a.is-active { color: var(--qc-color-accent); }
+:root[data-skin="dusk"] .qc-btn-primary {
+  background: linear-gradient(180deg, var(--qc-color-accent-hover), var(--qc-color-accent));
+  color: var(--qc-color-accent-contrast); border: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 24px -12px rgba(216, 162, 74, 0.6);
+}
+:root[data-skin="dusk"] .qc-btn-primary:hover { filter: brightness(1.05); }
+/* hairline top-highlight gives the dark cards a lit, glassy edge */
+:root[data-skin="dusk"] .de-outline,
+:root[data-skin="dusk"] .de-detail,
+:root[data-skin="dusk"] .de-relationships,
+:root[data-skin="dusk"] .cov-card,
+:root[data-skin="dusk"] .qc-preview,
+:root[data-skin="dusk"] .de-graph,
+:root[data-skin="dusk"] .qc-section,
+:root[data-skin="dusk"] .qc-summary {
+  box-shadow: var(--qc-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 /* --- Example SKIN: warmer, rounder. Switch with data-skin="ember" on <html>. --- */
 :root[data-skin="ember"] {
   --qc-color-accent: #e2571e; --qc-color-accent-hover: #c9481a;

@@ -3,58 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f6f8" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0d" />
-    <title>Quote Configurator · WASM</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>" />
-    <!-- engine-owned structure first, then designer-owned tokens/skin -->
-    <link rel="stylesheet" href="qc-base.css" />
-    <link rel="stylesheet" href="theme.css" />
+    <meta name="theme-color" content="#0b0c0e" />
+    <title>Rowblaa Luxury Experiences</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="showroom.css" />
   </head>
   <body>
-    <main class="qc-app">
-      <header class="qc-app__head">
-        <nav class="qc-nav" aria-label="Pages">
-          <a href="./" class="is-active">Configurator</a>
-          <a href="data-editor.html">Data model</a>
-          <a href="presentation-editor.html">Presentation</a>
-          <a href="editor.html">JSON</a>
-        </nav>
-        <h1>Quote Configurator</h1>
-        <p>
-          The form, its rules, and its pricing are described entirely in
-          <code>model.json</code> and evaluated by a model‑agnostic WebAssembly
-          engine (<code>quote.wasm</code>). Change the model and republish — no
-          code, no rebuild of the engine. Restyle it by editing tokens in
-          <code>theme.css</code>.
-        </p>
-      </header>
-
-      <div id="model-banner"></div>
-
-      <div class="qc-toolbar" role="group" aria-label="Appearance">
-        <button type="button" data-theme-set="">System</button>
-        <button type="button" data-theme-set="light">Light</button>
-        <button type="button" data-theme-set="dark">Dark</button>
-        <button type="button" data-skin-toggle>Toggle skin</button>
-      </div>
-
-      <div id="app"></div>
-    </main>
-
-    <script>
-      // Demo chrome only: flip design-token state on <html>. Not part of the engine.
-      const root = document.documentElement;
-      for (const b of document.querySelectorAll('[data-theme-set]')) {
-        b.addEventListener('click', () => {
-          const v = b.getAttribute('data-theme-set');
-          if (v) root.setAttribute('data-theme', v); else root.removeAttribute('data-theme');
-        });
-      }
-      document.querySelector('[data-skin-toggle]').addEventListener('click', () => {
-        root.getAttribute('data-skin') === 'ember' ? root.removeAttribute('data-skin') : root.setAttribute('data-skin', 'ember');
-      });
-    </script>
+    <!-- The configurator IS the showroom: showroom-view.mjs builds the full
+         stage + glass rail into #app, driven by the live wasm engine. -->
+    <div id="app"></div>
     <script type="module" src="app.js"></script>
   </body>
 </html>

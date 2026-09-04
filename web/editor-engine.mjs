@@ -155,6 +155,35 @@ const WIDGETS = {
   grid: (a) => gridWidget(a),
 };
 
+// The canonical set of widget names the engine can render (derived from the real
+// registry above). The conformance test asserts this equals WIDGET_CONTRACTS's
+// keys, so the two can never drift: add a widget above and the test fails until
+// you give it a contract.
+export const WIDGET_TYPES = Object.keys(WIDGETS);
+
+// Per-widget CONTRACT — the single source of truth the schema validator
+// (schema-check.mjs) checks against, co-located with WIDGETS so a new widget must
+// declare one. Fields:
+//   needsProp  : the widget reads/writes item[spec.prop], so `prop` is required
+//                (default is listed true — it renders from the item but still
+//                 WRITES back through spec.prop).
+//   oneOf      : at least one of these spec keys must be present.
+//   boolFlags  : spec keys that, if present, must be boolean.
+//   needsFields: uses the rule-builder, so ctx.fields must yield ≥1 field.
+//   item       : the doc item-shape this widget imposes, checked by
+//                validateDocAgainstSchema ('fieldType' | 'optionList' | 'table').
+export const WIDGET_CONTRACTS = {
+  text: { needsProp: true },
+  number: { needsProp: true },
+  toggle: { needsProp: true },
+  formula: { needsProp: true, boolFlags: ['multiline', 'required'] },
+  rule: { needsProp: true, needsFields: true },
+  select: { needsProp: true, oneOf: ['options', 'source'], boolFlags: ['allowNone'] },
+  default: { needsProp: true, item: 'fieldType' },
+  optionList: { needsProp: false, needsFields: true, item: 'optionList' },
+  grid: { needsProp: false, item: 'table' },
+};
+
 function defaultWidget(a) {
   const f = a.item;
   if (f.type === 'choice') return selectRow('Default', (f.options || []).map((o) => o.id), f.default ?? f.options?.[0]?.id, (v) => a.set(v));
@@ -170,10 +199,9 @@ function optionListWidget(a) {
   const box = el('div', 'de-sub');
   const render = () => {
     box.innerHTML = '';
-    const bh = el('div', 'de-sub__head'); bh.textContent = 'Options (availability)';
-    bh.appendChild(addBtn('+ option', () => { const id = prompt('New option id:'); if (id) { (f.options ||= []).push({ id }); render(); a.onChange(); } }));
+    const bh = el('div', 'de-sub__head'); bh.textContent = 'Options';
     box.appendChild(bh);
-    box.appendChild(hint('Labels & prices for options live on the Presentation page.'));
+    box.appendChild(hint('Labels, prices & images for options live on the Presentation page.'));
     (f.options || []).forEach((o, oi) => {
       const r = el('div', 'de-opt');
       const hdr = el('div', 'de-opt__hdr');
@@ -185,6 +213,33 @@ function optionListWidget(a) {
       r.appendChild(a.rules.ruleBlock(() => o.availableWhen, (ast) => { if (ast === undefined) delete o.availableWhen; else o.availableWhen = ast; a.onChange(); }));
       box.appendChild(r);
     });
+    // inline, immediately-validated add (replaces window.prompt)
+    const addWrap = el('div', 'de-optadd');
+    const input = el('input', 'qc-input de-optadd__in'); input.placeholder = 'add an option id…'; input.setAttribute('aria-label', 'New option id');
+    const btn = el('button', 'de-optadd__btn'); btn.type = 'button'; btn.textContent = 'Add'; btn.disabled = true;
+    const err = el('div', 'de-optadd__err'); err.setAttribute('aria-live', 'polite'); err.hidden = true;
+    const check = () => {
+      const v = input.value.trim();
+      let msg = '';
+      if (v && !/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) msg = 'Letters, numbers & underscore — start with a letter.';
+      else if (v && (f.options || []).some((o) => o.id === v)) msg = `"${v}" already exists.`;
+      err.textContent = msg; err.hidden = !msg;
+      input.classList.toggle('is-invalid', !!msg);
+      btn.disabled = !v || !!msg;
+      return !btn.disabled;
+    };
+    const commit = () => {
+      if (!check()) return;
+      (f.options ||= []).push({ id: input.value.trim() });
+      a.onChange();
+      render();
+      const ni = box.querySelector('.de-optadd__in'); if (ni) ni.focus();
+    };
+    input.addEventListener('input', check);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+    btn.addEventListener('click', commit);
+    addWrap.append(input, btn);
+    box.append(addWrap, err);
   };
   render();
   return box;

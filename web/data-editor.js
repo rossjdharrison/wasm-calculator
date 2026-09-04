@@ -7,22 +7,24 @@
 // dependency graph, and the live preview from the wasm engine.
 // =============================================================================
 import { assemble, loadEngine, mergeModel } from './assembler.mjs';
-import { currentData, currentPres, saveData, loadDefaultData } from './store.mjs';
+import { currentData, currentPres, saveData, savePres, loadDefaultData } from './store.mjs';
 import { createEditor } from './editor-engine.mjs';
+import { DATA_SOURCES } from './schema-check.mjs';
+import { analyzeCoverage, applyFix } from './coverage.mjs';
 import { el, hint } from './editor-ui.mjs';
 
 const WASM_URL = 'quote.wasm';
 const $ = (id) => document.getElementById(id);
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-let data = null, pres = null, wasmBytes = null, schema = null, editor = null, assembledOk = null;
+let data = null, pres = null, wasmBytes = null, schema = null, editor = null, assembledOk = null, presDirty = false;
 
 boot();
 async function boot() {
   try {
     [data, pres, wasmBytes, schema] = await Promise.all([
       currentData().then(clone),
-      currentPres(),
+      currentPres().then(clone),
       fetch(WASM_URL).then((r) => r.arrayBuffer()).then((b) => new Uint8Array(b)),
       fetch('data.schema.json').then((r) => r.json()),
     ]);
@@ -34,20 +36,104 @@ async function boot() {
   mountEditor();
 }
 
+// Each DATA_SOURCES name maps to a live reader over the current doc.
+const SOURCE_FNS = { fields: () => (data.fields || []).map((f) => f.id) };
+
 function mountEditor() {
   editor = createEditor({
     schema, doc: data, outline: $('outline'), detail: $('detail'),
     ctx: {
       fields: () => (data.fields || []).map((f) => ({ id: f.id, type: f.type, options: f.options || [] })),
-      sources: { fields: () => (data.fields || []).map((f) => f.id) },
+      // Built from DATA_SOURCES (shared with the schema validator) so a schema
+      // can never reference a source name the page forgets to wire.
+      sources: Object.fromEntries(DATA_SOURCES.map((name) => [name, SOURCE_FNS[name]])),
     },
     onChange: refresh,
   });
   refresh();
 }
 
-// ---- right panel: depends-on / used-by + live preview ----------------------
-function refresh() { renderRelationships(); recompute(); if (!$('graph').hidden) renderGraph(); }
+// ---- right panel: coverage + depends-on/used-by + live preview -------------
+function refresh() {
+  const cov = analyzeCoverage(data, pres);
+  renderCoverage(cov); renderInlineChecklist(cov);
+  renderRelationships(); recompute(); if (!$('graph').hidden) renderGraph();
+}
+
+// ---- coverage advisor (Slice 1: surface gaps + one-click connect) ----------
+function plainLabel(f) {
+  switch (f.kind) {
+    case 'missing-table-key': return `Needs a price for “${f.option}” in ${f.table}`;
+    case 'undefined-table': return `Table “${f.table}” is missing`;
+    case 'missing-label': return f.option ? `“${f.option}” has no customer-facing label` : `“${f.field}” has no label`;
+    case 'dead-option': return `“${f.option}” isn’t used by any price yet`;
+    case 'orphan-field': return `“${f.field}” isn’t connected to anything`;
+    default: return f.message;
+  }
+}
+function doFix(list) {
+  let changed = false;
+  for (const f of list) if (f.fix && applyFix(data, pres, f.fix)) { changed = true; if (f.fix.type === 'add-label') presDirty = true; }
+  if (changed) { editor.renderOutline(); editor.renderDetail(); }
+  refresh();
+}
+function covItem(f) {
+  const row = el('div', 'cov-item');
+  row.appendChild(el('span', `cov-dot cov-dot--${f.severity}`));
+  const msg = el('button', 'cov-msg'); msg.type = 'button'; msg.textContent = plainLabel(f);
+  msg.title = 'Go to this item';
+  msg.addEventListener('click', () => { const id = f.field || f.table; if (id) editor.selectById(id); });
+  row.appendChild(msg);
+  if (f.fix) { const b = el('button', 'cov-fix'); b.type = 'button'; b.textContent = f.fix.type === 'add-label' ? 'Add label' : 'Add'; b.addEventListener('click', () => doFix([f])); row.appendChild(b); }
+  return row;
+}
+function fixAllBtn(list, label) {
+  const fixable = list.filter((f) => f.fix);
+  if (fixable.length < 2) return null;
+  const b = el('button', 'cov-fixall'); b.type = 'button'; b.textContent = `${label} (${fixable.length})`;
+  b.addEventListener('click', () => doFix(fixable)); return b;
+}
+function renderCoverage(cov) {
+  const host = $('coverage'); if (!host) return;
+  host.innerHTML = '';
+  const head = el('div', 'cov-head');
+  const t = el('span', 'cov-title'); t.textContent = 'Coverage'; head.appendChild(t);
+  const counts = el('span', 'cov-counts');
+  if (!cov.findings.length) { const ok = el('span', 'cov-ok'); ok.textContent = 'All connected ✓'; counts.appendChild(ok); }
+  else {
+    for (const [sev, n] of [['error', cov.counts.error], ['warn', cov.counts.warn], ['info', cov.counts.info]]) {
+      if (!n) continue;
+      const s = el('span', 'cov-count'); s.appendChild(el('span', `cov-dot cov-dot--${sev}`));
+      const num = document.createElement('span'); num.textContent = sev === 'error' ? `${n} to fix` : String(n); s.appendChild(num);
+      counts.appendChild(s);
+    }
+  }
+  head.appendChild(counts); host.appendChild(head);
+  if (!cov.findings.length) return;
+  const all = fixAllBtn(cov.findings, 'Connect all'); if (all) host.appendChild(all);
+  const list = el('div', 'cov-list');
+  const groups = {};
+  for (const f of cov.findings) { const k = f.field || f.table || '—'; (groups[k] ||= []).push(f); }
+  for (const [k, fs] of Object.entries(groups)) {
+    const g = el('div', 'cov-group');
+    const gh = el('div', 'cov-group__h'); gh.textContent = k; g.appendChild(gh);
+    for (const f of fs) g.appendChild(covItem(f));
+    list.appendChild(g);
+  }
+  host.appendChild(list);
+}
+function renderInlineChecklist(cov) {
+  const detail = $('detail'); if (!detail) return;
+  const old = detail.querySelector('.cov-inline'); if (old) old.remove();
+  const selId = editor && editor.selectedId(); if (!selId) return;
+  const mine = cov.findings.filter((f) => f.field === selId || f.table === selId);
+  if (!mine.length) return;
+  const box = el('div', 'cov-inline');
+  const h = el('div', 'cov-inline__h'); h.textContent = 'To finish this'; box.appendChild(h);
+  for (const f of mine) box.appendChild(covItem(f));
+  const all = fixAllBtn(mine, 'Finish all'); if (all) box.appendChild(all);
+  detail.appendChild(box);
+}
 
 function refsOf(ast, out = new Set()) {
   if (!ast || typeof ast !== 'object') return out;
@@ -193,5 +279,6 @@ function renderGraph() {
 function save() {
   if (!assembledOk) { setStatus('error', 'Fix the errors before saving.'); return; }
   if (!saveData(data)) { setStatus('error', 'Could not save (storage blocked).'); return; }
+  if (presDirty) savePres(pres); // labels added via the coverage advisor live in the presentation model
   location.href = './';
 }

@@ -11,7 +11,7 @@
     "build:site": "node scripts/build-site.mjs",
     "build": "npm run validate:model && npm run asbuild:release && npm run build:site",
     "pretest": "npm run asbuild:release",
-    "test": "node --test test/split-merge.test.mjs test/expr.test.mjs test/rule.test.mjs test/binding.test.mjs test/ref-eval.test.mjs test/vm-parity.test.mjs",
+    "test": "node --test test/split-merge.test.mjs test/expr.test.mjs test/rule.test.mjs test/binding.test.mjs test/schema-conformance.test.mjs test/coverage.test.mjs test/ref-eval.test.mjs test/vm-parity.test.mjs",
     "serve": "node server.mjs",
     "start": "npm run asbuild:release && node server.mjs",
     "preview": "npm run build && npx --yes wrangler pages dev dist",

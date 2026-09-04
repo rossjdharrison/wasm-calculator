@@ -1,5 +1,6 @@
 {
   "name": "Vehicle Configurator",
+  "brand": { "mark": "ROWBLAA", "rest": "LUXURY EXPERIENCES", "tagline": "Haarlem" },
   "sections": [
     {
       "id": "s_model",

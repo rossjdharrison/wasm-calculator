@@ -11,6 +11,8 @@ import { currentData, currentPres, savePres, loadDefaultPres } from './store.mjs
 import { validateBinding } from './binding.mjs';
 import { el, textRow, numRow, checkRow, selectRow, hint, addBtn, makeRuleUI } from './editor-ui.mjs';
 import { mountConfigurator } from './render-form.mjs';
+import { pickImage } from './asset-picker.mjs';
+import { resolve as resolveAsset } from './assets.mjs';
 
 const WASM_URL = 'quote.wasm';
 const $ = (id) => document.getElementById(id);
@@ -50,6 +52,25 @@ function items(group) { return group === 'fields' ? (data.fields || []) : (pres[
 function dataValueIds() { return [...(data.computed || []).map((c) => c.id), ...(data.fields || []).map((f) => f.id)]; }
 function ensurePresField(id) { pres.fields = pres.fields || []; let pf = pres.fields.find((f) => f.id === id); if (!pf) { pf = { id }; pres.fields.push(pf); } return pf; }
 function ensurePresOption(pf, oid) { pf.options = pf.options || []; let o = pf.options.find((x) => x.id === oid); if (!o) { o = { id: oid }; pf.options.push(o); } return o; }
+
+// Per-option image control: thumbnail + Choose/Change/Remove, backed by the
+// asset picker. Stores a reference ("asset:<id>" or a URL) on the option.
+function imageCell(po) {
+  const cell = el('div', 'de-opt-img');
+  const thumb = el('div', 'de-opt-thumb'); thumb.setAttribute('aria-hidden', 'true');
+  const btn = el('button', 'qc-btn-link'); btn.type = 'button';
+  const rm = el('button', 'qc-btn-link de-opt-rm'); rm.type = 'button'; rm.textContent = '✕'; rm.title = 'Remove image';
+  const paint = () => {
+    thumb.innerHTML = '';
+    if (po.image) { const im = el('img'); resolveAsset(po.image).then((u) => { if (u) im.src = u; }); thumb.appendChild(im); thumb.classList.add('has'); btn.textContent = 'Change'; rm.hidden = false; }
+    else { thumb.classList.remove('has'); btn.textContent = 'Image…'; rm.hidden = true; }
+  };
+  btn.addEventListener('click', async () => { const ref = await pickImage({ current: po.image }); if (ref) { set(po, 'image', ref); paint(); } });
+  rm.addEventListener('click', () => { set(po, 'image', undefined); paint(); });
+  cell.append(thumb, btn, rm);
+  paint();
+  return cell;
+}
 
 function renderAll() { renderOutline(); renderDetail(); renderIssues(); scheduleRebuild(); }
 
@@ -113,13 +134,14 @@ function fieldEditor(f, idx, root) {
   root.appendChild(rules.ruleRow('Enable when', () => pf.enabledWhen, (a) => set(pf, 'enabledWhen', a)));
   if (f.options) {
     const box = el('div', 'de-sub');
-    const bh = el('div', 'de-sub__head'); bh.textContent = 'Option labels & prices'; box.appendChild(bh);
+    const bh = el('div', 'de-sub__head'); bh.textContent = 'Option labels, prices & images'; box.appendChild(bh);
     for (const o of f.options) {
       const po = ensurePresOption(pf, o.id);
       const r = el('div', 'de-opt-row');
       const id = el('code', 'de-opt__id'); id.textContent = o.id; r.appendChild(id);
       const li = el('input', 'qc-input'); li.placeholder = 'label'; li.setAttribute('aria-label', `${o.id} label`); li.value = po.label || ''; li.addEventListener('input', () => set(po, 'label', li.value || undefined)); r.appendChild(li);
       const pd = el('input', 'qc-input de-price'); pd.type = 'number'; pd.placeholder = 'price'; pd.setAttribute('aria-label', `${o.id} price delta`); pd.value = po.priceDelta ?? ''; pd.addEventListener('input', () => set(po, 'priceDelta', pd.value === '' ? undefined : Number(pd.value))); r.appendChild(pd);
+      r.appendChild(imageCell(po, o.id));
       box.appendChild(r);
     }
     root.appendChild(box);

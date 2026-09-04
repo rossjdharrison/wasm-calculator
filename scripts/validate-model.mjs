@@ -7,6 +7,8 @@
 import { readFile } from 'node:fs/promises';
 import { assemble, mergeModel } from '../web/assembler.mjs';
 import { validateBinding } from '../web/binding.mjs';
+import { validateEditorSchema, validateDocAgainstSchema } from '../web/schema-check.mjs';
+import { analyzeCoverage } from '../web/coverage.mjs';
 
 let data, pres, model;
 try {
@@ -18,6 +20,41 @@ try {
 } catch (e) {
   console.error(`✖ could not read/merge the model files: ${e.message}`);
   process.exit(1);
+}
+
+// editor-schema conformance (L2): the data.schema.json that drives the generic
+// editor must be well-formed, and the data model must render cleanly through it.
+// A broken schema edit fails the build here instead of silently breaking the UI.
+let editorSchema;
+try {
+  editorSchema = JSON.parse(await readFile('web/data.schema.json', 'utf8'));
+} catch (e) {
+  console.error(`✖ could not read/parse web/data.schema.json: ${e.message}`);
+  process.exit(1);
+}
+{
+  const s1 = validateEditorSchema(editorSchema);
+  const s2 = validateDocAgainstSchema(editorSchema, data);
+  for (const w of [...s1.warnings, ...s2.warnings]) console.warn(`  ⚠ schema: ${w}`);
+  if (s1.errors.length || s2.errors.length) {
+    for (const e of [...s1.errors, ...s2.errors]) console.error(`✖ schema: ${e}`);
+    process.exit(1);
+  }
+  console.log(`✓ editor schema "${editorSchema.title || 'data'}": ${editorSchema.collections.length} collections conform.`);
+}
+
+// model coverage (Area 1): a shipped model must be COMPLETE — every option an
+// expression indexes must have its table value, or pricing is silently wrong.
+// Errors block the build; warnings/info (labels, dead options, orphans) advise.
+{
+  const cov = analyzeCoverage(data, pres);
+  for (const f of cov.findings) if (f.severity !== 'error') console.warn(`  ⚠ coverage: ${f.message}`);
+  const covErrors = cov.findings.filter((f) => f.severity === 'error');
+  if (covErrors.length) {
+    for (const f of covErrors) console.error(`✖ coverage: ${f.message}`);
+    process.exit(1);
+  }
+  console.log(`✓ model coverage: every option is connected (${Object.keys(cov.indexing).length} indexed tables).`);
 }
 
 // cross-file binding integrity (errors block the build; warnings are advisory)
