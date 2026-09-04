@@ -54,9 +54,9 @@ test('Ex3 — GT Coupe/Sport, V8, AWD, 19", matte, {tech,performance,driverAssis
     financing: 'finance', term: 't36', deposit: 12000,
   });
   assert.equal(r.status, 0, `status ${r.status}`);
-  assert.ok(near(r.valueById.vehiclePrice, 97600, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`);
-  assert.ok(near(r.valueById.otr, 98790, 0.01), `otr ${r.valueById.otr}`);
-  assert.ok(near(r.valueById.monthlyPayment, 2715.68, 0.05), `monthly ${r.valueById.monthlyPayment}`);
+  assert.ok(near(r.valueById.vehiclePrice, 96400, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`); // incl. Technology Suite -800 + Track Pack -400
+  assert.ok(near(r.valueById.otr, 97590, 0.01), `otr ${r.valueById.otr}`);
+  assert.ok(near(r.valueById.monthlyPayment, 2678.13, 0.05), `monthly ${r.valueById.monthlyPayment}`);
   assert.ok(near(r.valueById.range, 389.88, 0.01), `range ${r.valueById.range}`);
   assert.equal(r.optionState.packages.performance, true, 'performance available');
   assert.equal(r.optionState.colour.matte, true, 'matte available on sport');
@@ -70,9 +70,9 @@ test('Ex4 — Hyper-car/Luxury, electric, AWD, 20", premium, {winter,tech,premiu
     financing: 'lease', term: 't36', annualMileage: 15000,
   });
   assert.equal(r.status, 0, `status ${r.status}`);
-  assert.ok(near(r.valueById.vehiclePrice, 1869700, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`);
-  assert.ok(near(r.valueById.otr, 1870700, 0.01), `otr ${r.valueById.otr}`);
-  assert.ok(near(r.valueById.monthlyPayment, 32936.55, 0.1), `monthly ${r.valueById.monthlyPayment}`);
+  assert.ok(near(r.valueById.vehiclePrice, 1869200, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`); // incl. Grand Touring Pack -500
+  assert.ok(near(r.valueById.otr, 1870200, 0.01), `otr ${r.valueById.otr}`);
+  assert.ok(near(r.valueById.monthlyPayment, 32927.75, 0.1), `monthly ${r.valueById.monthlyPayment}`);
   assert.ok(near(r.valueById.range, 267.9, 0.01), `range ${r.valueById.range}`);
   assert.ok(r.messages.some((m) => m.id === 'big_wheels_info'), 'w20 info message');
   assert.equal(r.optionState.packages.panoramicRoof, true, 'panoramic available (no towing)');

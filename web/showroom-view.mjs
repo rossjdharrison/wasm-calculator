@@ -132,7 +132,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     <div class="rail-body" id="sh-specs"></div>
     <div class="plate"><div class="micro"><span id="sh-veh">—</span><span style="display:flex;align-items:center;gap:8px"><span id="sh-range" class="num">—</span><span class="gauge"><i id="sh-rangebar" style="width:0"></i></span></span></div>
       <div class="otr-label">On-the-road</div><div class="otr"><span class="fig num" id="sh-otr">—</span></div>
-      <div class="monthly" id="sh-monthly"></div><button class="cta" id="sh-cta">Request this build ▸</button></div>`;
+      <div class="monthly" id="sh-monthly"></div><div class="savings" id="sh-savings"></div><button class="cta" id="sh-cta">Request this build ▸</button></div>`;
   body.append(stage, rail);
   shell.append(hd, body);
   root.appendChild(shell);
@@ -201,7 +201,33 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       for (const f of fs) sec.appendChild(renderField(f, res));
       host.appendChild(sec);
     }
+    renderBundles(host);
   }
+
+  // Bundles: x+y+z packages -> a discount. Shows each bundle's state; clicking a
+  // locked one adds its packages. The discount itself is applied by the engine
+  // (the compiled bundlesDiscount computed folded into vehiclePrice).
+  const pkgLabel = () => Object.fromEntries((modelFieldById.packages?.options || []).map((o) => [o.id, o.label || o.id]));
+  function renderBundles(host) {
+    const bundles = model.bundles || [];
+    if (!bundles.length) return;
+    const labels = pkgLabel();
+    const selected = new Set(state.packages || []);
+    const sec = el('section', 'sec');
+    sec.innerHTML = '<div class="eyebrow">Bundles &amp; savings</div>';
+    for (const b of bundles) {
+      const missing = b.requires.filter((r) => !selected.has(r));
+      const active = missing.length === 0;
+      const row = el('button', 'bundle' + (active ? ' is-active' : '')); row.type = 'button';
+      row.setAttribute('aria-pressed', String(active));
+      row.innerHTML = `<div class="bundle-h"><span class="bundle-name">${b.label}</span><span class="bundle-save num">−${money0(b.discount)}</span></div>`
+        + `<div class="bundle-req">${active ? 'Applied · ' + b.requires.map((r) => labels[r]).join(' + ') : 'Add ' + missing.map((r) => labels[r]).join(' + ')}</div>`;
+      row.addEventListener('click', () => { const set = new Set(state.packages || []); b.requires.forEach((r) => set.add(r)); setField('packages', [...set]); });
+      sec.appendChild(row);
+    }
+    host.appendChild(sec);
+  }
+  const activeSavings = () => (model.bundles || []).reduce((s, b) => s + (b.requires.every((r) => (state.packages || []).includes(r)) ? b.discount : 0), 0);
 
   function renderDock() {
     dock.querySelectorAll('.car-card').forEach((n) => n.remove());
@@ -258,6 +284,8 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     // spec sheet: headline figures (read-only)
     const specIds = ['hp', 'topSpeed', 'zeroToSixty', 'range'].filter((id) => res.out[id] && res.out[id].visible);
     $('sh-specsheet').innerHTML = specIds.map((id) => { const o = res.out[id]; return `<div class="spec"><span class="spec-v num">${fmt(o)}</span><span class="spec-l">${o.label}</span></div>`; }).join('');
+    const sav = activeSavings();
+    $('sh-savings').innerHTML = sav > 0 ? `Bundle savings <b class="num">−${money0(sav)}</b>` : '';
   }
 
   function setField(id, v) { state[id] = v; render(); }

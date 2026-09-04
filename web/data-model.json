@@ -1035,6 +1035,106 @@
       }
     },
     {
+      "id": "bundlesDiscount",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "tech"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "driverAssist"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "premiumAudio"
+                    ]
+                  }
+                ]
+              },
+              -800,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "winter"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "premiumAudio"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "panoramicRoof"
+                    ]
+                  }
+                ]
+              },
+              -500,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "performance"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "packages",
+                      "driverAssist"
+                    ]
+                  }
+                ]
+              },
+              -400,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "vehiclePrice",
       "label": "Vehicle price",
       "currency": true,
@@ -1099,6 +1199,12 @@
             "op": "field",
             "args": [
               "packagesTotal"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "bundlesDiscount"
             ]
           }
         ]
@@ -1659,6 +1765,37 @@
           "w20"
         ]
       }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "techSuite",
+      "label": "Technology Suite",
+      "requires": [
+        "tech",
+        "driverAssist",
+        "premiumAudio"
+      ],
+      "discount": 800
+    },
+    {
+      "id": "touringPack",
+      "label": "Grand Touring Pack",
+      "requires": [
+        "winter",
+        "premiumAudio",
+        "panoramicRoof"
+      ],
+      "discount": 500
+    },
+    {
+      "id": "trackPack",
+      "label": "Track Pack",
+      "requires": [
+        "performance",
+        "driverAssist"
+      ],
+      "discount": 400
     }
   ]
 }
