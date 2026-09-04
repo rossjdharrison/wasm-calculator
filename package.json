@@ -1,0 +1,29 @@
+{
+  "name": "wasm-calculator",
+  "version": "0.1.0",
+  "description": "A quote machine whose pricing and option-availability logic runs in WebAssembly (compiled from AssemblyScript).",
+  "type": "module",
+  "scripts": {
+    "asbuild:debug": "asc assembly/quote.ts --target debug",
+    "asbuild:release": "asc assembly/quote.ts --target release",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release",
+    "build": "npm run asbuild",
+    "pretest": "npm run asbuild:release",
+    "test": "node --test test/quote.test.mjs",
+    "serve": "node server.mjs",
+    "start": "npm run asbuild:release && node server.mjs"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "assemblyscript",
+    "quote",
+    "calculator",
+    "pricing"
+  ],
+  "author": "rossjdharrison",
+  "license": "MIT",
+  "devDependencies": {
+    "assemblyscript": "^0.27.31"
+  }
+}

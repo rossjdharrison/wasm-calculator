@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# build output (regenerate with `npm run asbuild`)
+build/
+
+# logs & OS cruft
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# local editor/agent settings
+.claude/settings.local.json

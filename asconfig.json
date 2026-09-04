@@ -1,0 +1,22 @@
+{
+  "targets": {
+    "debug": {
+      "outFile": "build/quote.debug.wasm",
+      "textFile": "build/quote.debug.wat",
+      "sourceMap": true,
+      "debug": true
+    },
+    "release": {
+      "outFile": "build/quote.wasm",
+      "textFile": "build/quote.wat",
+      "optimizeLevel": 3,
+      "shrinkLevel": 1,
+      "converge": false,
+      "noAssert": false
+    }
+  },
+  "options": {
+    "runtime": "stub",
+    "exportStart": false
+  }
+}

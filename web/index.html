@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quote Machine · WASM</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>" />
+    <link rel="stylesheet" href="/web/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__head">
+        <h1>Quote Machine</h1>
+        <p class="app__sub">
+          Pricing and option rules live in a WebAssembly module
+          (<code>build/quote.wasm</code>, compiled from AssemblyScript).
+          Everything below recalculates live as you edit — and the available
+          options change based on the engine's logic.
+        </p>
+      </header>
+
+      <div class="layout">
+        <!-- ---------------------------- INPUTS ---------------------------- -->
+        <form id="quote-form" class="card panel" autocomplete="off">
+          <h2 class="panel__title">Your order</h2>
+
+          <label class="field">
+            <span class="field__label">Quantity</span>
+            <input id="quantity" name="quantity" type="number" min="1" step="1" value="100" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Garment tier</span>
+            <select id="tier" name="tier">
+              <option value="0">Standard</option>
+              <option value="1">Premium</option>
+              <option value="2">Organic</option>
+            </select>
+          </label>
+
+          <fieldset class="field field--group">
+            <legend class="field__label">Print method</legend>
+            <label class="opt" data-method="0">
+              <input type="radio" name="method" value="0" />
+              <span>Screen print</span>
+            </label>
+            <label class="opt" data-method="1">
+              <input type="radio" name="method" value="1" checked />
+              <span>DTG (full colour)</span>
+            </label>
+            <label class="opt" data-method="2">
+              <input type="radio" name="method" value="2" />
+              <span>Embroidery</span>
+            </label>
+            <p id="screen-hint" class="hint is-hidden">
+              Screen print unlocks at 12+ units.
+            </p>
+          </fieldset>
+
+          <label class="field">
+            <span class="field__label">Print locations</span>
+            <input id="locations" name="locations" type="number" min="1" max="4" step="1" value="1" />
+          </label>
+
+          <label class="field" id="colors-field">
+            <span class="field__label">Ink colours <span class="field__note">(screen print)</span></span>
+            <input id="colors" name="colors" type="number" min="1" max="6" step="1" value="2" />
+          </label>
+
+          <label class="field field--check" id="rush-field">
+            <input id="rush" name="rush" type="checkbox" />
+            <span class="field__label">Rush turnaround (+20%)</span>
+          </label>
+
+          <label class="field field--check" id="member-field">
+            <input id="member" name="member" type="checkbox" />
+            <span class="field__label">Trade member (−10%)</span>
+          </label>
+        </form>
+
+        <!-- ---------------------------- OUTPUT ---------------------------- -->
+        <section class="card panel panel--quote" aria-live="polite">
+          <h2 class="panel__title">
+            Live quote
+            <span id="member-applied" class="badge is-hidden">member price</span>
+          </h2>
+
+          <div id="message" class="message message--ok">Loading engine…</div>
+
+          <dl class="quote">
+            <div class="quote__row">
+              <dt>Unit price</dt><dd id="unit-price">—</dd>
+            </div>
+            <div class="quote__row">
+              <dt>Subtotal</dt><dd id="subtotal">—</dd>
+            </div>
+            <div class="quote__row quote__row--muted">
+              <dt>Discount <span id="discount-rate" class="tag">—</span></dt>
+              <dd id="discount-amount">—</dd>
+            </div>
+            <div class="quote__row quote__row--muted">
+              <dt>Rush fee</dt><dd id="rush-fee">—</dd>
+            </div>
+            <div class="quote__row quote__row--muted">
+              <dt>Tax</dt><dd id="tax">—</dd>
+            </div>
+            <div class="quote__row quote__row--total">
+              <dt>Total</dt><dd id="total">—</dd>
+            </div>
+          </dl>
+
+          <p class="fineprint">
+            Values and available options are computed by the WASM engine on every
+            change. Try dropping the quantity below 12, or switching to embroidery,
+            to watch the options adapt.
+          </p>
+        </section>
+      </div>
+    </main>
+
+    <script src="/web/app.js"></script>
+  </body>
+</html>
