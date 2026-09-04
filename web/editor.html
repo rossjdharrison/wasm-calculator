@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f6f8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0d" />
+    <title>Edit model · Quote Configurator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>" />
+    <link rel="stylesheet" href="qc-base.css" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <main class="qc-app">
+      <header class="qc-app__head">
+        <nav class="qc-nav" aria-label="Pages">
+          <a href="./">Configurator</a>
+          <a href="data-editor.html">Data model</a>
+          <a href="presentation-editor.html">Presentation</a>
+          <a href="editor.html" class="is-active">JSON</a>
+        </nav>
+        <h1>Edit model</h1>
+        <p>
+          View and update the model that drives the configurator. <strong>Update model</strong>
+          validates it, loads it into the WebAssembly engine, saves it (in this browser), and
+          reopens the Configurator with the fresh model. Nothing here changes the engine.
+        </p>
+      </header>
+
+      <div class="qc-editor">
+        <section class="qc-editor__main">
+          <div class="qc-editor__bar">
+            <button id="btn-format" type="button">Format</button>
+            <button id="btn-reset" type="button">Load default</button>
+            <span class="qc-spacer"></span>
+            <button id="btn-update" type="button" class="qc-btn-primary">Update model ▸</button>
+          </div>
+          <textarea id="model-src" class="qc-code" spellcheck="false" aria-label="Model JSON"></textarea>
+        </section>
+
+        <aside class="qc-editor__side">
+          <div id="status" class="qc-status"></div>
+          <div id="preview" class="qc-preview"></div>
+        </aside>
+      </div>
+    </main>
+
+    <script type="module" src="editor.js"></script>
+  </body>
+</html>

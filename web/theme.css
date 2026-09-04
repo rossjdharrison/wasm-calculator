@@ -1,0 +1,128 @@
+/* =============================================================================
+   theme.css — DESIGNER-OWNED tokens. Restyle everything by editing values here;
+   add a named skin under :root[data-skin="…"]. qc-base.css consumes only --qc-*.
+
+   Theme state: default follows the OS (prefers-color-scheme); data-theme="light"
+   /"dark" on <html> overrides. `color-scheme` is set so native controls and
+   scrollbars match (Web Interface Guidelines).
+   ============================================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* --- type --- */
+  --qc-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", sans-serif;
+  --qc-font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  --qc-font-size: 15px;
+  --qc-font-size-h1: 32px;
+  --qc-font-size-total: 30px;
+  --qc-font-size-label: 12px;
+  --qc-font-size-small: 12.5px;
+  --qc-tracking-tight: -0.02em;
+
+  /* --- spacing --- */
+  --qc-space-1: 4px; --qc-space-2: 8px; --qc-space-3: 12px; --qc-space-4: 20px;
+  --qc-space-5: 28px; --qc-space-6: 40px; --qc-space-8: 64px;
+
+  /* --- shape --- */
+  --qc-radius: 16px;
+  --qc-radius-sm: 10px;
+  --qc-radius-xs: 8px;
+  --qc-max-width: 1040px;
+  --qc-summary-width: 340px;
+  --qc-disabled-opacity: 0.45;
+
+  /* --- motion --- */
+  --qc-dur-fast: 110ms;
+  --qc-dur: 170ms;
+  --qc-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* --- LIGHT palette --- */
+  --qc-color-bg: #f5f6f8;
+  --qc-color-surface: #ffffff;
+  --qc-color-surface-2: #f2f4f7;
+  --qc-color-text: #0b0d12;
+  --qc-color-text-soft: #616b7a;
+  --qc-color-border: #e5e8ed;
+  --qc-color-border-strong: #d2d7de;
+  --qc-color-accent: #3b5bfd;
+  --qc-color-accent-hover: #2f4be0;
+  --qc-color-accent-contrast: #ffffff;
+  --qc-color-accent-soft: #eaeeff;
+  --qc-color-ok: #167a4b;
+  --qc-color-error: #c0362c;
+  --qc-color-error-bg: #fdeceb;
+  --qc-color-warn: #8a5a12;
+  --qc-color-warn-bg: #fdf1e0;
+  --qc-color-info: #3b5bfd;
+  --qc-color-info-bg: #eaeeff;
+  --qc-ring: color-mix(in srgb, var(--qc-color-accent) 45%, transparent);
+  --qc-shadow-sm: 0 1px 2px rgba(12, 16, 24, 0.06);
+  --qc-shadow: 0 1px 2px rgba(12, 16, 24, 0.05), 0 6px 20px rgba(12, 16, 24, 0.06);
+  --qc-shadow-lg: 0 12px 40px rgba(12, 16, 24, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --qc-color-bg: #0a0b0d;
+    --qc-color-surface: #141619;
+    --qc-color-surface-2: #1b1e23;
+    --qc-color-text: #f3f5f8;
+    --qc-color-text-soft: #99a2b0;
+    --qc-color-border: #262a31;
+    --qc-color-border-strong: #333944;
+    --qc-color-accent: #7a93ff;
+    --qc-color-accent-hover: #93a7ff;
+    --qc-color-accent-contrast: #0a0b0d;
+    --qc-color-accent-soft: #182036;
+    --qc-color-ok: #5fdd97;
+    --qc-color-error: #ff9d93;
+    --qc-color-error-bg: #2a1512;
+    --qc-color-warn: #e6b06a;
+    --qc-color-warn-bg: #2a2012;
+    --qc-color-info: #7a93ff;
+    --qc-color-info-bg: #182036;
+    --qc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --qc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 26px rgba(0, 0, 0, 0.4);
+    --qc-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --qc-color-bg: #0a0b0d;
+  --qc-color-surface: #141619;
+  --qc-color-surface-2: #1b1e23;
+  --qc-color-text: #f3f5f8;
+  --qc-color-text-soft: #99a2b0;
+  --qc-color-border: #262a31;
+  --qc-color-border-strong: #333944;
+  --qc-color-accent: #7a93ff;
+  --qc-color-accent-hover: #93a7ff;
+  --qc-color-accent-contrast: #0a0b0d;
+  --qc-color-accent-soft: #182036;
+  --qc-color-ok: #5fdd97;
+  --qc-color-error: #ff9d93;
+  --qc-color-error-bg: #2a1512;
+  --qc-color-warn: #e6b06a;
+  --qc-color-warn-bg: #2a2012;
+  --qc-color-info: #7a93ff;
+  --qc-color-info-bg: #182036;
+  --qc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --qc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 26px rgba(0, 0, 0, 0.4);
+  --qc-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Example SKIN: warmer, rounder. Switch with data-skin="ember" on <html>. --- */
+:root[data-skin="ember"] {
+  --qc-color-accent: #e2571e; --qc-color-accent-hover: #c9481a;
+  --qc-color-accent-soft: #fdece3; --qc-color-info: #e2571e; --qc-color-info-bg: #fdece3;
+  --qc-radius: 22px; --qc-radius-sm: 14px;
+}
+:root[data-skin="ember"][data-theme="dark"],
+:root[data-skin="ember"]:not([data-theme="light"]) {
+  --qc-color-accent: #ff7a45; --qc-color-accent-hover: #ff8f61;
+  --qc-color-accent-contrast: #1a0f0a; --qc-color-accent-soft: #2a1710;
+  --qc-color-info: #ff7a45; --qc-color-info-bg: #2a1710;
+}

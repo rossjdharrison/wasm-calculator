@@ -1,0 +1,54 @@
+{
+  "title": "Data model",
+  "collections": [
+    {
+      "key": "fields", "kind": "array", "title": "Fields", "singular": "Field",
+      "itemLabel": "id", "sub": "type",
+      "add": { "prompt": "New field id:", "into": "id", "template": { "type": "number" } },
+      "form": [
+        { "prop": "unit", "label": "Unit", "widget": "text", "when": { "prop": "type", "eq": "number" } },
+        { "prop": "min", "label": "Min", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
+        { "prop": "max", "label": "Max", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
+        { "prop": "step", "label": "Step", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
+        { "prop": "default", "label": "Default", "widget": "default" },
+        { "prop": "options", "widget": "optionList" }
+      ]
+    },
+    {
+      "key": "computed", "kind": "array", "title": "Computed", "singular": "Computed",
+      "itemLabel": "id",
+      "add": { "prompt": "New computed id:", "into": "id", "template": { "formula": 0 } },
+      "form": [
+        { "prop": "label", "label": "Label", "widget": "text" },
+        { "prop": "formula", "label": "Formula", "widget": "formula", "multiline": true, "required": true }
+      ]
+    },
+    {
+      "key": "tables", "kind": "map", "title": "Tables", "singular": "Table", "sub": "kind",
+      "add": { "prompt": "New table name:", "template": { "kind": "1d", "map": {} } },
+      "form": [ { "widget": "grid" } ]
+    },
+    {
+      "key": "validations", "kind": "array", "title": "Validations", "singular": "Validation",
+      "itemLabel": "id", "sub": "severity",
+      "add": { "template": { "id": "rule", "when": 0, "message": "", "severity": "warning" } },
+      "form": [
+        { "prop": "id", "label": "Id", "widget": "text" },
+        { "prop": "when", "label": "When", "widget": "rule" },
+        { "prop": "message", "label": "Message", "widget": "text", "clearEmpty": false },
+        { "prop": "severity", "label": "Severity", "widget": "select", "options": ["info", "warning", "error"] },
+        { "prop": "field", "label": "Field", "widget": "select", "source": "fields", "allowNone": true }
+      ]
+    },
+    {
+      "key": "effects", "kind": "array", "title": "Effects", "singular": "Effect",
+      "itemLabel": "setField", "itemLabelPrefix": "→ ",
+      "add": { "template": { "when": 0, "setField": "", "toValue": "" } },
+      "form": [
+        { "prop": "when", "label": "When", "widget": "rule" },
+        { "prop": "setField", "label": "Set field", "widget": "select", "source": "fields" },
+        { "prop": "toValue", "label": "To value", "widget": "text" }
+      ]
+    }
+  ]
+}

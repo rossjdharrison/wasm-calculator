@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f6f8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0d" />
+    <title>Presentation · Quote Configurator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>" />
+    <link rel="stylesheet" href="qc-base.css" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <main class="qc-app qc-app--wide">
+      <header class="qc-app__head">
+        <nav class="qc-nav" aria-label="Pages">
+          <a href="./">Configurator</a>
+          <a href="data-editor.html">Data model</a>
+          <a href="presentation-editor.html" class="is-active">Presentation</a>
+          <a href="editor.html">JSON</a>
+        </nav>
+        <h1>Presentation</h1>
+        <p>
+          How the data is shown: bind each field to a control, place it in a
+          section, set labels &amp; option text, choose outputs and formats. The
+          logic lives on the Data page; this only changes the look and layout.
+        </p>
+      </header>
+
+      <div class="de-toolbar">
+        <button id="btn-save" type="button" class="qc-btn-primary">Save &amp; open Configurator ▸</button>
+        <button id="btn-revert" type="button">Revert</button>
+        <button id="btn-default" type="button">Load default</button>
+      </div>
+
+      <div class="pe-wys">
+        <nav id="outline" class="de-outline" aria-label="Presentation outline"></nav>
+        <section id="detail" class="de-detail" aria-label="Properties"></section>
+        <section class="pe-canvas" aria-label="Live preview">
+          <div class="pe-canvas__bar">
+            <span class="pe-canvas__title">Live preview</span>
+            <div id="status" class="qc-status">…</div>
+          </div>
+          <div id="issues" class="de-issues" aria-live="polite"></div>
+          <div class="pe-canvas__stage">
+            <div id="preview" class="qc-preview" aria-label="The quote form as customers see it"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="presentation-editor.js"></script>
+  </body>
+</html>

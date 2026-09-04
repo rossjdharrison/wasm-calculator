@@ -1,196 +1,129 @@
-# wasm-calculator — a quote machine powered by WebAssembly
+# wasm-calculator — a model-driven quote configurator
 
-A configurable **quote machine**: the user enters order details and, as they
-type, both the **prices** and the **available options** update live. All of that
-logic — pricing tables, discounts, validation, and which options are allowed —
-lives in a **WebAssembly module compiled from [AssemblyScript]** (a
-TypeScript-like language). The browser front-end is deliberately thin: it just
-feeds inputs to the WASM engine and paints whatever comes back.
+A **quote/configurator machine** whose entire form — the fields, the rules for
+when things appear, and the pricing — is described as **data** in `model.json`
+and evaluated by a **model-agnostic WebAssembly engine**. Change the model and
+republish; the engine never needs rebuilding. Restyle it by editing design
+tokens; the logic never needs touching.
 
-The example domain is a **custom-apparel print quote** (screen print / DTG /
-embroidery), chosen because it has rich conditional logic. Swap it for your own
-domain by editing one file — see [Adapting the logic](#adapting-the-logic).
+The example model is a **vehicle configurator** (trims gate engines, packages
+have prerequisites and conflicts, financing reveals a computed monthly payment).
+Swap `model.json` for your own domain — see [Deploy a new model](#deploy-a-new-model).
 
 ```mermaid
 flowchart LR
-  U["User edits form"] -->|input event| A["app.js"]
-  A -->|compute(numbers)| W["quote.wasm<br/>(AssemblyScript)"]
-  W -->|prices + option flags| A
-  A -->|paint values| V["Live quote"]
-  A -->|enable / disable / clamp| O["Option controls"]
+  M["model.json (data)"] -->|assemble| B["binary MODEL image + manifest"]
+  B --> V["quote.wasm — model-agnostic VM"]
+  U["user input"] --> V
+  V -->|values · options · limits · validation| A["app.js paints the DOM"]
+  T["theme.css tokens"] -.styles.-> A
 ```
 
-## Why WebAssembly here?
+## Three layers, one wall between each
 
-- **One source of truth for logic.** Pricing rules live in `assembly/quote.ts`
-  and run identically wherever the `.wasm` is loaded (browser today, a Node
-  service or another host tomorrow).
-- **Instant recalculation.** The engine runs in microseconds, so it's fine to
-  recompute on every keystroke — that's what makes options feel reactive.
-- **Portable & sealed.** The rules ship as a single `.wasm` artifact with a
-  pure-numeric interface — no framework lock-in.
+| Layer | Owner | Files | Contains | Never contains |
+|---|---|---|---|---|
+| **Model** | Non-dev author | `model.json` (+ `model.schema.json`) | fields, sections, control hints, and all logic (conditions, pricing, effects, validations) | any colour, font, size, class, CSS |
+| **Engine** | Dev (built once) | `assembly/quote.ts` → `quote.wasm`, `web/assembler.mjs`, `web/app.js`, `web/qc-base.css` | the VM, the assembler, the DOM contract, structural CSS | brand look, per-model logic |
+| **Designer** | Designer | `web/theme.css` | `--qc-*` tokens (light/dark) + skins | logic, markup, field ids |
+
+The same `quote.wasm` runs the public site and (later) the editor's live preview,
+so preview and production can never diverge.
+
+## How it works
+
+- **`web/assembler.mjs`** flattens `model.json` into a compact binary image (a
+  preorder AST + structural records + baked lookup tables) plus a JS-side
+  manifest. It also carries `referenceEvaluate()` — a JS mirror of the VM used as
+  a test oracle.
+- **`assembly/quote.ts` (QCM1 VM)** walks that image: an `evalNode()` switch over
+  the AST inside a fixed `evaluate()` loop (reset → bounded *settle* for effects,
+  option availability, and auto-deselect → compute → outputs → validations).
+  The JS⇄wasm boundary is numbers/bytes only — strings stay in JS.
+- **`web/app.js`** renders the form once from the manifest, then on every change
+  reads the controls, calls `evaluate()`, and paints: values, which options are
+  available, field visibility/limits, engine-forced values, and validation — all
+  onto the stable `qc-*` DOM contract.
 
 ## Project structure
 
 ```
-assembly/
-  quote.ts          # THE LOGIC — pricing, discounts, option rules (→ WASM)
-  tsconfig.json     # AssemblyScript editor config
-build/              # compiled wasm output (git-ignored; run `npm run asbuild`)
-  quote.wasm        #   release build used by the app + tests
-  quote.debug.wasm  #   debug build
-  quote.wat         #   human-readable WebAssembly text (handy for inspection)
-web/                # authored front-end (paths are relative, e.g. app.js)
-  index.html        # the form + live quote panel
-  app.js            # thin glue: read form → call WASM → paint results & options
-  styles.css        # theme-aware styling (light + dark)
-dist/               # DEPLOYABLE site (git-ignored; run `npm run build`)
-                    #   flat: index.html, app.js, styles.css, quote.wasm
+assembly/quote.ts        # the QCM1 VM (compiled once to quote.wasm)
+web/
+  model.json             # THE MODEL — the whole configurator, as data
+  model.schema.json      # JSON Schema (editor autocomplete + validation)
+  assembler.mjs          # model -> binary image + manifest; loadEngine; reference oracle
+  app.js                 # generic front-end (render + drive VM + paint)
+  qc-base.css            # engine-owned structure (tokens only)
+  theme.css              # designer-owned tokens (light/dark) + skins
+  index.html             # shell
 scripts/
-  build-site.mjs    # assembles web/ + build/quote.wasm → dist/
+  validate-model.mjs     # build gate: fails the build on a bad model
+  build-site.mjs         # assemble the flat dist/
 test/
-  quote.test.mjs    # node:test suite that loads the WASM and checks the maths
-server.mjs          # zero-dep dev server (serves web/ + build/ with prod URLs)
-asconfig.json       # AssemblyScript build targets (debug / release)
-wrangler.jsonc      # Cloudflare Pages project config
-.nvmrc              # Node version for the Cloudflare build
-package.json
+  ref-eval.test.mjs      # golden scenarios vs the reference evaluator
+  vm-parity.test.mjs     # wasm VM == reference (golden + 500 random configs)
+docs/phase1-spec.md      # the full engine/design spec
+server.mjs               # zero-dep dev server (flat URLs, correct .wasm MIME)
+asconfig.json · wrangler.jsonc · .nvmrc
 ```
 
 ## Getting started
 
 ```bash
-npm install          # installs the AssemblyScript compiler (dev dependency)
-npm start            # builds quote.wasm, then serves http://localhost:8080/
+npm install
+npm start            # builds quote.wasm, serves http://localhost:8080/
 ```
-
-The dev server serves `web/` and `build/` together using the **same flat URLs
-as production** (`/`, `/app.js`, `/quote.wasm`), so what you see locally matches
-what Cloudflare serves.
 
 Other scripts:
 
 ```bash
-npm run asbuild      # compile assembly/quote.ts → build/*.wasm (debug + release)
-npm run build        # compile release wasm + assemble the deployable dist/
-npm test             # build the release wasm, then run the test suite
-npm run serve        # serve web/ + build/ without rebuilding
-npm run preview      # build, then serve dist/ via the Cloudflare Pages emulator
-npm run deploy       # build, then deploy dist/ to Cloudflare Pages (wrangler)
+npm run build          # validate model -> compile wasm -> assemble dist/
+npm test               # reference + wasm-parity suites
+npm run validate:model # just the build-gate model check
 ```
 
-> `build/` and `dist/` are git-ignored (build outputs). After cloning, run
-> `npm start` (dev) or `npm run build` (deploy) once to generate them.
+## Deploy a new model
 
-## Deploy to Cloudflare Pages
+Publishing a model **does not rebuild the engine** — `quote.wasm` is
+model-agnostic. Editing the model is editing data.
 
-The site is a **built artifact**: `dist/` is assembled from `assembly/quote.ts`
-(→ `build/quote.wasm`) plus `web/`. Nothing binary is committed — `dist/` is
-produced by the build. Two ways to ship it:
+1. **Edit `web/model.json`** (keep the leading `"$schema": "./model.schema.json"`
+   for autocomplete + inline validation of field types, control enums, width
+   tokens, expression ops, and table shapes).
+2. **`npm run build`** runs `validate-model` first. On any problem — unknown
+   field/option/table reference, a dependency cycle, a bad enum, too-deep
+   expression — it prints the error and **fails the build**, so a broken model
+   never deploys.
+3. **Push to `main`.** Cloudflare Pages runs `npm run build` (Node pinned by
+   `.nvmrc`) and publishes `dist/`. Live at
+   **https://quote.rowblaa.com** within a minute or two.
+   > Phase 2 will move `model.json` behind a single URL backed by Cloudflare KV,
+   > so publishing becomes a write with no rebuild at all; `app.js` fetches from
+   > one constant URL either way.
 
-### Option A — Git integration (auto-deploy on push, recommended)
+### What the model can express
 
-In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to
-Git**, pick this repo, then set:
+`fields` (`choice` / `multichoice` / `number` / `boolean` / `computed`) with a
+`control` hint (`radio` / `dropdown` / `buttons` / `stepper`), `section`, and
+coarse `width`; per-option and per-field conditions (`visibleWhen`,
+`enabledWhen`, `availableWhen`); dynamic `min`/`max`/`step`; `effects`
+(`when → set a field`, e.g. Off-road → AWD); `computed` values and `tables`
+(1D/2D lookups); `validations`; and `outputs`. Expressions are a small AST —
+`{ "op": "...", "args": [...] }` — with `field`, `const`, comparisons, `and`/`or`/
+`not`, `has`/`notHas`, arithmetic, `min`/`max`/`pow`, `if`, and `lookup`.
 
-| Setting | Value |
-| --- | --- |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Node version | pinned by `.nvmrc` (22) — or set `NODE_VERSION=22` |
+## Restyle it (designers)
 
-Every push to `main` builds the wasm from source and publishes `dist/`.
-(`wrangler.jsonc` already declares `pages_build_output_dir`, so the output dir
-is taken from the repo.)
-
-### Option B — Wrangler CLI (manual / one-off)
-
-```bash
-npx wrangler login          # once, to authenticate
-npm run deploy              # builds dist/, then `wrangler pages deploy dist`
-```
-
-The first deploy creates a Pages project named `wasm-calculator` (from
-`wrangler.jsonc`) and prints the live `*.pages.dev` URL.
-
-> Cloudflare Pages serves `.wasm` with the correct `application/wasm` type, and
-> the app instantiates from an `ArrayBuffer`, so it works regardless.
-
-### Custom domain — `quote.rowblaa.com`
-
-The site is served at **https://quote.rowblaa.com** (a subdomain of the
-Cloudflare-managed zone `rowblaa.com`). Because the zone is in the same
-Cloudflare account, the DNS record and TLS certificate are created
-automatically — there is no manual DNS step.
-
-1. Deploy at least once (Option A or B) so the `wasm-calculator` Pages project
-   exists.
-2. Dashboard → **Workers & Pages → `wasm-calculator` → Custom domains → Set up a
-   domain** → enter `quote.rowblaa.com` → **Activate domain**.
-3. Cloudflare adds the proxied `CNAME quote → wasm-calculator.pages.dev` in the
-   `rowblaa.com` zone and issues the certificate. Live within a few minutes.
-
-No repo changes are needed for the custom domain; it's Cloudflare-side config.
-
-## The WASM boundary (contract)
-
-The interface is **pure-numeric** — numbers in, numbers out — so there's no
-memory marshalling. `compute(...)` runs all the rules and stashes results; the
-front-end then reads them back via getters.
-
-```ts
-// inputs (booleans are passed as 0 / 1)
-compute(quantity, tier, method, locations, colors, rush, member): void
-
-// numeric results
-getUnitPrice()  getSubtotal()  getDiscountRate()  getDiscountAmount()
-getRushFee()    getTax()       getTotal()
-
-// option availability + dynamic limits
-getFlags()          // bitfield: which options are currently allowed
-getMaxColors()      // colour cap for the current method
-getMaxLocations()   // location cap for the current method
-getValidation()     // 0 = ok, else an error code
-```
-
-`getFlags()` is a bitfield the UI uses to enable/disable/clamp controls:
-
-| bit | flag | meaning |
-| --- | --- | --- |
-| 1  | `SCREEN_AVAILABLE`     | screen print allowed (needs ≥ 12 units) |
-| 2  | `DTG_AVAILABLE`        | DTG allowed |
-| 4  | `EMBROIDERY_AVAILABLE` | embroidery allowed |
-| 8  | `COLORS_APPLICABLE`    | ink-colour input is relevant |
-| 16 | `RUSH_AVAILABLE`       | rush turnaround allowed |
-| 32 | `MEMBERSHIP_APPLIED`   | member discount applied |
-
-These constants are defined in `assembly/quote.ts` and mirrored in `web/app.js`
-and `test/quote.test.mjs` — **keep the three in sync** if you change them.
-
-## How "options change as you type"
-
-`web/app.js` doesn't decide anything itself. On every change it calls the WASM
-engine and then obeys the flags:
-
-- Quantity below 12 → `SCREEN_AVAILABLE` clears → the *Screen print* radio is
-  disabled (and selection falls back to DTG).
-- Method = embroidery → `getMaxLocations()` returns 2 → the locations input is
-  capped, and `RUSH_AVAILABLE` clears → the rush checkbox is disabled.
-- Method = screen → `COLORS_APPLICABLE` sets → the ink-colours field appears,
-  capped to `getMaxColors()`.
-
-## Adapting the logic
-
-1. Edit **`assembly/quote.ts`**: change the enums, the pricing tables
-   (`garmentBase`, `printCost`, `volumeDiscount`), and the rules in `compute`.
-   Add getters for any new outputs.
-2. If you add/rename enums or flags, mirror them in **`web/app.js`** and
-   **`test/quote.test.mjs`**.
-3. Update **`web/index.html`** for any new inputs/outputs.
-4. `npm test` to check the maths, `npm start` to see it live.
+Everything visual lives in **`web/theme.css`** as `--qc-*` tokens (colours,
+type, spacing, radius) with a full light and dark palette. To rebrand, change
+the token values. To offer alternates, add a block under
+`:root[data-skin="yourskin"]` and switch with `data-skin` on `<html>`. You never
+touch `model.json`, `app.js`, or the wasm. The generated markup is a stable set
+of `qc-*` classes + `data-*` hooks (`data-field`, `data-output`, state classes
+like `is-hidden`/`is-disabled`/`is-invalid`/`is-forced`) — style against those,
+never tag/`nth-child`.
 
 ## License
 
 [MIT](LICENSE) © rossjdharrison
-
-[AssemblyScript]: https://www.assemblyscript.org/

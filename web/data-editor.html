@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f6f8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0d" />
+    <title>Data model · Quote Configurator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>" />
+    <link rel="stylesheet" href="qc-base.css" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <main class="qc-app qc-app--wide">
+      <header class="qc-app__head">
+        <nav class="qc-nav" aria-label="Pages">
+          <a href="./">Configurator</a>
+          <a href="data-editor.html" class="is-active">Data model</a>
+          <a href="presentation-editor.html">Presentation</a>
+          <a href="editor.html">JSON</a>
+        </nav>
+        <h1>Data model</h1>
+        <p>
+          How the quote is calculated and how fields depend on each other. Edit
+          fields, options &amp; availability, computed formulas, tables,
+          validations and effects. <strong>Save</strong> applies it (this browser)
+          and reopens the Configurator. Presentation (labels, layout, controls)
+          lives on its own page.
+        </p>
+      </header>
+
+      <div class="de-toolbar">
+        <button id="btn-save" type="button" class="qc-btn-primary">Save &amp; open Configurator ▸</button>
+        <button id="btn-revert" type="button">Revert</button>
+        <button id="btn-default" type="button">Load default</button>
+        <button id="btn-graph" type="button">Dependency graph</button>
+      </div>
+
+      <div id="graph" class="de-graph" hidden></div>
+
+      <div class="de-layout">
+        <nav id="outline" class="de-outline" aria-label="Model outline"></nav>
+        <section id="detail" class="de-detail"></section>
+        <aside class="de-side">
+          <div id="status" class="qc-status">…</div>
+          <div id="deps" class="de-relationships"></div>
+          <div id="preview" class="qc-preview"></div>
+        </aside>
+      </div>
+    </main>
+
+    <script type="module" src="data-editor.js"></script>
+  </body>
+</html>

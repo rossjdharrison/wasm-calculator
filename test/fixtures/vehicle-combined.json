@@ -1,0 +1,1757 @@
+{
+  "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
+  "id": "vehicle-configurator",
+  "name": "Vehicle Configurator",
+  "version": "1.0.0",
+  "currency": "GBP",
+  "sections": [
+    {
+      "id": "s_model",
+      "label": "Model & trim",
+      "order": 1
+    },
+    {
+      "id": "s_powertrain",
+      "label": "Powertrain & drivetrain",
+      "order": 2
+    },
+    {
+      "id": "s_appearance",
+      "label": "Wheels & appearance",
+      "order": 3
+    },
+    {
+      "id": "s_packages",
+      "label": "Packages",
+      "order": 4
+    },
+    {
+      "id": "s_finance",
+      "label": "Payment",
+      "order": 5
+    }
+  ],
+  "fields": [
+    {
+      "id": "model",
+      "label": "Model",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full",
+      "default": "city",
+      "options": [
+        {
+          "id": "city",
+          "label": "City (hatch)",
+          "priceDelta": 22000
+        },
+        {
+          "id": "cruiser",
+          "label": "Cruiser (sedan)",
+          "priceDelta": 27000
+        },
+        {
+          "id": "trail",
+          "label": "Trail (SUV)",
+          "priceDelta": 31000
+        }
+      ]
+    },
+    {
+      "id": "trim",
+      "label": "Trim",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full",
+      "default": "standard",
+      "options": [
+        {
+          "id": "standard",
+          "label": "Standard",
+          "priceDelta": 0
+        },
+        {
+          "id": "sport",
+          "label": "Sport",
+          "priceDelta": 3500
+        },
+        {
+          "id": "luxury",
+          "label": "Luxury",
+          "priceDelta": 6000
+        },
+        {
+          "id": "offRoad",
+          "label": "Off-road",
+          "priceDelta": 4500,
+          "availableWhen": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              "trail"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "label": "Engine",
+      "type": "choice",
+      "control": "radio",
+      "section": "s_powertrain",
+      "width": "full",
+      "default": "petrol15",
+      "options": [
+        {
+          "id": "petrol15",
+          "label": "Petrol 1.5",
+          "priceDelta": 0,
+          "availableWhen": {
+            "op": "not",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "petrol20turbo",
+          "label": "Petrol 2.0 Turbo",
+          "priceDelta": 2500,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "luxury"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "hybrid",
+          "label": "Hybrid",
+          "priceDelta": 3000
+        },
+        {
+          "id": "electric",
+          "label": "Electric",
+          "priceDelta": 6000,
+          "availableWhen": {
+            "op": "not",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "model"
+                    ]
+                  },
+                  "trail"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "drivetrain",
+      "label": "Drivetrain",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_powertrain",
+      "width": "full",
+      "default": "fwd",
+      "enabledWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              },
+              "offRoad"
+            ]
+          }
+        ]
+      },
+      "options": [
+        {
+          "id": "fwd",
+          "label": "Front-wheel drive",
+          "priceDelta": 0,
+          "availableWhen": {
+            "op": "not",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "awd",
+          "label": "All-wheel drive",
+          "priceDelta": 0,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "engine"
+                    ]
+                  },
+                  "petrol20turbo"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "engine"
+                    ]
+                  },
+                  "electric"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wheels",
+      "label": "Wheels",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_appearance",
+      "width": "full",
+      "default": "w17",
+      "options": [
+        {
+          "id": "w17",
+          "label": "17-inch",
+          "priceDelta": 0,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "standard"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "w18",
+          "label": "18-inch",
+          "priceDelta": 600,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "standard"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "offRoad"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "w19",
+          "label": "19-inch",
+          "priceDelta": 1200,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "luxury"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "w20",
+          "label": "20-inch",
+          "priceDelta": 1800,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "luxury"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "colour",
+      "label": "Colour",
+      "type": "choice",
+      "control": "dropdown",
+      "section": "s_appearance",
+      "width": "half",
+      "default": "solid",
+      "options": [
+        {
+          "id": "solid",
+          "label": "Solid",
+          "priceDelta": 0
+        },
+        {
+          "id": "metallic",
+          "label": "Metallic",
+          "priceDelta": 650
+        },
+        {
+          "id": "premium",
+          "label": "Premium",
+          "priceDelta": 900
+        },
+        {
+          "id": "matte",
+          "label": "Matte",
+          "priceDelta": 1200,
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "luxury"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "packages",
+      "label": "Packages",
+      "type": "multichoice",
+      "control": "buttons",
+      "section": "s_packages",
+      "width": "full",
+      "default": [],
+      "options": [
+        {
+          "id": "winter",
+          "label": "Winter",
+          "priceDelta": 800
+        },
+        {
+          "id": "tech",
+          "label": "Tech",
+          "priceDelta": 1500
+        },
+        {
+          "id": "driverAssist",
+          "label": "Driver-Assist",
+          "priceDelta": 1900,
+          "availableWhen": {
+            "op": "has",
+            "args": [
+              "packages",
+              "tech"
+            ]
+          }
+        },
+        {
+          "id": "premiumAudio",
+          "label": "Premium Audio",
+          "priceDelta": 1100,
+          "availableWhen": {
+            "op": "has",
+            "args": [
+              "packages",
+              "tech"
+            ]
+          }
+        },
+        {
+          "id": "performance",
+          "label": "Performance",
+          "priceDelta": 3200,
+          "availableWhen": {
+            "op": "and",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "trim"
+                    ]
+                  },
+                  "sport"
+                ]
+              },
+              {
+                "op": "or",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "engine"
+                        ]
+                      },
+                      "petrol20turbo"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "engine"
+                        ]
+                      },
+                      "electric"
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "or",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "wheels"
+                        ]
+                      },
+                      "w19"
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "wheels"
+                        ]
+                      },
+                      "w20"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "towing",
+          "label": "Towing",
+          "priceDelta": 1300,
+          "availableWhen": {
+            "op": "and",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "model"
+                    ]
+                  },
+                  "trail"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "drivetrain"
+                    ]
+                  },
+                  "awd"
+                ]
+              },
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "wheels"
+                        ]
+                      },
+                      "w20"
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "notHas",
+                "args": [
+                  "packages",
+                  "panoramicRoof"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "panoramicRoof",
+          "label": "Panoramic Roof",
+          "priceDelta": 1600,
+          "availableWhen": {
+            "op": "and",
+            "args": [
+              {
+                "op": "notHas",
+                "args": [
+                  "packages",
+                  "towing"
+                ]
+              },
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "trim"
+                        ]
+                      },
+                      "offRoad"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "financing",
+      "label": "Payment method",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_finance",
+      "width": "full",
+      "default": "cash",
+      "options": [
+        {
+          "id": "cash",
+          "label": "Cash",
+          "priceDelta": 0
+        },
+        {
+          "id": "finance",
+          "label": "Finance",
+          "priceDelta": 0
+        },
+        {
+          "id": "lease",
+          "label": "Lease",
+          "priceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "term",
+      "label": "Term (months)",
+      "type": "choice",
+      "control": "buttons",
+      "section": "s_finance",
+      "width": "half",
+      "default": "t36",
+      "visibleWhen": {
+        "op": "or",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "finance"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "lease"
+            ]
+          }
+        ]
+      },
+      "options": [
+        {
+          "id": "t24",
+          "label": "24",
+          "priceDelta": 0
+        },
+        {
+          "id": "t36",
+          "label": "36",
+          "priceDelta": 0
+        },
+        {
+          "id": "t48",
+          "label": "48",
+          "priceDelta": 0
+        },
+        {
+          "id": "t60",
+          "label": "60",
+          "priceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "deposit",
+      "label": "Deposit",
+      "type": "number",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "unit": "GBP",
+      "decimals": 0,
+      "step": 100,
+      "min": {
+        "op": "mul",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "otr"
+            ]
+          },
+          0.1
+        ]
+      },
+      "max": {
+        "op": "field",
+        "args": [
+          "otr"
+        ]
+      },
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "financing"
+            ]
+          },
+          "finance"
+        ]
+      }
+    },
+    {
+      "id": "annualMileage",
+      "label": "Annual mileage",
+      "type": "number",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "unit": "mi",
+      "decimals": 0,
+      "min": 5000,
+      "max": 30000,
+      "step": 1000,
+      "default": 10000,
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "financing"
+            ]
+          },
+          "lease"
+        ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "when": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "trim"
+            ]
+          },
+          "offRoad"
+        ]
+      },
+      "setField": "drivetrain",
+      "toValue": "awd"
+    }
+  ],
+  "tables": {
+    "modelTrimPrice": {
+      "kind": "2d",
+      "rows": {
+        "city": {
+          "standard": 22000,
+          "sport": 25500,
+          "luxury": 28000,
+          "offRoad": 26500
+        },
+        "cruiser": {
+          "standard": 27000,
+          "sport": 30500,
+          "luxury": 33000,
+          "offRoad": 31500
+        },
+        "trail": {
+          "standard": 31000,
+          "sport": 34500,
+          "luxury": 37000,
+          "offRoad": 35500
+        }
+      }
+    },
+    "engineDelta": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 0,
+        "petrol20turbo": 2500,
+        "hybrid": 3000,
+        "electric": 6000
+      }
+    },
+    "wheelsDelta": {
+      "kind": "1d",
+      "map": {
+        "w17": 0,
+        "w18": 600,
+        "w19": 1200,
+        "w20": 1800
+      }
+    },
+    "colourDelta": {
+      "kind": "1d",
+      "map": {
+        "solid": 0,
+        "metallic": 650,
+        "premium": 900,
+        "matte": 1200
+      }
+    },
+    "roadTax": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 190,
+        "petrol20turbo": 190,
+        "hybrid": 150,
+        "electric": 0
+      }
+    },
+    "engineRange": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 500,
+        "petrol20turbo": 450,
+        "hybrid": 600,
+        "electric": 300
+      }
+    },
+    "wheelRangeFactor": {
+      "kind": "1d",
+      "map": {
+        "w17": 1,
+        "w18": 0.98,
+        "w19": 0.96,
+        "w20": 0.94
+      }
+    },
+    "termMonths": {
+      "kind": "1d",
+      "map": {
+        "t24": 24,
+        "t36": 36,
+        "t48": 48,
+        "t60": 60
+      }
+    },
+    "leaseResidual": {
+      "kind": "1d",
+      "map": {
+        "t24": 0.62,
+        "t36": 0.55,
+        "t48": 0.48,
+        "t60": 0.42
+      }
+    }
+  },
+  "computed": [
+    {
+      "id": "packagesTotal",
+      "label": "Packages total",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "winter"
+                ]
+              },
+              800,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "tech"
+                ]
+              },
+              1500,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "driverAssist"
+                ]
+              },
+              1900,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "premiumAudio"
+                ]
+              },
+              1100,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "performance"
+                ]
+              },
+              3200,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "towing"
+                ]
+              },
+              1300,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "panoramicRoof"
+                ]
+              },
+              1600,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "vehiclePrice",
+      "label": "Vehicle price",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "lookup",
+            "args": [
+              "modelTrimPrice",
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              },
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "engineDelta",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "wheelsDelta",
+              {
+                "op": "field",
+                "args": [
+                  "wheels"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "colourDelta",
+              {
+                "op": "field",
+                "args": [
+                  "colour"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "packagesTotal"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "roadTax",
+      "label": "Road tax",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "roadTax",
+          {
+            "op": "field",
+            "args": [
+              "engine"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "feesTotal",
+      "label": "Fees",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          700,
+          300,
+          {
+            "op": "field",
+            "args": [
+              "roadTax"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "otr",
+      "label": "On-the-road total",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "vehiclePrice"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "feesTotal"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "monthlyPayment",
+      "label": "Monthly payment",
+      "currency": true,
+      "formula": {
+        "op": "if",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "finance"
+            ]
+          },
+          {
+            "op": "div",
+            "args": [
+              {
+                "op": "mul",
+                "args": [
+                  {
+                    "op": "sub",
+                    "args": [
+                      {
+                        "op": "field",
+                        "args": [
+                          "otr"
+                        ]
+                      },
+                      {
+                        "op": "field",
+                        "args": [
+                          "deposit"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "div",
+                    "args": [
+                      0.079,
+                      12
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "sub",
+                "args": [
+                  1,
+                  {
+                    "op": "pow",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          1,
+                          {
+                            "op": "div",
+                            "args": [
+                              0.079,
+                              12
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          -1,
+                          {
+                            "op": "lookup",
+                            "args": [
+                              "termMonths",
+                              {
+                                "op": "field",
+                                "args": [
+                                  "term"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "financing"
+                    ]
+                  },
+                  "lease"
+                ]
+              },
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "div",
+                    "args": [
+                      {
+                        "op": "sub",
+                        "args": [
+                          {
+                            "op": "field",
+                            "args": [
+                              "otr"
+                            ]
+                          },
+                          {
+                            "op": "mul",
+                            "args": [
+                              {
+                                "op": "field",
+                                "args": [
+                                  "otr"
+                                ]
+                              },
+                              {
+                                "op": "lookup",
+                                "args": [
+                                  "leaseResidual",
+                                  {
+                                    "op": "field",
+                                    "args": [
+                                      "term"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "lookup",
+                        "args": [
+                          "termMonths",
+                          {
+                            "op": "field",
+                            "args": [
+                              "term"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "field",
+                            "args": [
+                              "otr"
+                            ]
+                          },
+                          {
+                            "op": "mul",
+                            "args": [
+                              {
+                                "op": "field",
+                                "args": [
+                                  "otr"
+                                ]
+                              },
+                              {
+                                "op": "lookup",
+                                "args": [
+                                  "leaseResidual",
+                                  {
+                                    "op": "field",
+                                    "args": [
+                                      "term"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "div",
+                        "args": [
+                          0.079,
+                          24
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "op": "max",
+                        "args": [
+                          0,
+                          {
+                            "op": "sub",
+                            "args": [
+                              {
+                                "op": "field",
+                                "args": [
+                                  "annualMileage"
+                                ]
+                              },
+                              10000
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "div",
+                        "args": [
+                          0.02,
+                          12
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "range",
+      "label": "Range / economy",
+      "formula": {
+        "op": "mul",
+        "args": [
+          {
+            "op": "lookup",
+            "args": [
+              "engineRange",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "wheelRangeFactor",
+              {
+                "op": "field",
+                "args": [
+                  "wheels"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "drivetrain"
+                    ]
+                  },
+                  "awd"
+                ]
+              },
+              0.95,
+              1
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "packages",
+                  "performance"
+                ]
+              },
+              0.95,
+              1
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "validations": [
+    {
+      "id": "deposit_min",
+      "field": "deposit",
+      "severity": "error",
+      "message": "Deposit must be at least 10% of the on-the-road price.",
+      "when": {
+        "op": "and",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "finance"
+            ]
+          },
+          {
+            "op": "lt",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "deposit"
+                ]
+              },
+              {
+                "op": "mul",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "otr"
+                    ]
+                  },
+                  0.1
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "deposit_max",
+      "field": "deposit",
+      "severity": "error",
+      "message": "Deposit cannot exceed the on-the-road price.",
+      "when": {
+        "op": "and",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "finance"
+            ]
+          },
+          {
+            "op": "gt",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "deposit"
+                ]
+              },
+              {
+                "op": "field",
+                "args": [
+                  "otr"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "mileage_high",
+      "field": "annualMileage",
+      "severity": "warning",
+      "message": "High annual mileage significantly increases lease cost.",
+      "when": {
+        "op": "and",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "lease"
+            ]
+          },
+          {
+            "op": "gt",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "annualMileage"
+                ]
+              },
+              15000
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "big_wheels_info",
+      "field": "wheels",
+      "severity": "info",
+      "message": "20-inch wheels increase price and reduce range.",
+      "when": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "wheels"
+            ]
+          },
+          "w20"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "vehiclePrice",
+      "label": "Vehicle price",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      }
+    },
+    {
+      "id": "otr",
+      "label": "On-the-road total",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      },
+      "emphasis": true
+    },
+    {
+      "id": "monthlyPayment",
+      "label": "Monthly payment",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      },
+      "visibleWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "cash"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "range",
+      "label": "Range / economy",
+      "format": {
+        "type": "unit",
+        "unit": "mi",
+        "decimals": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,430 @@
+{
+  "name": "Vehicle Configurator",
+  "sections": [
+    {
+      "id": "s_model",
+      "label": "Model & trim",
+      "order": 1
+    },
+    {
+      "id": "s_powertrain",
+      "label": "Powertrain & drivetrain",
+      "order": 2
+    },
+    {
+      "id": "s_appearance",
+      "label": "Wheels & appearance",
+      "order": 3
+    },
+    {
+      "id": "s_packages",
+      "label": "Packages",
+      "order": 4
+    },
+    {
+      "id": "s_finance",
+      "label": "Payment",
+      "order": 5
+    }
+  ],
+  "fields": [
+    {
+      "id": "model",
+      "label": "Model",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full",
+      "options": [
+        {
+          "id": "city",
+          "label": "City (hatch)",
+          "priceDelta": 22000
+        },
+        {
+          "id": "cruiser",
+          "label": "Cruiser (sedan)",
+          "priceDelta": 27000
+        },
+        {
+          "id": "trail",
+          "label": "Trail (SUV)",
+          "priceDelta": 31000
+        }
+      ]
+    },
+    {
+      "id": "trim",
+      "label": "Trim",
+      "control": "buttons",
+      "section": "s_model",
+      "width": "full",
+      "options": [
+        {
+          "id": "standard",
+          "label": "Standard",
+          "priceDelta": 0
+        },
+        {
+          "id": "sport",
+          "label": "Sport",
+          "priceDelta": 3500
+        },
+        {
+          "id": "luxury",
+          "label": "Luxury",
+          "priceDelta": 6000
+        },
+        {
+          "id": "offRoad",
+          "label": "Off-road",
+          "priceDelta": 4500
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "label": "Engine",
+      "control": "radio",
+      "section": "s_powertrain",
+      "width": "full",
+      "options": [
+        {
+          "id": "petrol15",
+          "label": "Petrol 1.5",
+          "priceDelta": 0
+        },
+        {
+          "id": "petrol20turbo",
+          "label": "Petrol 2.0 Turbo",
+          "priceDelta": 2500
+        },
+        {
+          "id": "hybrid",
+          "label": "Hybrid",
+          "priceDelta": 3000
+        },
+        {
+          "id": "electric",
+          "label": "Electric",
+          "priceDelta": 6000
+        }
+      ]
+    },
+    {
+      "id": "drivetrain",
+      "label": "Drivetrain",
+      "control": "buttons",
+      "section": "s_powertrain",
+      "width": "full",
+      "enabledWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              },
+              "offRoad"
+            ]
+          }
+        ]
+      },
+      "options": [
+        {
+          "id": "fwd",
+          "label": "Front-wheel drive",
+          "priceDelta": 0
+        },
+        {
+          "id": "awd",
+          "label": "All-wheel drive",
+          "priceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "wheels",
+      "label": "Wheels",
+      "control": "buttons",
+      "section": "s_appearance",
+      "width": "full",
+      "options": [
+        {
+          "id": "w17",
+          "label": "17-inch",
+          "priceDelta": 0
+        },
+        {
+          "id": "w18",
+          "label": "18-inch",
+          "priceDelta": 600
+        },
+        {
+          "id": "w19",
+          "label": "19-inch",
+          "priceDelta": 1200
+        },
+        {
+          "id": "w20",
+          "label": "20-inch",
+          "priceDelta": 1800
+        }
+      ]
+    },
+    {
+      "id": "colour",
+      "label": "Colour",
+      "control": "dropdown",
+      "section": "s_appearance",
+      "width": "half",
+      "options": [
+        {
+          "id": "solid",
+          "label": "Solid",
+          "priceDelta": 0
+        },
+        {
+          "id": "metallic",
+          "label": "Metallic",
+          "priceDelta": 650
+        },
+        {
+          "id": "premium",
+          "label": "Premium",
+          "priceDelta": 900
+        },
+        {
+          "id": "matte",
+          "label": "Matte",
+          "priceDelta": 1200
+        }
+      ]
+    },
+    {
+      "id": "packages",
+      "label": "Packages",
+      "control": "buttons",
+      "section": "s_packages",
+      "width": "full",
+      "options": [
+        {
+          "id": "winter",
+          "label": "Winter",
+          "priceDelta": 800
+        },
+        {
+          "id": "tech",
+          "label": "Tech",
+          "priceDelta": 1500
+        },
+        {
+          "id": "driverAssist",
+          "label": "Driver-Assist",
+          "priceDelta": 1900
+        },
+        {
+          "id": "premiumAudio",
+          "label": "Premium Audio",
+          "priceDelta": 1100
+        },
+        {
+          "id": "performance",
+          "label": "Performance",
+          "priceDelta": 3200
+        },
+        {
+          "id": "towing",
+          "label": "Towing",
+          "priceDelta": 1300
+        },
+        {
+          "id": "panoramicRoof",
+          "label": "Panoramic Roof",
+          "priceDelta": 1600
+        }
+      ]
+    },
+    {
+      "id": "financing",
+      "label": "Payment method",
+      "control": "buttons",
+      "section": "s_finance",
+      "width": "full",
+      "options": [
+        {
+          "id": "cash",
+          "label": "Cash",
+          "priceDelta": 0
+        },
+        {
+          "id": "finance",
+          "label": "Finance",
+          "priceDelta": 0
+        },
+        {
+          "id": "lease",
+          "label": "Lease",
+          "priceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "term",
+      "label": "Term (months)",
+      "control": "buttons",
+      "section": "s_finance",
+      "width": "half",
+      "visibleWhen": {
+        "op": "or",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "finance"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "lease"
+            ]
+          }
+        ]
+      },
+      "options": [
+        {
+          "id": "t24",
+          "label": "24",
+          "priceDelta": 0
+        },
+        {
+          "id": "t36",
+          "label": "36",
+          "priceDelta": 0
+        },
+        {
+          "id": "t48",
+          "label": "48",
+          "priceDelta": 0
+        },
+        {
+          "id": "t60",
+          "label": "60",
+          "priceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "deposit",
+      "label": "Deposit",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "decimals": 0,
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "financing"
+            ]
+          },
+          "finance"
+        ]
+      }
+    },
+    {
+      "id": "annualMileage",
+      "label": "Annual mileage",
+      "control": "stepper",
+      "section": "s_finance",
+      "width": "half",
+      "decimals": 0,
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "financing"
+            ]
+          },
+          "lease"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "vehiclePrice",
+      "label": "Vehicle price",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      }
+    },
+    {
+      "id": "otr",
+      "label": "On-the-road total",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      },
+      "emphasis": true
+    },
+    {
+      "id": "monthlyPayment",
+      "label": "Monthly payment",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "GBP"
+      },
+      "visibleWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "cash"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "range",
+      "label": "Range / economy",
+      "format": {
+        "type": "unit",
+        "unit": "mi",
+        "decimals": 0
+      }
+    }
+  ]
+}

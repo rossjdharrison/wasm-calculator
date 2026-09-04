@@ -1,204 +1,289 @@
 // =============================================================================
-// Quote engine — compiled to WebAssembly (AssemblyScript).
+// quote.ts — QCM1: the model-agnostic quote engine (compiled once to WASM).
 //
-// This is the "brain" of the quote machine. The browser passes the current form
-// values into `compute(...)` on every keystroke/change, then reads the results
-// back through the `get*` exports. Two kinds of things come back out:
+// It knows nothing about vehicles or any domain. The JS assembler serializes a
+// model into a binary MODEL image (a flattened-tree AST + structural records +
+// baked tables) and an IO blob; this VM walks it. Boundary is numbers/bytes only.
 //
-//   1. NUMBERS  — unit price, subtotal, discounts, tax, total.
-//   2. OPTIONS  — which choices are currently allowed, and their dynamic limits
-//                 (e.g. "screen printing needs >=12 units", "embroidery caps at
-//                 2 locations"). The UI uses these to enable/disable/clamp its
-//                 controls, so the available options change as the user types.
-//
-// The WASM boundary is intentionally PURE-NUMERIC (numbers in, numbers out) so
-// there is no memory marshalling to worry about. Results are stashed in module
-// globals by `compute` and exposed via getters.
-//
-// -- Adapting this to your own quote domain -----------------------------------
-// Replace the enums, the pricing tables (`garmentBase`, `printCost`,
-// `volumeDiscount`) and the rules inside `compute`. Keep the plumbing (numeric
-// args in, getters out, a flags bitfield for availability) and the front-end
-// keeps working. Remember to mirror any enum/flag changes in web/app.js.
+// Layout (must match web/assembler.mjs serialize()):
+//   HEADER: 32 x i32 at modelBase+0 (counts + region byte-offsets).
+//   NODES:  i32[nodeCount*5]  (op, aux, k0, k1, k2)  — children inline, -1 = none
+//   NODE_IMM: f64[nodeCount]  (CONST immediates)
+//   FIELDS: i32[fieldCount*11] (kind, slot, visNode, enNode, minNode, maxNode,
+//                               stepNode, compNode, optStart, optCount, defCode)
+//   OPTIONS: i32[optionCount*2] (code, availNode)
+//   EFFECTS: i32[effectCount*4] (condNode, targetSlot, valueNode, opKind)
+//   VALIDATIONS: i32[valCount*4] (condNode, msgId, severity, targetSlot)
+//   OUTPUTS: i32[outputCount*2] (slot, visNode)
+//   TABLES: i32[tableCount*4]  (kind, rows, cols, dataOff)
+//   COMPUTED: i32[computedCount*2] (slot, node)  — in dependency order
+//   TABLE_DATA: f64[...]
+// IO blob (relative to ioBase): VALUES f64[slot], STATE i32[slot],
+//   LIMITS f64[slot*3], OPTSTATE i32[option], MSG_COUNT i32, MSG i32[cap*3],
+//   OUTVALUES f64[out], OUTVIS i32[out], STATUS i32.
 // =============================================================================
 
-// ---- Domain enums (i32 codes so they cross the WASM boundary as numbers) -----
-// Garment tier
-const TIER_STANDARD: i32 = 0;
-const TIER_PREMIUM: i32 = 1;
-const TIER_ORGANIC: i32 = 2;
+// ---- opcodes ----
+const CONST: i32 = 0, LOAD: i32 = 1, ADD: i32 = 2, SUB: i32 = 3, MUL: i32 = 4,
+  DIV: i32 = 5, NEG: i32 = 6, POW: i32 = 7, ABS: i32 = 8, FLOOR: i32 = 9,
+  CEIL: i32 = 10, ROUND: i32 = 11, MIN: i32 = 12, MAX: i32 = 13, CLAMP: i32 = 14,
+  EQ: i32 = 15, NE: i32 = 16, LT: i32 = 17, LE: i32 = 18, GT: i32 = 19, GE: i32 = 20,
+  AND: i32 = 21, OR: i32 = 22, NOT: i32 = 23, IF: i32 = 24, HAS: i32 = 25,
+  COUNTBITS: i32 = 26, LOOKUP1D: i32 = 27, LOOKUP2D: i32 = 28;
 
-// Print method
-const METHOD_SCREEN: i32 = 0;
-const METHOD_DTG: i32 = 1;
-const METHOD_EMBROIDERY: i32 = 2;
+// ---- status bits ----
+const ST_DIV0: i32 = 1, ST_TABLE_OOB: i32 = 2, ST_NAN_INF: i32 = 4,
+  ST_DEPTH: i32 = 8, ST_SETTLE: i32 = 16;
 
-// ---- Option-availability flags (bitfield returned by getFlags) --------------
-// The UI reads these to decide which controls to enable / show / clamp.
-const FLAG_SCREEN_AVAILABLE: i32 = 1 << 0;
-const FLAG_DTG_AVAILABLE: i32 = 1 << 1;
-const FLAG_EMBROIDERY_AVAILABLE: i32 = 1 << 2;
-const FLAG_COLORS_APPLICABLE: i32 = 1 << 3;
-const FLAG_RUSH_AVAILABLE: i32 = 1 << 4;
-const FLAG_MEMBERSHIP_APPLIED: i32 = 1 << 5;
+// ---- field state bits ----
+const S_VISIBLE: i32 = 1, S_ENABLED: i32 = 2, S_INVALID: i32 = 4,
+  S_FORCED: i32 = 8, S_CHANGED: i32 = 16;
 
-// ---- Validation codes (returned by getValidation) ---------------------------
-const VALID_OK: i32 = 0;
-const VALID_BELOW_MIN_QTY: i32 = 1;
-const VALID_TOO_MANY_COLORS: i32 = 2;
-const VALID_TOO_MANY_LOCATIONS: i32 = 3;
-const VALID_RUSH_UNAVAILABLE: i32 = 4;
+// ---- globals populated by loadModel ----
+let MB: usize = 0, IB: usize = 0;
+let slotCount: i32 = 0, nodeCount: i32 = 0, fieldCount: i32 = 0, optionCount: i32 = 0;
+let effectCount: i32 = 0, validationCount: i32 = 0, outputCount: i32 = 0;
+let tableCount: i32 = 0, computedCount: i32 = 0, settleMaxPasses: i32 = 0, messageCap: i32 = 0;
 
-// ---- Business constants (tune these to your pricing) ------------------------
-const SCREEN_MIN_QTY: i32 = 12;         // screen printing needs a minimum run
-const SCREEN_MAX_COLORS: i32 = 6;       // colours per location for screen print
-const EMBROIDERY_MAX_LOCATIONS: i32 = 2;
-const OTHER_MAX_LOCATIONS: i32 = 4;
-const RUSH_MAX_QTY: i32 = 250;          // can't rush very large runs
-const RUSH_SURCHARGE: f64 = 0.20;       // +20%
-const MEMBER_DISCOUNT: f64 = 0.10;      // -10%
-const MAX_DISCOUNT: f64 = 0.50;         // cap on stacked discounts
-const TAX_RATE: f64 = 0.08;
+let nodesP: usize = 0, nodeImmP: usize = 0, fieldsP: usize = 0, optionsP: usize = 0;
+let effectsP: usize = 0, validationsP: usize = 0, outputsP: usize = 0, tablesP: usize = 0;
+let tableDataP: usize = 0, computedP: usize = 0;
+let valuesP: usize = 0, stateP: usize = 0, limitsP: usize = 0, optStateP: usize = 0;
+let msgCountP: usize = 0, msgP: usize = 0, outValuesP: usize = 0, outVisP: usize = 0, statusP: usize = 0;
 
-// ---- Pricing tables ---------------------------------------------------------
-// Base garment cost per unit, by tier.
-function garmentBase(tier: i32): f64 {
-  if (tier == TIER_PREMIUM) return 9.50;
-  if (tier == TIER_ORGANIC) return 12.00;
-  return 6.00; // standard
+let gStatus: i32 = 0;
+
+// bump allocator over the AS heap base (no GC; we never free)
+let bump: usize = 0;
+export function alloc(size: usize): usize {
+  if (bump == 0) bump = (__heap_base + 7) & ~(<usize>7);
+  let p = (bump + 7) & ~(<usize>7);
+  bump = p + size;
+  // grow memory if needed
+  let need = <i32>((bump + 0xffff) >> 16);
+  let have = <i32>memory.size();
+  if (need > have) memory.grow(need - have);
+  return p;
 }
 
-// Volume discount rate, by quantity.
-function volumeDiscount(qty: i32): f64 {
-  if (qty >= 500) return 0.25;
-  if (qty >= 250) return 0.18;
-  if (qty >= 100) return 0.12;
-  if (qty >= 50) return 0.06;
-  if (qty >= 24) return 0.03;
-  return 0.0;
+function hi(i: i32): i32 { return load<i32>(MB + (<usize>i << 2)); }
+
+export function loadModel(modelBase: usize, ioBase: usize): void {
+  MB = modelBase; IB = ioBase;
+  slotCount = hi(1); nodeCount = hi(2); fieldCount = hi(3); optionCount = hi(4);
+  effectCount = hi(5); validationCount = hi(6); outputCount = hi(7); tableCount = hi(8);
+  computedCount = hi(9); settleMaxPasses = hi(10); messageCap = hi(11);
+  nodesP = MB + <usize>hi(12); nodeImmP = MB + <usize>hi(13); fieldsP = MB + <usize>hi(14);
+  optionsP = MB + <usize>hi(15); effectsP = MB + <usize>hi(16); validationsP = MB + <usize>hi(17);
+  outputsP = MB + <usize>hi(18); tablesP = MB + <usize>hi(19); tableDataP = MB + <usize>hi(20);
+  computedP = MB + <usize>hi(21);
+  valuesP = IB + <usize>hi(22); stateP = IB + <usize>hi(23); limitsP = IB + <usize>hi(24);
+  optStateP = IB + <usize>hi(25); msgCountP = IB + <usize>hi(26); msgP = IB + <usize>hi(27);
+  outValuesP = IB + <usize>hi(28); outVisP = IB + <usize>hi(29); statusP = IB + <usize>hi(30);
 }
 
-// Per-unit decoration cost for the chosen method / locations / colours.
-function printCost(method: i32, locations: i32, colors: i32): f64 {
-  if (method == METHOD_SCREEN) {
-    // cheap ink per unit, but each colour at each location adds a little
-    return f64(locations) * (1.20 + f64(colors) * 0.35);
-  }
-  if (method == METHOD_DTG) {
-    // full-colour, flat per location, pricier per unit
-    return f64(locations) * 4.50;
-  }
-  // embroidery: premium per location, colours irrelevant (thread)
-  return f64(locations) * 6.75;
+// ---- accessors ----
+// @ts-ignore: decorator
+@inline function vGet(slot: i32): f64 { return load<f64>(valuesP + (<usize>slot << 3)); }
+// @ts-ignore: decorator
+@inline function vSet(slot: i32, x: f64): void { store<f64>(valuesP + (<usize>slot << 3), x); }
+// @ts-ignore: decorator
+@inline function nOp(i: i32): i32 { return load<i32>(nodesP + <usize>i * 20); }
+// @ts-ignore: decorator
+@inline function nAux(i: i32): i32 { return load<i32>(nodesP + <usize>i * 20 + 4); }
+// @ts-ignore: decorator
+@inline function nK(i: i32, c: i32): i32 { return load<i32>(nodesP + <usize>i * 20 + 8 + (<usize>c << 2)); }
+// @ts-ignore: decorator
+@inline function nImm(i: i32): f64 { return load<f64>(nodeImmP + (<usize>i << 3)); }
+// @ts-ignore: decorator
+@inline function optState(gi: i32): i32 { return load<i32>(optStateP + (<usize>gi << 2)); }
+// @ts-ignore: decorator
+@inline function setBit(slot: i32, bit: i32): void {
+  store<i32>(stateP + (<usize>slot << 2), load<i32>(stateP + (<usize>slot << 2)) | bit);
 }
 
-// ---- Result globals (written by compute, read by the getters) ---------------
-let rUnitPrice: f64 = 0;
-let rSubtotal: f64 = 0;
-let rDiscountRate: f64 = 0;
-let rDiscountAmount: f64 = 0;
-let rRushFee: f64 = 0;
-let rTax: f64 = 0;
-let rTotal: f64 = 0;
-let rFlags: i32 = 0;
-let rMaxColors: i32 = 0;
-let rMaxLocations: i32 = 0;
-let rValidation: i32 = 0;
-
-// =============================================================================
-// compute — run every rule against the current inputs.
-// booleans are passed as 0/1 because the WASM boundary only speaks numbers.
-// =============================================================================
-export function compute(
-  quantity: i32,
-  tier: i32,
-  method: i32,
-  locations: i32,
-  colors: i32,
-  rush: i32,   // 0 / 1
-  member: i32  // 0 / 1
-): void {
-  // ---- 1. Which OPTIONS are available given the current inputs? ------------
-  let flags: i32 = 0;
-
-  const screenAvailable = quantity >= SCREEN_MIN_QTY; // screen needs a min run
-  if (screenAvailable) flags |= FLAG_SCREEN_AVAILABLE;
-  flags |= FLAG_DTG_AVAILABLE;        // DTG works at any quantity
-  flags |= FLAG_EMBROIDERY_AVAILABLE; // embroidery works at any quantity
-
-  const colorsApplicable = method == METHOD_SCREEN; // only screen uses colours
-  if (colorsApplicable) flags |= FLAG_COLORS_APPLICABLE;
-
-  // dynamic limits for the current method
-  const maxColors = method == METHOD_SCREEN ? SCREEN_MAX_COLORS : 0;
-  const maxLocations =
-    method == METHOD_EMBROIDERY ? EMBROIDERY_MAX_LOCATIONS : OTHER_MAX_LOCATIONS;
-
-  // rush only for small/medium, non-embroidery orders
-  const rushAvailable = quantity <= RUSH_MAX_QTY && method != METHOD_EMBROIDERY;
-  if (rushAvailable) flags |= FLAG_RUSH_AVAILABLE;
-
-  // ---- 2. Validate the requested inputs against the rules ------------------
-  let validation = VALID_OK;
-  if (method == METHOD_SCREEN && quantity < SCREEN_MIN_QTY) {
-    validation = VALID_BELOW_MIN_QTY;
-  } else if (colorsApplicable && colors > maxColors) {
-    validation = VALID_TOO_MANY_COLORS;
-  } else if (locations > maxLocations) {
-    validation = VALID_TOO_MANY_LOCATIONS;
-  } else if (rush == 1 && !rushAvailable) {
-    validation = VALID_RUSH_UNAVAILABLE;
+// ---- expression evaluator (recursive tree walk) ----
+function evalNode(i: i32): f64 {
+  let op = nOp(i);
+  switch (op) {
+    case CONST: return nImm(i);
+    case LOAD: return vGet(nAux(i));
+    case ADD: return evalNode(nK(i, 0)) + evalNode(nK(i, 1));
+    case SUB: return evalNode(nK(i, 0)) - evalNode(nK(i, 1));
+    case MUL: return evalNode(nK(i, 0)) * evalNode(nK(i, 1));
+    case DIV: {
+      let a = evalNode(nK(i, 0)); let b = evalNode(nK(i, 1));
+      if (b == 0.0) { gStatus |= ST_DIV0; return 0.0; }
+      return a / b;
+    }
+    case NEG: return -evalNode(nK(i, 0));
+    case POW: {
+      let r = Math.pow(evalNode(nK(i, 0)), evalNode(nK(i, 1)));
+      if (r != r || r == Infinity || r == -Infinity) gStatus |= ST_NAN_INF;
+      return r;
+    }
+    case ABS: return Math.abs(evalNode(nK(i, 0)));
+    case FLOOR: return Math.floor(evalNode(nK(i, 0)));
+    case CEIL: return Math.ceil(evalNode(nK(i, 0)));
+    case ROUND: return Math.round(evalNode(nK(i, 0)));
+    case MIN: return Math.min(evalNode(nK(i, 0)), evalNode(nK(i, 1)));
+    case MAX: return Math.max(evalNode(nK(i, 0)), evalNode(nK(i, 1)));
+    case CLAMP: {
+      let x = evalNode(nK(i, 0)); let lo = evalNode(nK(i, 1)); let hi2 = evalNode(nK(i, 2));
+      return Math.max(lo, Math.min(hi2, x));
+    }
+    case EQ: return evalNode(nK(i, 0)) == evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case NE: return evalNode(nK(i, 0)) != evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case LT: return evalNode(nK(i, 0)) < evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case LE: return evalNode(nK(i, 0)) <= evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case GT: return evalNode(nK(i, 0)) > evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case GE: return evalNode(nK(i, 0)) >= evalNode(nK(i, 1)) ? 1.0 : 0.0;
+    case AND: { if (evalNode(nK(i, 0)) == 0.0) return 0.0; return evalNode(nK(i, 1)) != 0.0 ? 1.0 : 0.0; }
+    case OR: { if (evalNode(nK(i, 0)) != 0.0) return 1.0; return evalNode(nK(i, 1)) != 0.0 ? 1.0 : 0.0; }
+    case NOT: return evalNode(nK(i, 0)) == 0.0 ? 1.0 : 0.0;
+    case IF: { if (evalNode(nK(i, 0)) != 0.0) return evalNode(nK(i, 1)); return evalNode(nK(i, 2)); }
+    case HAS: { let mask = <i32>evalNode(nK(i, 0)); return <f64>((mask >> nAux(i)) & 1); }
+    case COUNTBITS: return <f64>popcnt<i32>(<i32>evalNode(nK(i, 0)));
+    case LOOKUP1D: {
+      let tb = tablesP + <usize>nAux(i) * 16;
+      let rows = load<i32>(tb + 4); let dataOff = load<i32>(tb + 12);
+      let idx = <i32>Math.round(evalNode(nK(i, 0)));
+      if (idx < 0 || idx >= rows) { gStatus |= ST_TABLE_OOB; idx = idx < 0 ? 0 : rows - 1; }
+      return load<f64>(tableDataP + (<usize>(dataOff + idx) << 3));
+    }
+    case LOOKUP2D: {
+      let tb = tablesP + <usize>nAux(i) * 16;
+      let rows = load<i32>(tb + 4); let cols = load<i32>(tb + 8); let dataOff = load<i32>(tb + 12);
+      let r = <i32>Math.round(evalNode(nK(i, 0)));
+      let c = <i32>Math.round(evalNode(nK(i, 1)));
+      if (r < 0 || r >= rows || c < 0 || c >= cols) {
+        gStatus |= ST_TABLE_OOB;
+        r = r < 0 ? 0 : (r >= rows ? rows - 1 : r);
+        c = c < 0 ? 0 : (c >= cols ? cols - 1 : c);
+      }
+      return load<f64>(tableDataP + (<usize>(dataOff + r * cols + c) << 3));
+    }
+    default: return 0.0;
   }
-
-  // ---- 3. Clamp the values we actually price with, so the quote is sane ----
-  let effColors = colorsApplicable ? (colors > maxColors ? maxColors : colors) : 0;
-  if (effColors < 0) effColors = 0;
-  let effLocations = locations > maxLocations ? maxLocations : locations;
-  if (effLocations < 1) effLocations = 1;
-
-  // ---- 4. Price it --------------------------------------------------------
-  const unit = garmentBase(tier) + printCost(method, effLocations, effColors);
-  const subtotal = unit * f64(quantity);
-
-  let discountRate = volumeDiscount(quantity);
-  if (member == 1) {
-    discountRate += MEMBER_DISCOUNT;
-    flags |= FLAG_MEMBERSHIP_APPLIED;
-  }
-  if (discountRate > MAX_DISCOUNT) discountRate = MAX_DISCOUNT;
-  const discountAmount = subtotal * discountRate;
-  const afterDiscount = subtotal - discountAmount;
-
-  let rushFee: f64 = 0;
-  if (rush == 1 && rushAvailable) rushFee = afterDiscount * RUSH_SURCHARGE;
-
-  const taxable = afterDiscount + rushFee;
-  const tax = taxable * TAX_RATE;
-  const total = taxable + tax;
-
-  // ---- 5. Stash results for the getters -----------------------------------
-  rUnitPrice = unit;
-  rSubtotal = subtotal;
-  rDiscountRate = discountRate;
-  rDiscountAmount = discountAmount;
-  rRushFee = rushFee;
-  rTax = tax;
-  rTotal = total;
-  rFlags = flags;
-  rMaxColors = maxColors;
-  rMaxLocations = maxLocations;
-  rValidation = validation;
 }
 
-// ---- Getters (read after each compute) --------------------------------------
-export function getUnitPrice(): f64 { return rUnitPrice; }
-export function getSubtotal(): f64 { return rSubtotal; }
-export function getDiscountRate(): f64 { return rDiscountRate; }
-export function getDiscountAmount(): f64 { return rDiscountAmount; }
-export function getRushFee(): f64 { return rRushFee; }
-export function getTax(): f64 { return rTax; }
-export function getTotal(): f64 { return rTotal; }
-export function getFlags(): i32 { return rFlags; }
-export function getMaxColors(): i32 { return rMaxColors; }
-export function getMaxLocations(): i32 { return rMaxLocations; }
-export function getValidation(): i32 { return rValidation; }
+// @ts-ignore: decorator
+@inline function fI(fb: usize, k: i32): i32 { return load<i32>(fb + (<usize>k << 2)); }
+
+function recomputeComputed(): void {
+  for (let c = 0; c < computedCount; c++) {
+    let cb = computedP + <usize>c * 8;
+    let slot = load<i32>(cb);
+    let node = load<i32>(cb + 4);
+    vSet(slot, evalNode(node));
+  }
+}
+
+function computeOptionAvailability(fb: usize): void {
+  let optStart = fI(fb, 8); let optCount = fI(fb, 9);
+  for (let j = 0; j < optCount; j++) {
+    let ob = optionsP + <usize>(optStart + j) * 8;
+    let availNode = load<i32>(ob + 4);
+    let av = availNode < 0 ? 1 : (evalNode(availNode) != 0.0 ? 1 : 0);
+    store<i32>(optStateP + (<usize>(optStart + j) << 2), av);
+  }
+}
+
+export function evaluate(): i32 {
+  gStatus = 0;
+  // reset state / outputs / messages
+  for (let s = 0; s < slotCount; s++) store<i32>(stateP + (<usize>s << 2), 0);
+  for (let o = 0; o < outputCount; o++) {
+    store<f64>(outValuesP + (<usize>o << 3), 0.0);
+    store<i32>(outVisP + (<usize>o << 2), 0);
+  }
+  store<i32>(msgCountP, 0);
+
+  // ---- settle (bounded fixpoint) ----
+  let converged = false;
+  for (let pass = 0; pass < settleMaxPasses; pass++) {
+    let dirty = false;
+    recomputeComputed();
+
+    // effects (declaration/priority order)
+    for (let e = 0; e < effectCount; e++) {
+      let eb = effectsP + <usize>e * 16;
+      let cond = load<i32>(eb); let tgt = load<i32>(eb + 4); let vn = load<i32>(eb + 8);
+      if (evalNode(cond) != 0.0) {
+        let nv = evalNode(vn);
+        setBit(tgt, S_FORCED | S_CHANGED);
+        if (vGet(tgt) != nv) { vSet(tgt, nv); dirty = true; }
+      }
+    }
+
+    // option availability + auto-deselect / single-select fallback
+    for (let f = 0; f < fieldCount; f++) {
+      let fb = fieldsP + <usize>f * 44;
+      let kind = fI(fb, 0);
+      if (kind != 2 && kind != 3) continue;
+      let slot = fI(fb, 1); let optStart = fI(fb, 8); let optCount = fI(fb, 9); let defCode = fI(fb, 10);
+      computeOptionAvailability(fb);
+      if (kind == 3) {
+        let mask = <i32>vGet(slot);
+        for (let j = 0; j < optCount; j++) {
+          if (optState(optStart + j) == 0 && ((mask >> j) & 1) != 0) { mask &= ~(1 << j); dirty = true; }
+        }
+        vSet(slot, <f64>mask);
+      } else {
+        let cur = <i32>vGet(slot);
+        if (cur < 0 || cur >= optCount || optState(optStart + cur) == 0) {
+          let next = -1;
+          if (defCode >= 0 && optState(optStart + defCode) == 1) next = defCode;
+          else { for (let j = 0; j < optCount; j++) { if (optState(optStart + j) == 1) { next = j; break; } } }
+          if (next < 0) next = cur;
+          if (next != cur) { vSet(slot, <f64>next); setBit(slot, S_CHANGED); dirty = true; }
+        }
+      }
+    }
+
+    if (!dirty) { converged = true; break; }
+  }
+  if (!converged) gStatus |= ST_SETTLE;
+
+  // ---- finalize ----
+  recomputeComputed();
+  for (let f = 0; f < fieldCount; f++) {
+    let fb = fieldsP + <usize>f * 44;
+    let kind = fI(fb, 0); let slot = fI(fb, 1);
+    let visNode = fI(fb, 2); let enNode = fI(fb, 3);
+    let minNode = fI(fb, 4); let maxNode = fI(fb, 5); let stepNode = fI(fb, 6);
+    if (visNode < 0 || evalNode(visNode) != 0.0) setBit(slot, S_VISIBLE);
+    if (enNode < 0 || evalNode(enNode) != 0.0) setBit(slot, S_ENABLED);
+    let lb = limitsP + <usize>slot * 24;
+    store<f64>(lb, minNode < 0 ? NaN : evalNode(minNode));
+    store<f64>(lb + 8, maxNode < 0 ? NaN : evalNode(maxNode));
+    store<f64>(lb + 16, stepNode < 0 ? NaN : evalNode(stepNode));
+    if (kind == 2 || kind == 3) computeOptionAvailability(fb);
+  }
+
+  // outputs
+  for (let o = 0; o < outputCount; o++) {
+    let ob = outputsP + <usize>o * 8;
+    let slot = load<i32>(ob); let visNode = load<i32>(ob + 4);
+    store<f64>(outValuesP + (<usize>o << 3), vGet(slot));
+    store<i32>(outVisP + (<usize>o << 2), (visNode < 0 || evalNode(visNode) != 0.0) ? 1 : 0);
+  }
+
+  // validations
+  let mc = 0;
+  for (let v = 0; v < validationCount; v++) {
+    let vb = validationsP + <usize>v * 16;
+    let cond = load<i32>(vb); let msgId = load<i32>(vb + 4); let sev = load<i32>(vb + 8); let tgt = load<i32>(vb + 12);
+    if (evalNode(cond) != 0.0) {
+      if (mc < messageCap) {
+        let mb = msgP + <usize>mc * 12;
+        store<i32>(mb, msgId); store<i32>(mb + 4, sev); store<i32>(mb + 8, tgt);
+        mc++;
+      }
+      if (sev == 2 && tgt >= 0) setBit(tgt, S_INVALID);
+    }
+  }
+  store<i32>(msgCountP, mc);
+  store<i32>(statusP, gStatus);
+  return gStatus;
+}
