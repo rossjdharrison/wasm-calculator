@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { analyzeCoverage, applyFix, inferIndexing } from '../web/coverage.mjs';
+import { analyzeCoverage, applyFix, inferIndexing, edgesOf, findCycles } from '../web/coverage.mjs';
 
 const readJson = (p) => readFile(new URL(p, import.meta.url)).then((b) => JSON.parse(b));
 const DATA = await readJson('../web/models/vehicles/data-model.json');
@@ -14,6 +14,32 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 test('the shipped model is fully connected (no coverage findings)', () => {
   const r = analyzeCoverage(clone(DATA), clone(PRES));
   assert.deepEqual(r.counts, { error: 0, warn: 0, info: 0 }, r.findings.map((f) => `${f.severity}:${f.message}`).join(' | '));
+});
+
+test('the shipped model has no dependency cycles', () => {
+  assert.equal(findCycles(edgesOf(DATA)).size, 0);
+});
+
+test('a dependency cycle is detected and flagged as an error on every member', () => {
+  const fld = (id) => ({ op: 'field', args: [id] });
+  const data = { fields: [], computed: [
+    { id: 'a', formula: fld('b') },   // a depends on b
+    { id: 'b', formula: fld('c') },   // b depends on c
+    { id: 'c', formula: fld('a') },   // c depends on a  → cycle a→b→c→a
+    { id: 'd', formula: fld('a') },   // d depends on a but is not itself in the cycle
+  ] };
+  const cyc = findCycles(edgesOf(data));
+  assert.deepEqual([...cyc].sort(), ['a', 'b', 'c']);
+  assert.ok(!cyc.has('d'), 'a dependent outside the cycle is not flagged');
+  const r = analyzeCoverage(data, {});
+  const cycleFindings = r.findings.filter((f) => f.kind === 'cycle');
+  assert.equal(cycleFindings.length, 3);
+  assert.ok(cycleFindings.every((f) => f.severity === 'error'));
+});
+
+test('edgesOf orients edges dependency→dependent', () => {
+  const data = { computed: [{ id: 'total', formula: { op: 'add', args: [{ op: 'field', args: ['base'] }, 5] } }], fields: [{ id: 'base', type: 'number' }] };
+  assert.deepEqual(edgesOf(data), [{ from: 'base', to: 'total' }]);
 });
 
 test('indexing is inferred from lookup() ASTs', () => {

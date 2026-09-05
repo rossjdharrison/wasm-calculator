@@ -350,6 +350,16 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; accent-
 .dg-node text { fill: var(--qc-color-text); font-family: var(--qc-font-mono); font-size: 12px; }
 .dg-node--computed rect { fill: var(--qc-color-accent-soft); stroke: var(--qc-color-accent); }
 .dg-node.is-sel rect { stroke: var(--qc-color-accent); stroke-width: 2.5; }
+/* blast radius: selecting a node dims the rest and traces its deps + impact */
+.dg-node.is-dim { opacity: 0.32; }
+.dg-node.is-upstream rect { stroke: var(--qc-color-accent); stroke-dasharray: 4 3; }
+.dg-node.is-downstream rect { stroke: var(--qc-color-accent); stroke-width: 2; }
+.dg-node.is-downstream text { fill: var(--qc-color-accent); }
+.dg-edge.is-path { stroke: var(--qc-color-accent); stroke-width: 2; opacity: 0.85; }
+/* diagnostic overlay: cycles (error) + disconnected fields (warn) */
+.dg-node.has-error rect { stroke: var(--qc-color-error); stroke-width: 2.5; }
+.dg-node.has-error text { fill: var(--qc-color-error); }
+.dg-node.has-warn rect { stroke: var(--qc-color-warn); stroke-width: 2; stroke-dasharray: 3 2; }
 
 /* ---- theme toggle (demo chrome) ---- */
 .qc-toolbar { display: flex; gap: var(--qc-space-2); margin-bottom: var(--qc-space-4); }

@@ -9,7 +9,7 @@
 import { currentData, currentPres, saveData, savePres, loadDefaultData } from './store.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
-import { analyzeCoverage, applyFix } from './coverage.mjs';
+import { analyzeCoverage, applyFix, edgesOf } from './coverage.mjs';
 import { el, hint } from './editor-ui.mjs';
 import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
 import { buildDefaults, renderStaticPreview } from './preview.mjs';
@@ -18,6 +18,7 @@ import { mountStudioShell } from './studio-shell.mjs';
 const WASM_URL = 'quote.wasm';
 
 let data = null, pres = null, wasmBytes = null, schema = null, editor = null, assembledOk = null, presDirty = false;
+let lastCov = null;   // most recent coverage result, reused by the graph overlay
 
 boot();
 async function boot() {
@@ -56,7 +57,7 @@ function mountEditor() {
 
 // ---- right panel: coverage + depends-on/used-by + live preview -------------
 function refresh() {
-  const cov = analyzeCoverage(data, pres);
+  const cov = analyzeCoverage(data, pres); lastCov = cov;
   renderCoverage(cov); renderInlineChecklist(cov);
   renderRelationships(); recompute(); if (!$('graph').hidden) renderGraph();
 }
@@ -69,6 +70,7 @@ function plainLabel(f) {
     case 'missing-label': return f.option ? `“${f.option}” has no customer-facing label` : `“${f.field}” has no label`;
     case 'dead-option': return `“${f.option}” isn’t used by any price yet`;
     case 'orphan-field': return `“${f.field}” isn’t connected to anything`;
+    case 'cycle': return `“${f.field}” is in a dependency cycle`;
     default: return f.message;
   }
 }
@@ -198,16 +200,28 @@ function toggleGraph() {
   $('btn-graph').textContent = show ? 'Hide graph' : 'Dependency graph';
   if (show) renderGraph();
 }
+// field-level worst severity per node, for the overlay (cycle=error, orphan=warn)
+function nodeSeverity(cov) {
+  const rank = { error: 3, warn: 2, info: 1 }; const sev = new Map();
+  for (const f of (cov && cov.findings) || []) {
+    if (!f.field || f.option) continue;              // field-level findings only
+    const r = rank[f.severity] || 0; if (r > (sev.get(f.field) || 0)) sev.set(f.field, r);
+  }
+  return sev;
+}
+// nodes reachable from `start` (forward = dependents/impact; else = dependencies)
+function reachable(edges, start, forward) {
+  const adj = new Map();
+  for (const { from, to } of edges) { const [a, b] = forward ? [from, to] : [to, from]; if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); }
+  const seen = new Set(); const q = [start];
+  while (q.length) { const u = q.shift(); for (const v of adj.get(u) || []) if (!seen.has(v)) { seen.add(v); q.push(v); } }
+  seen.delete(start); return seen;
+}
 function renderGraph() {
   const host = $('graph'); host.innerHTML = '';
   const nodes = [...(data.fields || []).map((f) => ({ id: f.id, kind: 'field' })), ...(data.computed || []).map((c) => ({ id: c.id, kind: 'computed' }))];
   const ids = new Set(nodes.map((n) => n.id));
-  const edgeSet = new Set();
-  for (const [owner, e] of allExprs()) {
-    if (!owner || !ids.has(owner)) continue;
-    for (const ref of refsOf(e)) if (ids.has(ref) && ref !== owner) edgeSet.add(ref + ' ' + owner);
-  }
-  const edges = [...edgeSet].map((s) => { const [from, to] = s.split(' '); return { from, to }; });
+  const edges = edgesOf(data).filter((e) => ids.has(e.from) && ids.has(e.to));
   const layer = new Map(nodes.map((n) => [n.id, 0]));
   for (let pass = 0, changed = true; changed && pass < 200; pass++) {
     changed = false;
@@ -223,6 +237,11 @@ function renderGraph() {
   const W = PX * 2 + Math.max(...layerKeys) * COLW + NW;
   const H = PY * 2 + Math.max(1, maxRows) * ROWH;
   const selId = editor && editor.selectedId();
+  // blast radius: dependencies (upstream) + dependents/impact (downstream)
+  const up = selId ? reachable(edges, selId, false) : new Set();
+  const down = selId ? reachable(edges, selId, true) : new Set();
+  const related = new Set(selId ? [selId, ...up, ...down] : []);
+  const sev = nodeSeverity(lastCov);
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H); svg.classList.add('dg-svg');
@@ -231,17 +250,28 @@ function renderGraph() {
     const x1 = a.x + NW, y1 = a.y + NH / 2, x2 = b.x, y2 = b.y + NH / 2, mx = (x1 + x2) / 2;
     const p = document.createElementNS(NS, 'path');
     p.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
-    p.setAttribute('class', 'dg-edge' + (selId && (e.from === selId || e.to === selId) ? ' is-hot' : ''));
+    const onPath = selId && related.has(e.from) && related.has(e.to);
+    const direct = selId && (e.from === selId || e.to === selId);
+    p.setAttribute('class', 'dg-edge' + (onPath ? ' is-path' : '') + (direct ? ' is-hot' : ''));
     svg.appendChild(p);
   }
   for (const n of nodes) {
     const p = pos.get(n.id);
-    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', `dg-node dg-node--${n.kind}${n.id === selId ? ' is-sel' : ''}`); g.style.cursor = 'pointer';
+    const cls = ['dg-node', `dg-node--${n.kind}`];
+    if (n.id === selId) cls.push('is-sel');
+    else if (up.has(n.id)) cls.push('is-upstream');
+    else if (down.has(n.id)) cls.push('is-downstream');
+    else if (selId) cls.push('is-dim');
+    const s = sev.get(n.id); if (s === 3) cls.push('has-error'); else if (s === 2) cls.push('has-warn');
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', cls.join(' ')); g.style.cursor = 'pointer';
     const rect = document.createElementNS(NS, 'rect');
     rect.setAttribute('x', p.x); rect.setAttribute('y', p.y); rect.setAttribute('width', NW); rect.setAttribute('height', NH); rect.setAttribute('rx', 7);
     const tx = document.createElementNS(NS, 'text'); tx.setAttribute('x', p.x + NW / 2); tx.setAttribute('y', p.y + NH / 2 + 4); tx.setAttribute('text-anchor', 'middle'); tx.textContent = n.id;
     g.append(rect, tx);
-    g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', `Select ${n.id}`);
+    g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
+    const note = s === 3 ? 'in a dependency cycle' : s === 2 ? 'disconnected' : '';
+    g.setAttribute('aria-label', `Select ${n.id}${note ? ` — ${note}` : ''}`);
+    if (note) { const t = document.createElementNS(NS, 'title'); t.textContent = note; g.appendChild(t); }
     g.addEventListener('click', () => { editor.selectById(n.id); if (!$('graph').hidden) renderGraph(); });
     g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); editor.selectById(n.id); if (!$('graph').hidden) renderGraph(); } });
     svg.appendChild(g);
