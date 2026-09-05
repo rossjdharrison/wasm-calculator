@@ -130,3 +130,29 @@ export function mountCarousel(host, { items, getCurrent, onSelect, renderCard, r
   }
   return { deck, update, cardEl: (id) => cards[id] };
 }
+
+// ---- organism: itemised summary (line items + total + CTA) ----
+// Renders an itemised money summary into a modal (or any host). Domain-agnostic:
+// the caller passes normalised lines; the organism handles formatting + styling.
+//   lines: [{ label, amount, kind }]  kind ∈ 'base'|'add'|'save'|'fee' (default 'add')
+//   base is shown unsigned; add/save/fee show a signed ±. cta: { label, onClick(btn) }.
+// Reused by the per-item build summary and the cross-collection basket.
+export function renderSummary(host, { mark, title, lines, totalLabel, total, currency = 'GBP', cta, onClose, focus = true }) {
+  host.innerHTML = '';
+  const hd = el('div', 'bd-hd', { html: `<div class="bd-title">${mark ? `<span class="bd-eyebrow">${mark}</span>` : ''}${title || ''}</div>` });
+  if (onClose) hd.appendChild(el('button', 'bd-x', { type: 'button', text: '✕', 'aria-label': 'Close', on: { click: () => onClose() } }));
+  host.appendChild(hd);
+  const body = el('div', 'bd-body');
+  for (const ln of lines) {
+    const cls = 'bd-row' + (ln.kind === 'base' ? ' bd-base' : ln.kind === 'save' ? ' bd-save' : ln.kind === 'fee' ? ' bd-fees' : '');
+    const amt = ln.kind === 'base' ? money(ln.amount, currency) : (ln.amount < 0 ? '−' : '+') + money(Math.abs(ln.amount), currency);
+    body.appendChild(el('div', cls, { html: `<span class="bd-l">${ln.label}</span><span class="bd-a num">${amt}</span>` }));
+  }
+  host.appendChild(body);
+  const foot = el('div', 'bd-foot');
+  foot.appendChild(el('div', 'bd-total', { html: `<span>${totalLabel || 'Total'}</span><span class="num">${money(total, currency)}</span>` }));
+  if (cta) { const b = el('button', 'bd-cta', { type: 'button', text: cta.label }); b.addEventListener('click', () => cta.onClick(b)); foot.appendChild(b); }
+  host.appendChild(foot);
+  if (focus && host.focus) host.focus();
+  return { body, foot };
+}

@@ -13,9 +13,10 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-import { el, placeholderSVG as placeholder, money, openModal, mountCarousel } from './ui.mjs';
+import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary } from './ui.mjs';
+import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 
-export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links }) {
+export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId }) {
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
   resolveImage = resolveImage || (async () => null);
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -133,6 +134,12 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const tagEl = el('div', 'tag'); tagEl.textContent = brand.tagline || '';
   hd.appendChild(brandEl);
   if (links && links.length) { const nav = el('nav', 'sh-nav'); nav.setAttribute('aria-label', 'Edit'); for (const l of links) { const a = el('a'); a.href = l.href; a.textContent = l.label; nav.appendChild(a); } hd.appendChild(nav); }
+  // cross-collection basket indicator (opens the basket dialog; live count)
+  const basketBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = `<span aria-hidden="true">◈</span> Basket${n ? `<span class="basket-count">${n}</span>` : ''}`; basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); };
+  syncBasket(); basketOnChange(syncBasket);
+  basketBtn.addEventListener('click', () => openBasketModal(root, { resolveImage, inert: shell }));
+  hd.appendChild(basketBtn);
   hd.appendChild(tagEl);
   const body = el('div', 'body');
   const stage = el('section', 'stage'); stage.setAttribute('aria-label', 'Showroom stage');
@@ -385,29 +392,29 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     return { primaryLabel, baseSub, items, savings, fees, total, hasSub: !!veh, totalLabel: em.label || 'Total' };
   }
 
+  // normalise buildBreakdown() output into renderSummary's line shape
+  const summaryLines = (b) => {
+    const lines = [{ label: b.primaryLabel + ' · Base specification', amount: b.baseSub, kind: 'base' }];
+    for (const it of b.items) lines.push({ label: it.label, amount: it.amount, kind: it.amount < 0 ? 'save' : 'add' });
+    for (const s of b.savings) lines.push({ label: s.label, amount: s.amount, kind: 'save' });
+    if (b.hasSub && Math.round(b.fees) !== 0) lines.push({ label: b.totalLabel === 'Total' ? 'Fees' : 'Fees & taxes', amount: b.fees, kind: 'fee' });
+    return lines;
+  };
+  const cur = () => model.currency || 'GBP';
   let bdModal = null;
   function closeBreakdown() { if (bdModal) bdModal.close(); }
   function openBreakdown() {
     const b = buildBreakdown();
     bdModal = openModal({ root, inert: shell, overlayClass: 'bd-overlay', modalClass: 'bd-modal', label: b.primaryLabel + ' build summary', onClose: () => { bdModal = null; } });
-    const modal = bdModal.modal;
-    const hd = el('div', 'bd-hd');
-    hd.innerHTML = `<div class="bd-title"><span class="bd-eyebrow">${brand.mark}</span>${b.primaryLabel}</div>`;
-    const x = el('button', 'bd-x'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close summary'); x.addEventListener('click', closeBreakdown);
-    hd.appendChild(x); modal.appendChild(hd);
-    const body = el('div', 'bd-body');
-    const row = (label, amount, cls) => { const r = el('div', 'bd-row' + (cls ? ' ' + cls : '')); r.innerHTML = `<span class="bd-l">${label}</span><span class="bd-a num">${amount}</span>`; body.appendChild(r); };
-    row(b.primaryLabel + ' · Base specification', money0(b.baseSub), 'bd-base');
-    for (const it of b.items) row(it.label, (it.amount > 0 ? '+' : '−') + money0(Math.abs(it.amount)), it.amount < 0 ? 'bd-save' : '');
-    for (const s of b.savings) row(s.label, '−' + money0(Math.abs(s.amount)), 'bd-save');
-    if (b.hasSub && Math.round(b.fees) !== 0) row(b.totalLabel === 'Total' ? 'Fees' : 'Fees & taxes', (b.fees > 0 ? '+' : '−') + money0(Math.abs(b.fees)), 'bd-fees');
-    modal.appendChild(body);
-    const foot = el('div', 'bd-foot');
-    foot.innerHTML = `<div class="bd-total"><span>${b.totalLabel}</span><span class="num">${money0(b.total)}</span></div>`;
-    const cta = el('button', 'bd-cta'); cta.type = 'button'; cta.textContent = brand.cta || 'Request this build ▸';
-    cta.addEventListener('click', () => { cta.disabled = true; cta.textContent = 'Request submitted ✓'; setTimeout(closeBreakdown, 1500); });
-    foot.appendChild(cta); modal.appendChild(foot);
-    modal.focus();
+    renderSummary(bdModal.modal, {
+      mark: brand.mark, title: b.primaryLabel, lines: summaryLines(b),
+      totalLabel: b.totalLabel, total: b.total, currency: cur(), onClose: closeBreakdown,
+      cta: { label: 'Add to basket ▸', onClick: (btn) => {
+        const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
+        basketAdd({ modelId, collection: brand.descriptor || (brand.rest || ''), title: b.primaryLabel, total: b.total, currency: cur(), image: opt.image || null });
+        btn.disabled = true; btn.textContent = 'Added to basket ✓'; setTimeout(closeBreakdown, 1100);
+      } },
+    });
   }
 
   function buildPodium() {

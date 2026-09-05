@@ -7,6 +7,7 @@
 import { loadCatalog } from './store.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 import { el, placeholderSVG } from './ui.mjs';
+import { count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 
 (async function boot() {
   const root = document.getElementById('landing');
@@ -17,7 +18,14 @@ import { el, placeholderSVG } from './ui.mjs';
   const brand = cat.brand || { mark: 'ROWBLAA', rest: 'LUXURY' };
   const wrap = el('div', 'lp');
   const hd = el('header', 'lp-hd');
-  hd.innerHTML = `<div class="brand"><b>${brand.mark}</b> ${brand.rest || ''}</div><div class="tag">Haarlem</div>`;
+  const brandEl = el('div', 'brand', { html: `<b>${brand.mark}</b> ${brand.rest || ''}` });
+  const right = el('div', 'lp-hd-right');
+  const basketBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = `<span aria-hidden="true">◈</span> Basket${n ? `<span class="basket-count">${n}</span>` : ''}`; basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); };
+  syncBasket(); basketOnChange(syncBasket);
+  basketBtn.addEventListener('click', () => openBasketModal(document.body, { resolveImage, inert: root }));
+  right.append(basketBtn, el('div', 'tag', { text: 'Haarlem' }));
+  hd.append(brandEl, right);
   const hero = el('div', 'lp-hero');
   hero.innerHTML = `<div class="lp-eyebrow">The Collections</div>
     <h1 class="lp-title">Curated luxury, configured to you.</h1>

@@ -33,7 +33,7 @@ const LINKS = [
   catch (e) { return fatal(`Could not start the engine: ${e.message}`); }
 
   mountShowroom(document.getElementById('app'), {
-    model, ir: assembled.ir, engine, brand: model.brand, resolveImage, links: LINKS,
+    model, ir: assembled.ir, engine, brand: model.brand, resolveImage, links: LINKS, modelId: MODEL_ID,
   });
 })();
 

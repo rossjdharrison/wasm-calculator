@@ -266,6 +266,42 @@
   .bd-cta:hover { filter: brightness(1.05); }
   .bd-cta:disabled { filter: none; opacity: .9; cursor: default; }
 
+  /* ---- basket indicator + dialog ---- */
+  .basket-btn { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--text-soft); background: rgba(255,255,255,.04); border: 1px solid var(--border-strong);
+    border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+  .basket-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .basket-btn span[aria-hidden] { font-size: 13px; }
+  .basket-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; margin-left: 4px;
+    background: linear-gradient(180deg, var(--accent-hi), var(--accent)); color: var(--accent-ink); font-size: 10px; letter-spacing: 0; font-weight: 600; }
+  .lp-hd-right { display: flex; align-items: center; gap: 16px; }
+
+  .bk-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 4vh 3vw; overflow: auto;
+    background: radial-gradient(120% 90% at 50% -10%, rgba(216,162,74,.10), transparent 55%), rgba(6,7,9,.72); backdrop-filter: blur(6px); animation: cmp-fade .18s ease both; }
+  .bk-modal { width: min(520px, 96vw); max-height: 92vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #16181d, #101216);
+    border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 40px 100px -30px rgba(0,0,0,.85); overflow: hidden; animation: cmp-rise .28s cubic-bezier(.2,.7,.2,1) both; }
+  .bk-hd { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 20px; border-bottom: 1px solid var(--border); }
+  .bk-title { font-family: var(--display); font-weight: 600; font-size: 19px; display: flex; align-items: baseline; gap: 10px; }
+  .bk-eyebrow { font-family: var(--sans); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+  .bk-empty { padding: 40px 24px; text-align: center; color: var(--text-soft); font-size: 14px; line-height: 1.7; }
+  .bk-empty b { color: var(--text); }
+  .bk-list { overflow: auto; padding: 6px 12px; }
+  .bk-item { display: grid; grid-template-columns: 56px 1fr auto auto; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  .bk-item:last-child { border-bottom: 0; }
+  .bk-thumb { width: 56px; height: 42px; border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .bk-thumb img, .bk-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bk-info { min-width: 0; }
+  .bk-item-title { font-family: var(--display); font-weight: 600; font-size: 15px; }
+  .bk-item-sub { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; }
+  .bk-item-price { font-family: var(--display); font-size: 15px; color: var(--accent); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+  .bk-rm { border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 6px; }
+  .bk-rm:hover { color: var(--error); background: var(--surface-2); }
+  .bk-foot { border-top: 1px solid var(--border-strong); padding: 14px 20px 18px; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.18)); }
+  .bk-total { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .bk-total span:first-child { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-soft); }
+  .bk-total span:last-child { font-family: var(--display); font-weight: 600; font-size: 26px; color: var(--accent); font-variant-numeric: tabular-nums lining-nums; }
+
   /* powertrain radio list */
   .plist { display: flex; flex-direction: column; gap: 8px; }
   .prow { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 12px;
