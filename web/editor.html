@@ -14,20 +14,7 @@
   </head>
   <body>
     <main class="qc-app">
-      <header class="qc-app__head">
-        <nav class="qc-nav" aria-label="Pages">
-          <a href="./">Configurator</a>
-          <a href="data-editor.html">Data model</a>
-          <a href="presentation-editor.html">Presentation</a>
-          <a href="editor.html" class="is-active">JSON</a>
-        </nav>
-        <h1>Edit model</h1>
-        <p>
-          View and update the model that drives the configurator. <strong>Update model</strong>
-          validates it, loads it into the WebAssembly engine, saves it (in this browser), and
-          reopens the Configurator with the fresh model. Nothing here changes the engine.
-        </p>
-      </header>
+      <header id="studio-head" class="qc-app__head"></header>
 
       <div class="qc-editor">
         <section class="qc-editor__main">

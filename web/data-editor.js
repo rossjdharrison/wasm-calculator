@@ -6,21 +6,22 @@
 // mounts the engine, and owns the domain right-panel: depends-on/used-by, the
 // dependency graph, and the live preview from the wasm engine.
 // =============================================================================
-import { assemble, loadEngine, mergeModel } from './assembler.mjs';
 import { currentData, currentPres, saveData, savePres, loadDefaultData } from './store.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
 import { analyzeCoverage, applyFix } from './coverage.mjs';
 import { el, hint } from './editor-ui.mjs';
+import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
+import { buildDefaults, renderStaticPreview } from './preview.mjs';
+import { mountStudioShell } from './studio-shell.mjs';
 
 const WASM_URL = 'quote.wasm';
-const $ = (id) => document.getElementById(id);
-const clone = (x) => JSON.parse(JSON.stringify(x));
 
 let data = null, pres = null, wasmBytes = null, schema = null, editor = null, assembledOk = null, presDirty = false;
 
 boot();
 async function boot() {
+  mountStudioShell($('studio-head'), { active: 'data', title: 'Data model', blurb: 'How the quote is calculated and how fields depend on each other. Edit fields, options &amp; availability, computed formulas, tables, validations and effects. <strong>Save</strong> applies it (this browser) and reopens the Configurator. Presentation (labels, layout, controls) lives on its own page.' });
   try {
     [data, pres, wasmBytes, schema] = await Promise.all([
       currentData().then(clone),
@@ -176,46 +177,19 @@ function depList(label, ids) {
 }
 
 function recompute() {
-  let model, assembled;
-  try { model = mergeModel(data, pres); assembled = assemble(model); }
-  catch (e) { assembledOk = null; setStatus('error', `Model error: ${e.message}`); $('preview').innerHTML = ''; return; }
-  loadEngine(wasmBytes, assembled)
-    .then((engine) => {
+  assembleLive(data, pres, wasmBytes)
+    .then(({ assembled, engine }) => {
       const res = engine.evaluate(buildDefaults(assembled.ir));
       assembledOk = assembled;
       setStatus('ok', `Valid — ${assembled.ir.fields.length} fields, ${assembled.ir.computedIR.length} computed, ${assembled.ir.outputs.length} outputs.`);
-      renderPreview(assembled.ir, res);
+      renderStaticPreview($('preview'), assembled.ir, res);
     })
-    .catch((e) => { assembledOk = null; setStatus('error', `Engine: ${e.message}`); });
+    .catch((e) => {
+      assembledOk = null;
+      if (e.phase === 'assemble') { setStatus('error', `Model error: ${e.message}`); $('preview').innerHTML = ''; }
+      else setStatus('error', `Engine: ${e.message}`);
+    });
 }
-function renderPreview(ir, res) {
-  const host = $('preview'); host.innerHTML = '';
-  const h = el('div', 'qc-preview__title'); h.textContent = 'Default quote (live)'; host.appendChild(h);
-  ir.outputs.forEach((o, i) => {
-    const r = res.outputs[i]; if (!r.visible) return;
-    const rowEl = el('div', 'qc-preview__row');
-    const l = el('span'); l.textContent = o.label; const v = el('span'); v.textContent = fmt(r);
-    rowEl.append(l, v); host.appendChild(rowEl);
-  });
-}
-function buildDefaults(ir) {
-  const inp = {};
-  for (const f of ir.fields) {
-    if (f.type === 'choice') inp[f.id] = f.defaultRaw ?? f.options[0]?.id;
-    else if (f.type === 'multichoice') inp[f.id] = f.defaultRaw ?? [];
-    else if (f.type === 'boolean') inp[f.id] = !!f.defaultRaw;
-    else inp[f.id] = f.defaultRaw ?? 0;
-  }
-  return inp;
-}
-function fmt(o) {
-  const v = o.value; const nf = (opt) => new Intl.NumberFormat(undefined, opt).format(v);
-  if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals });
-  if (o.format === 'unit') { const n = nf({ maximumFractionDigits: o.decimals, minimumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
-  return nf({ maximumFractionDigits: o.decimals ?? 2 });
-}
-function setStatus(kind, msg) { const s = $('status'); s.className = `qc-status qc-status--${kind}`; s.textContent = msg; }
 
 // ---- dependency graph (SVG) ------------------------------------------------
 function toggleGraph() {

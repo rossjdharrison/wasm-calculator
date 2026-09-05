@@ -9,11 +9,11 @@
 
 import { assemble, loadEngine, mergeModel, splitModel } from './assembler.mjs';
 import { currentModel, saveData, savePres, loadDefaultData, loadDefaultPres } from './store.mjs';
+import { $, debounce, setStatus } from './studio-dom.mjs';
+import { buildDefaults, renderStaticPreview } from './preview.mjs';
+import { mountStudioShell } from './studio-shell.mjs';
 
 const WASM_URL = 'quote.wasm';
-
-const $ = (id) => document.getElementById(id);
-const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 
 let wasmBytes = null;
 let lastValid = null; // parsed model object from the most recent successful validate
@@ -21,6 +21,7 @@ let lastValid = null; // parsed model object from the most recent successful val
 boot();
 
 async function boot() {
+  mountStudioShell($('studio-head'), { active: 'json', title: 'Edit model', blurb: 'View and update the model that drives the configurator. <strong>Update model</strong> validates it, loads it into the WebAssembly engine, saves it (in this browser), and reopens the Configurator with the fresh model. Nothing here changes the engine.' });
   try {
     wasmBytes = new Uint8Array(await (await fetch(WASM_URL)).arrayBuffer());
   } catch (e) {
@@ -75,43 +76,7 @@ function ok(model, assembled, res) {
     + `${ir.fields.length} fields, ${ir.computedIR.length} computed, ${ir.outputs.length} outputs, `
     + `${assembled.modelBytes.length}-byte image.`);
   $('btn-update').disabled = false;
-  renderPreview(ir, res);
-}
-
-// ---- preview: the default quote produced by the fresh model ------------------
-function renderPreview(ir, res) {
-  const host = $('preview');
-  host.innerHTML = '';
-  const h = el('div', 'qc-preview__title'); h.textContent = 'Default quote (live from the engine)';
-  host.appendChild(h);
-  for (let i = 0; i < ir.outputs.length; i++) {
-    const o = ir.outputs[i], r = res.outputs[i];
-    if (!r.visible) continue;
-    const row = el('div', 'qc-preview__row');
-    const l = el('span'); l.textContent = o.label;
-    const v = el('span'); v.textContent = fmt(r);
-    row.append(l, v); host.appendChild(row);
-  }
-}
-
-function buildDefaults(ir) {
-  const inp = {};
-  for (const f of ir.fields) {
-    if (f.type === 'choice') inp[f.id] = f.defaultRaw ?? f.options[0].id;
-    else if (f.type === 'multichoice') inp[f.id] = f.defaultRaw ?? [];
-    else if (f.type === 'boolean') inp[f.id] = !!f.defaultRaw;
-    else inp[f.id] = f.defaultRaw ?? 0;
-  }
-  return inp;
-}
-
-function fmt(o) {
-  const v = o.value;
-  const nf = (opts) => new Intl.NumberFormat(undefined, opts).format(v);
-  if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
-  return nf({ maximumFractionDigits: o.decimals ?? 2 });
+  renderStaticPreview($('preview'), ir, res, 'Default quote (live from the engine)');
 }
 
 // ---- actions ----------------------------------------------------------------
@@ -142,13 +107,3 @@ function update() {
     .catch((e) => setStatus('error', `Engine rejected the model: ${e.message}`));
 }
 
-// ---- helpers ----------------------------------------------------------------
-function setStatus(kind, msg) {
-  const s = $('status');
-  s.className = `qc-status qc-status--${kind}`;
-  s.textContent = msg;
-}
-function debounce(fn, ms) {
-  let t;
-  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-}

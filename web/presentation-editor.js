@@ -6,18 +6,16 @@
 // rebuilt as you edit, with two-way click-to-edit selection between the form and
 // the editors. Cross-file binding check + Save reopens the Configurator.
 // =============================================================================
-import { assemble, loadEngine, mergeModel } from './assembler.mjs';
 import { currentData, currentPres, savePres, loadDefaultPres } from './store.mjs';
 import { validateBinding } from './binding.mjs';
 import { el, textRow, numRow, checkRow, selectRow, hint, addBtn, makeRuleUI } from './editor-ui.mjs';
 import { mountConfigurator } from './render-form.mjs';
 import { pickImage } from './asset-picker.mjs';
 import { resolve as resolveAsset } from './assets.mjs';
+import { $, clone, debounce, setStatus, message, assembleLive } from './studio-dom.mjs';
+import { mountStudioShell } from './studio-shell.mjs';
 
 const WASM_URL = 'quote.wasm';
-const $ = (id) => document.getElementById(id);
-const clone = (x) => JSON.parse(JSON.stringify(x));
-const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
 const CONTROLS = { choice: ['radio', 'dropdown', 'buttons'], multichoice: ['buttons', 'checkboxes'], number: ['input', 'stepper'], boolean: ['switch', 'checkbox'] };
 const WIDTHS = ['full', 'half', 'third', 'quarter'];
@@ -31,6 +29,7 @@ const rules = makeRuleUI(() => (data.fields || []).map((f) => ({ id: f.id, type:
 
 boot();
 async function boot() {
+  mountStudioShell($('studio-head'), { active: 'pres', title: 'Presentation', blurb: 'How the data is shown: bind each field to a control, place it in a section, set labels &amp; option text, choose outputs and formats. The logic lives on the Data page; this only changes the look and layout.' });
   try {
     [data, pres, wasm] = await Promise.all([
       currentData(), currentPres().then(clone),
@@ -44,11 +43,12 @@ async function boot() {
 }
 
 const GROUPS = [
-  { key: 'sections', title: 'Sections', label: (x) => x.label || x.id },
+  { key: 'settings', title: 'Collection', label: () => 'Settings' },
+  { key: 'sections', title: 'Sections', label: (x) => x.label || x.id, addable: true },
   { key: 'fields', title: 'Fields', label: (x) => x.id },
-  { key: 'outputs', title: 'Outputs', label: (x, i) => x.id || `#${i}` },
+  { key: 'outputs', title: 'Outputs', label: (x, i) => x.id || `#${i}`, addable: true },
 ];
-function items(group) { return group === 'fields' ? (data.fields || []) : (pres[group] || []); }
+function items(group) { return group === 'fields' ? (data.fields || []) : group === 'settings' ? [{ id: 'Settings' }] : (pres[group] || []); }
 function dataValueIds() { return [...(data.computed || []).map((c) => c.id), ...(data.fields || []).map((f) => f.id)]; }
 function ensurePresField(id) { pres.fields = pres.fields || []; let pf = pres.fields.find((f) => f.id === id); if (!pf) { pf = { id }; pres.fields.push(pf); } return pf; }
 function ensurePresOption(pf, oid) { pf.options = pf.options || []; let o = pf.options.find((x) => x.id === oid); if (!o) { o = { id: oid }; pf.options.push(o); } return o; }
@@ -80,7 +80,7 @@ function renderOutline() {
     const sec = el('div', 'de-group');
     const head = el('div', 'de-group__head');
     const h = el('span'); h.textContent = g.title; head.appendChild(h);
-    if (g.key !== 'fields') head.appendChild(addBtn('+ add', () => addItem(g.key)));
+    if (g.addable) head.appendChild(addBtn('+ add', () => addItem(g.key)));
     sec.appendChild(head);
     items(g.key).forEach((it, i) => {
       const b = el('button', 'de-item'); b.type = 'button'; b.textContent = g.label(it, i);
@@ -98,8 +98,8 @@ function highlightSelection() {
   if (!preview) return;
   const list = items(sel.group); const it = list[sel.index]; if (!it) return;
   const kind = { sections: 'section', fields: 'field', outputs: 'output' }[sel.group];
-  const id = sel.group === 'fields' ? it.id : (sel.group === 'sections' ? it.id : it.id);
-  preview.highlight(kind, id);
+  if (!kind) return;   // settings has no preview target
+  preview.highlight(kind, it.id);
 }
 function onEdit(kind, id) {
   if (kind === 'field') { const i = (data.fields || []).findIndex((f) => f.id === id); if (i >= 0) selectItem('fields', i); }
@@ -112,7 +112,22 @@ function renderDetail() {
   const list = items(sel.group);
   if (!list.length) { root.appendChild(hint('Nothing here yet.')); return; }
   if (sel.index >= list.length) sel.index = list.length - 1;
-  ({ sections: sectionEditor, fields: fieldEditor, outputs: outputEditor }[sel.group])(list[sel.index], sel.index, root);
+  ({ settings: settingsEditor, sections: sectionEditor, fields: fieldEditor, outputs: outputEditor }[sel.group])(list[sel.index], sel.index, root);
+}
+
+// Collection-level presentation settings: the header/brand, the CTA, and the
+// carry-over behaviour when the main option changes (all top-level presentation).
+function settingsEditor(_it, _idx, root) {
+  root.appendChild(titleRow('Collection settings'));
+  root.appendChild(textRow('Name', pres.name || '', (v) => set(pres, 'name', v || undefined)));
+  root.appendChild(checkRow('Carry selections over when the main option changes', pres.carryOverOnPrimaryChange !== false, (v) => set(pres, 'carryOverOnPrimaryChange', v)));
+  root.appendChild(hint('On: keep trim/options while browsing the range (good when options are comparable). Off: reset to defaults for each new option.'));
+  pres.brand = pres.brand || {};
+  root.appendChild(textRow('Brand mark', pres.brand.mark || '', (v) => set(pres.brand, 'mark', v || undefined)));
+  root.appendChild(textRow('Brand rest', pres.brand.rest || '', (v) => set(pres.brand, 'rest', v || undefined)));
+  root.appendChild(textRow('Collection descriptor', pres.brand.descriptor || '', (v) => set(pres.brand, 'descriptor', v || undefined)));
+  root.appendChild(textRow('Maison / tagline', pres.brand.tagline || '', (v) => set(pres.brand, 'tagline', v || undefined)));
+  root.appendChild(textRow('Call to action', pres.brand.cta || '', (v) => set(pres.brand, 'cta', v || undefined)));
 }
 
 function sectionEditor(s, idx, root) {
@@ -183,28 +198,28 @@ function set(obj, key, val) { if (val === undefined) delete obj[key]; else obj[k
 function renderIssues() {
   const host = $('issues'); host.innerHTML = '';
   const { errors, warnings } = validateBinding(data, pres);
-  if (!errors.length && !warnings.length) { host.appendChild(line('info', 'Bindings look good.')); return; }
-  for (const e of errors) host.appendChild(line('error', e));
-  for (const w of warnings) host.appendChild(line('warn', w));
+  if (!errors.length && !warnings.length) { host.appendChild(message('info', 'Bindings look good.')); return; }
+  for (const e of errors) host.appendChild(message('error', e));
+  for (const w of warnings) host.appendChild(message('warn', w));
 }
-function line(kind, text) { const d = el('div', `qc-message qc-message--${kind}`); d.textContent = text; return d; }
 
 // ---- WYSIWYG live preview (the real Configurator) --------------------------
 const scheduleRebuild = debounce(rebuildPreview, 140);
 function rebuildPreview() {
-  let model, assembled;
-  try { model = mergeModel(data, pres); assembled = assemble(model); }
-  catch (e) { assembledOk = null; preview = null; setStatus('error', `Model error: ${e.message}`); $('preview').innerHTML = ''; return; }
   const token = ++previewToken;
-  loadEngine(wasm, assembled).then((engine) => {
+  assembleLive(data, pres, wasm).then(({ model, assembled, engine }) => {
     if (token !== previewToken) return; // a newer edit superseded this build
     assembledOk = assembled;
     setStatus('ok', 'Live preview — click any field to edit it.');
     preview = mountConfigurator($('preview'), { model, ir: assembled.ir, engine, onEdit });
     highlightSelection();
-  }).catch((e) => { if (token !== previewToken) return; assembledOk = null; preview = null; setStatus('error', `Engine: ${e.message}`); });
+  }).catch((e) => {
+    if (token !== previewToken) return;
+    assembledOk = null; preview = null;
+    if (e.phase === 'assemble') { setStatus('error', `Model error: ${e.message}`); $('preview').innerHTML = ''; }
+    else setStatus('error', `Engine: ${e.message}`);
+  });
 }
-function setStatus(kind, msg) { const s = $('status'); s.className = `qc-status qc-status--${kind}`; s.textContent = msg; }
 
 function save() {
   const { errors } = validateBinding(data, pres);

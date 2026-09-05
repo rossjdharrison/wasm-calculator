@@ -21,6 +21,14 @@ body {
 .qc-app__head h1 { margin: 0 0 var(--qc-space-2); font-size: var(--qc-font-size-h1); letter-spacing: -0.02em; }
 .qc-app__head p { margin: 0; max-width: 62ch; color: var(--qc-color-text-soft); }
 
+/* ---- studio shell (shared editor chrome: brand lockup + cross-page nav) ---- */
+.studio-top { display: flex; align-items: center; justify-content: space-between; gap: var(--qc-space-3) var(--qc-space-5); flex-wrap: wrap; margin-bottom: var(--qc-space-4); }
+.studio-top .qc-nav { margin-bottom: 0; }
+.studio-brand { text-decoration: none; display: inline-flex; flex-direction: column; line-height: 1.1; }
+.studio-brand__mark { font-family: var(--qc-font-display); font-size: 15px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--qc-color-text-soft); }
+.studio-brand__mark b { font-weight: 700; color: var(--qc-color-text); }
+.studio-brand__sub { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--qc-color-text-soft); margin-top: 3px; }
+
 /* ---- layout ---- */
 .qc { display: grid; grid-template-columns: 1fr var(--qc-summary-width); gap: var(--qc-space-5); align-items: start; }
 @media (max-width: 820px) { .qc { grid-template-columns: 1fr; } }

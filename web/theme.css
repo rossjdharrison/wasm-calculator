@@ -168,6 +168,7 @@
 }
 :root[data-skin="dusk"] .qc-app__head h1 { text-shadow: 0 0 26px rgba(216, 162, 74, 0.22); }
 :root[data-skin="dusk"] .qc-nav a.is-active { color: var(--qc-color-accent); }
+:root[data-skin="dusk"] .studio-brand__sub { color: var(--qc-color-accent); }
 :root[data-skin="dusk"] .qc-btn-primary {
   background: linear-gradient(180deg, var(--qc-color-accent-hover), var(--qc-color-accent));
   color: var(--qc-color-accent-contrast); border: 0;
