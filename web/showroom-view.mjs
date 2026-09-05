@@ -13,7 +13,7 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+import { el, placeholderSVG as placeholder, money, openModal } from './ui.mjs';
 
 export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links }) {
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
@@ -64,20 +64,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     if (r.format === 'unit') return nf({ maximumFractionDigits: r.decimals ?? 0 }) + (r.unit ? ' ' + r.unit : '');
     return nf({ maximumFractionDigits: r.decimals ?? 0 });
   };
-  const money0 = (v) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(v);
+  const money0 = (v) => money(v, model.currency || 'GBP');
 
   // ---------- item visuals (image asset, else a neutral placeholder) ----------
   // Colour swatch palette (used only by a field flagged render:"swatch", e.g. paint).
   const PAINT = { solid: ['#8a9099', '#6d737c'], metallic: ['#aeb7c4', '#7c8794'], premium: ['#3a4c6b', '#243149'], matte: ['#4a4d52', '#3a3d42'] };
-  // domain-agnostic placeholder shown until an image is attached: a framed monogram
-  // of the option's label (works for a car, a painting, a chandelier — anything).
-  function placeholderSVG(optId) {
-    const o = (modelFieldById[primary.id].options || []).find((x) => x.id === optId);
-    const lbl = (o && o.label) || optId;
-    const initials = String(lbl).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '◆';
-    const gid = 'ph' + Math.random().toString(36).slice(2, 7);
-    return `<svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#232830"/><stop offset="1" stop-color="#12141a"/></linearGradient></defs><rect width="400" height="250" fill="url(#${gid})"/><rect x="148" y="52" width="104" height="146" rx="4" fill="none" stroke="rgba(216,162,74,.45)" stroke-width="2"/><text x="200" y="142" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="46" fill="rgba(244,239,231,.9)">${initials}</text></svg>`;
-  }
+  // shared neutral placeholder (ui.placeholderSVG), keyed to the primary option's label
+  const placeholderSVG = (optId) => { const o = (modelFieldById[primary.id].options || []).find((x) => x.id === optId); return placeholder((o && o.label) || optId); };
   const imgUrl = {}; // primary optionId -> resolved image URL
   function carVisual(optId) {
     if (imgUrl[optId]) return `<img class="carimg" src="${imgUrl[optId]}" alt="">`;
@@ -286,25 +279,20 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
 
   // a model option's headline metrics at its default build (the same basis as "from")
   function carMetrics(id) { return compute(baseConfigFor(id)); }
-  let cmpOpener = null;
+  let cmpModal = null;                          // ui.openModal handle (shell + a11y)
   function openCompare() {
     const all = primaryOpts().map((o) => o.id);
     const cur = state[primary.id];
     compareIds = [cur, ...all.filter((id) => id !== cur)].slice(0, 3);
-    cmpOpener = document.activeElement;         // to restore focus on close
-    shell.inert = true;                          // make the app behind the dialog inert (no focus/AT reach)
+    cmpModal = openModal({ root, inert: shell, overlayClass: 'cmp-overlay', modalClass: 'cmp-modal', label: 'Compare vehicles', onClose: () => { compareIds = null; cmpModal = null; } });
     renderCompare('init');
   }
-  function closeCompare() { compareIds = null; shell.inert = false; const ov = root.querySelector('.cmp-overlay'); if (ov) ov.remove(); document.removeEventListener('keydown', cmpKey); if (cmpOpener && cmpOpener.focus) cmpOpener.focus(); cmpOpener = null; }
-  function cmpKey(e) { if (e.key === 'Escape') closeCompare(); }
+  function closeCompare() { if (cmpModal) cmpModal.close(); }
   // focusReq: 'init' (focus the dialog on open) | <number> (focus the i-th picker
   // after a rebuild, so keyboard focus survives select/add/remove) | undefined.
   function renderCompare(focusReq) {
-    if (!compareIds) return;
-    let ov = root.querySelector('.cmp-overlay');
-    if (!ov) { ov = el('div', 'cmp-overlay'); ov.addEventListener('click', (e) => { if (e.target === ov) closeCompare(); }); root.appendChild(ov); document.addEventListener('keydown', cmpKey); }
-    ov.innerHTML = '';
-    const modal = el('div', 'cmp-modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Compare vehicles');
+    if (!cmpModal) return;
+    const modal = cmpModal.modal; modal.innerHTML = '';
     const opts = primaryOpts();
     const metrics = compareIds.map(carMetrics);
     const best = {};
@@ -346,7 +334,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     // metric rows (the "From" price is the headline figure — give it accent weight)
     for (const row of COMPARE_ROWS) {
       grid.appendChild(cell('cmp-lbl', row.label));
-      compareIds.forEach((id, i) => { const m = metrics[i]; const o = m && m.out[row.id]; const cls = 'cmp-val' + (row.id === 'otr' ? ' cmp-price' : '') + (best[row.id] && best[row.id][i] ? ' is-best' : ''); grid.appendChild(cell(cls, o ? fmt(o) : '—')); });
+      compareIds.forEach((id, i) => { const m = metrics[i]; const o = m && m.out[row.id]; const cls = 'cmp-val' + (row.id === emOutput().id ? ' cmp-price' : '') + (best[row.id] && best[row.id][i] ? ' is-best' : ''); grid.appendChild(cell(cls, o ? fmt(o) : '—')); });
     }
     // configure row
     grid.appendChild(cell('cmp-lbl', ''));
@@ -354,12 +342,11 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     wrap.appendChild(grid);
     if (compareIds.length < 4) { const add = el('button', 'cmp-add'); add.type = 'button'; add.textContent = '+ Add a vehicle'; add.addEventListener('click', () => { const a = opts.map((o) => o.id).find((id) => !compareIds.includes(id)) || opts[0].id; compareIds.push(a); renderCompare(compareIds.length - 1); }); wrap.appendChild(add); }
     modal.appendChild(wrap);
-    ov.appendChild(modal);
     // horizontal-scroll affordance when the grid is wider than the modal (mobile)
     if (wrap.scrollWidth > wrap.clientWidth + 2) { const hint = el('div', 'cmp-hint'); hint.textContent = '‹ swipe to compare ›'; hint.setAttribute('aria-hidden', 'true'); modal.appendChild(hint); }
     // focus: into the dialog on open; back onto the rebuilt picker after an edit
-    if (focusReq === 'init') { modal.tabIndex = -1; modal.focus(); }
-    else if (typeof focusReq === 'number') { const sels = ov.querySelectorAll('.cmp-select'); (sels[Math.min(focusReq, sels.length - 1)] || modal).focus(); }
+    if (focusReq === 'init') { modal.focus(); }
+    else if (typeof focusReq === 'number') { const sels = modal.querySelectorAll('.cmp-select'); (sels[Math.min(focusReq, sels.length - 1)] || modal).focus(); }
   }
 
   // ---------- itemised breakdown ("Request this build") ----------
@@ -407,15 +394,12 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     return { primaryLabel, baseSub, items, savings, fees, total, hasSub: !!veh, totalLabel: em.label || 'Total' };
   }
 
-  let bdOpener = null;
-  function openBreakdown() { bdOpener = document.activeElement; shell.inert = true; renderBreakdown(); }
-  function closeBreakdown() { shell.inert = false; const ov = root.querySelector('.bd-overlay'); if (ov) ov.remove(); document.removeEventListener('keydown', bdKey); if (bdOpener && bdOpener.focus) bdOpener.focus(); bdOpener = null; }
-  function bdKey(e) { if (e.key === 'Escape') closeBreakdown(); }
-  function renderBreakdown() {
+  let bdModal = null;
+  function closeBreakdown() { if (bdModal) bdModal.close(); }
+  function openBreakdown() {
     const b = buildBreakdown();
-    const ov = el('div', 'bd-overlay'); ov.addEventListener('click', (e) => { if (e.target === ov) closeBreakdown(); });
-    root.appendChild(ov); document.addEventListener('keydown', bdKey);
-    const modal = el('div', 'bd-modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', b.primaryLabel + ' build summary');
+    bdModal = openModal({ root, inert: shell, overlayClass: 'bd-overlay', modalClass: 'bd-modal', label: b.primaryLabel + ' build summary', onClose: () => { bdModal = null; } });
+    const modal = bdModal.modal;
     const hd = el('div', 'bd-hd');
     hd.innerHTML = `<div class="bd-title"><span class="bd-eyebrow">${brand.mark}</span>${b.primaryLabel}</div>`;
     const x = el('button', 'bd-x'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close summary'); x.addEventListener('click', closeBreakdown);
@@ -432,8 +416,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const cta = el('button', 'bd-cta'); cta.type = 'button'; cta.textContent = brand.cta || 'Request this build ▸';
     cta.addEventListener('click', () => { cta.disabled = true; cta.textContent = 'Request submitted ✓'; setTimeout(closeBreakdown, 1500); });
     foot.appendChild(cta); modal.appendChild(foot);
-    ov.appendChild(modal);
-    modal.tabIndex = -1; modal.focus();
+    modal.focus();
   }
 
   // Build the deck cards ONCE (so CSS can animate their transforms between renders);

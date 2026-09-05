@@ -6,20 +6,7 @@
 // =============================================================================
 import { loadCatalog } from './store.mjs';
 import { resolve as resolveImage } from './assets.mjs';
-
-const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
-
-// a neutral, domain-agnostic placeholder for a collection with no hero image yet
-const placeholder = (label) => {
-  const gid = 'lp' + Math.random().toString(36).slice(2, 7);
-  const initials = (label || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  return `<svg viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
-    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20242c"/><stop offset="1" stop-color="#12141a"/></linearGradient></defs>
-    <rect width="400" height="260" fill="url(#${gid})"/>
-    <rect x="150" y="70" width="100" height="120" rx="4" fill="none" stroke="rgba(216,162,74,.5)" stroke-width="2"/>
-    <text x="200" y="145" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="42" fill="rgba(244,239,231,.85)">${initials}</text>
-  </svg>`;
-};
+import { el, placeholderSVG } from './ui.mjs';
 
 (async function boot() {
   const root = document.getElementById('landing');
@@ -40,7 +27,7 @@ const placeholder = (label) => {
   for (const m of (cat.models || [])) {
     const a = el('a', 'lp-card'); a.href = `configure.html?m=${encodeURIComponent(m.id)}`;
     const media = el('div', 'lp-media');
-    media.innerHTML = placeholder(m.title);            // neutral until the hero resolves
+    media.innerHTML = placeholderSVG(m.title);          // neutral until the hero resolves
     const body = el('div', 'lp-cardbody');
     body.innerHTML = `<div class="lp-cardtitle">${m.title}</div><div class="lp-blurb">${m.blurb || ''}</div><div class="lp-enter">Enter <span aria-hidden="true">→</span></div>`;
     a.append(media, body); grid.appendChild(a);
