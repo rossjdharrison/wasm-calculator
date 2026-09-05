@@ -6,8 +6,11 @@
 // =============================================================================
 import { parseExpr, formatExpr } from './expr.mjs';
 import { astToRuleTop, ruleToAst } from './rule.mjs';
+import { el } from './ui.mjs';
 
-export const el = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
+// el() lives in the shared ui.mjs atom layer now; re-exported so the editor
+// widgets (and pages importing from editor-ui) keep a single source of truth.
+export { el };
 export function row(label, control) { const r = el('label', 'de-row'); const l = el('span', 'de-row__label'); l.textContent = label; r.append(l, control); return r; }
 export function textRow(label, val, onChange) { const i = el('input', 'qc-input'); i.value = val; i.addEventListener('input', () => onChange(i.value)); return row(label, i); }
 export function numRow(label, val, onChange) { const i = el('input', 'qc-input'); i.type = 'number'; i.value = val ?? ''; i.addEventListener('input', () => onChange(i.value === '' ? undefined : Number(i.value))); return row(label, i); }

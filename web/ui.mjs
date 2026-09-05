@@ -70,3 +70,63 @@ export function openModal({ root, inert, overlayClass, modalClass, label, onClos
   root.appendChild(overlay);
   return { overlay, modal, close };
 }
+
+// ---- molecule: coverflow carousel (a single-row "deck") ----
+// A domain-agnostic single-select carousel: the current item sits centred and
+// "face-up", neighbours fan away in 3D, and it loops when there are enough items
+// to hide the wrap off-stage (>=7; fewer clamp at the ends). Handles nav arrows,
+// Arrow/Home/End keys, roving tabindex and radiogroup a11y. The caller supplies
+// the card content (renderCard) and reacts to selection (onSelect); update()
+// repositions to the current id. Requires the .deck/.deck-track/.deck-card/
+// .deck-nav CSS to be present. Returns { deck, update, cardEl }.
+export function mountCarousel(host, { items, getCurrent, onSelect, renderCard, refreshCard, label = 'Choose', prevLabel = 'Previous', nextLabel = 'Next' }) {
+  const deck = el('div', 'deck');
+  const track = el('div', 'deck-track', { role: 'radiogroup', 'aria-label': label });
+  const navPrev = el('button', 'deck-nav prev', { type: 'button', 'aria-label': prevLabel, html: '<span aria-hidden="true">‹</span>' });
+  const navNext = el('button', 'deck-nav next', { type: 'button', 'aria-label': nextLabel, html: '<span aria-hidden="true">›</span>' });
+  const cards = {};
+  const idx = () => Math.max(0, items.findIndex((o) => o.id === getCurrent()));
+  const select = (id) => { onSelect(id); const c = cards[id]; if (c) c.focus({ preventScroll: true }); };
+  const step = (dir) => { const n = items.length, i = idx(); const j = n >= 7 ? ((i + dir) % n + n) % n : Math.max(0, Math.min(n - 1, i + dir)); select(items[j].id); };
+  navPrev.addEventListener('click', () => step(-1));
+  navNext.addEventListener('click', () => step(1));
+  track.addEventListener('keydown', (e) => {
+    const k = e.key, n = items.length;
+    if (k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); step(1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); step(-1); }
+    else if (k === 'Home') { e.preventDefault(); select(items[0].id); }
+    else if (k === 'End') { e.preventDefault(); select(items[n - 1].id); }
+  });
+  for (const o of items) {
+    const b = el('button', 'deck-card', { type: 'button', role: 'radio' });
+    b.dataset.id = o.id;
+    b.innerHTML = renderCard(o);
+    b.addEventListener('click', () => select(o.id));
+    track.appendChild(b); cards[o.id] = b;
+  }
+  deck.append(track, navPrev, navNext);
+  host.appendChild(deck);
+
+  function update() {
+    const n = items.length, centerIdx = idx();
+    items.forEach((o, i) => {
+      const card = cards[o.id]; if (!card) return;
+      if (refreshCard) refreshCard(o, card);
+      let off = ((i - centerIdx) % n + n) % n; if (off > n / 2) off -= n;
+      const a = Math.abs(off), dir = Math.sign(off), hidden = a >= 3;
+      card.classList.toggle('is-center', off === 0);
+      card.style.opacity = hidden ? '0' : a === 2 ? '.46' : a === 1 ? '.9' : '1';
+      card.style.pointerEvents = hidden ? 'none' : 'auto';     // hidden cards stay in the a11y tree
+      card.setAttribute('aria-checked', String(off === 0));
+      card.tabIndex = off === 0 ? 0 : -1;                       // roving tabindex
+      card.style.zIndex = String(40 - a * 8);
+      card.style.transitionProperty = a >= 4 ? 'opacity' : 'transform, opacity';  // antipode snaps (no streak)
+      const x = off === 0 ? 0 : dir * (128 + (a - 1) * 82);
+      const rot = off === 0 ? 0 : -dir * Math.min(46, 30 + (a - 1) * 8);
+      const sc = off === 0 ? 1 : a === 1 ? 0.84 : a === 2 ? 0.66 : 0.56;
+      const lift = off === 0 ? -6 : 0;
+      card.style.transform = `translate(-50%, calc(-50% + ${lift}px)) translateX(${x}px) rotateY(${rot}deg) scale(${sc})`;
+    });
+  }
+  return { deck, update, cardEl: (id) => cards[id] };
+}

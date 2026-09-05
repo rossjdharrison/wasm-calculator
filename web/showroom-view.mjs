@@ -13,7 +13,7 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-import { el, placeholderSVG as placeholder, money, openModal } from './ui.mjs';
+import { el, placeholderSVG as placeholder, money, openModal, mountCarousel } from './ui.mjs';
 
 export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links }) {
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
@@ -143,27 +143,18 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const cmpBtn = el('button', 'compare-btn'); cmpBtn.type = 'button'; cmpBtn.innerHTML = '<span aria-hidden="true">⇆</span> Compare'; cmpBtn.setAttribute('aria-haspopup', 'dialog');
   cmpBtn.addEventListener('click', openCompare);
   dockHd.append(dockLabel, cmpBtn);
-  // the range as a single-row coverflow "deck": the selected car is face-up & centred,
-  // neighbours fan away in 3D, and it loops (the last card's right neighbour is the first).
-  const deck = el('div', 'deck');
-  // the radiogroup owns ONLY the radio cards (nav arrows sit outside it so the
-  // group's membership stays clean); the track is a positioning layer for the cards.
-  const deckTrack = el('div', 'deck-track'); deckTrack.setAttribute('role', 'radiogroup'); deckTrack.setAttribute('aria-label', 'Choose a model');
-  const navPrev = el('button', 'deck-nav prev'); navPrev.type = 'button'; navPrev.innerHTML = '<span aria-hidden="true">‹</span>'; navPrev.setAttribute('aria-label', 'Previous vehicle');
-  const navNext = el('button', 'deck-nav next'); navNext.type = 'button'; navNext.innerHTML = '<span aria-hidden="true">›</span>'; navNext.setAttribute('aria-label', 'Next vehicle');
-  // loop only when there are enough cards to hide the wrap off-stage (>=7); with
-  // fewer, a wrapping card would visibly pop across the deck, so clamp at the ends.
-  const stepDeck = (dir) => { const opts = primaryOpts(); const n = opts.length; const i = Math.max(0, opts.findIndex((o) => o.id === state[primary.id])); const j = n >= 7 ? ((i + dir) % n + n) % n : Math.max(0, Math.min(n - 1, i + dir)); const nx = opts[j].id; setField(primary.id, nx); const c = deckCards && deckCards[nx]; if (c) c.focus({ preventScroll: true }); };
-  navPrev.addEventListener('click', () => stepDeck(-1)); navNext.addEventListener('click', () => stepDeck(1));
-  deckTrack.addEventListener('keydown', (e) => {
-    const k = e.key;
-    if (k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); stepDeck(1); }
-    else if (k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); stepDeck(-1); }
-    else if (k === 'Home') { e.preventDefault(); const o = primaryOpts()[0]; setField(primary.id, o.id); deckCards[o.id] && deckCards[o.id].focus({ preventScroll: true }); }
-    else if (k === 'End') { e.preventDefault(); const os = primaryOpts(); const o = os[os.length - 1]; setField(primary.id, o.id); deckCards[o.id] && deckCards[o.id].focus({ preventScroll: true }); }
+  dock.appendChild(dockHd);
+  // the range as a single-row coverflow "deck" (ui.mountCarousel): the selected item
+  // is face-up & centred, neighbours fan away in 3D, and it loops when >=7 items.
+  const primaryField = modelFieldById[primary.id];
+  const deckCard = (o) => `<div class="dc-img">${carVisual(o.id)}</div>`
+    + `<div class="dc-cap"><div class="dc-name">${o.label || o.id}</div><div class="dc-from">from <b>${money0(fromPrice(o.id))}</b></div></div>`;
+  const refreshDeckCard = (o, card) => { if (imgUrl[o.id] && !card.querySelector('img')) { const dci = card.querySelector('.dc-img'); if (dci) dci.innerHTML = `<img class="carimg" src="${imgUrl[o.id]}" alt="">`; } };
+  const carousel = mountCarousel(dock, {
+    items: primaryOpts(), getCurrent: () => state[primary.id], onSelect: (id) => setField(primary.id, id),
+    renderCard: deckCard, refreshCard: refreshDeckCard,
+    label: `Choose a ${(primaryField.label || 'option').toLowerCase()}`,
   });
-  deck.append(deckTrack, navPrev, navNext);
-  dock.append(dockHd, deck);
   stage.append(turntable, dock);
   const rail = el('aside', 'rail'); rail.setAttribute('aria-label', 'Specification');
   rail.innerHTML = `<div class="rail-hd"><div class="marque" id="sh-marque"></div><h1 id="sh-name">—</h1><div class="sub" id="sh-sub"></div></div>
@@ -419,50 +410,6 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     modal.focus();
   }
 
-  // Build the deck cards ONCE (so CSS can animate their transforms between renders);
-  // fromPrice() is computed here, once per card, not on every re-render.
-  let deckCards = null;
-  function buildDeck() {
-    deckTrack.querySelectorAll('.deck-card').forEach((n) => n.remove());
-    deckCards = {};
-    for (const o of primaryOpts()) {
-      const b = el('button', 'deck-card'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.id = o.id;
-      b.innerHTML = `<div class="dc-img">${carVisual(o.id, { colour: state.colour, wheels: 'w17' })}</div>`
-        + `<div class="dc-cap"><div class="dc-name">${o.label || o.id}</div><div class="dc-from">from <b>${money0(fromPrice(o.id))}</b></div></div>`;
-      b.addEventListener('click', () => { setField(primary.id, o.id); b.focus({ preventScroll: true }); });
-      deckTrack.appendChild(b); deckCards[o.id] = b;
-    }
-  }
-  // Position every card by its signed circular offset from the centred (selected) car.
-  // |off|<=2 are visible & animate; |off|===3 is an off-stage buffer (still animates, so
-  // edges slide in/out); |off|===4 (the antipode) snaps with no transform transition, so
-  // the wrap-around never streaks across the deck.
-  function positionDeck() {
-    const opts = primaryOpts(); const n = opts.length;
-    const centerIdx = Math.max(0, opts.findIndex((o) => o.id === state[primary.id]));
-    opts.forEach((o, i) => {
-      const card = deckCards[o.id]; if (!card) return;
-      if (imgUrl[o.id] && !card.querySelector('img')) { const dci = card.querySelector('.dc-img'); if (dci) dci.innerHTML = `<img class="carimg" src="${imgUrl[o.id]}" alt="">`; }
-      let off = ((i - centerIdx) % n + n) % n; if (off > n / 2) off -= n;
-      const a = Math.abs(off), dir = Math.sign(off), hidden = a >= 3;
-      card.classList.toggle('is-center', off === 0);
-      card.style.opacity = hidden ? '0' : a === 2 ? '.46' : a === 1 ? '.9' : '1';
-      // off-stage cards are hidden VISUALLY only (opacity/pointer-events) — they stay
-      // in the a11y tree so the radiogroup always exposes the full range of options.
-      card.style.pointerEvents = hidden ? 'none' : 'auto';
-      card.setAttribute('aria-checked', String(off === 0));
-      card.tabIndex = off === 0 ? 0 : -1;
-      card.style.zIndex = String(40 - a * 8);
-      card.style.transitionProperty = a >= 4 ? 'opacity' : 'transform, opacity';
-      const x = off === 0 ? 0 : dir * (128 + (a - 1) * 82);
-      const rot = off === 0 ? 0 : -dir * Math.min(46, 30 + (a - 1) * 8);
-      const sc = off === 0 ? 1 : a === 1 ? 0.84 : a === 2 ? 0.66 : 0.56;
-      const lift = off === 0 ? -6 : 0;
-      card.style.transform = `translate(-50%, calc(-50% + ${lift}px)) translateX(${x}px) rotateY(${rot}deg) scale(${sc})`;
-    });
-  }
-  function renderDeck() { if (!deckCards) buildDeck(); positionDeck(); }
-
   function buildPodium() {
     const p = el('div', 'podium');
     const disc = el('div', 'disc');
@@ -523,7 +470,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   function setField(id, v) { state[id] = v; render(); }
   function render() {
     const res = compute(state); Object.assign(state, res.st);
-    renderDeck(); renderStage(); renderRail(res); renderSpecs(res);
+    carousel.update(); renderStage(); renderRail(res); renderSpecs(res);
   }
 
   $('sh-cta').textContent = brand.cta || 'Request this build ▸';
