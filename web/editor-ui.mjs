@@ -32,6 +32,31 @@ export function mini(pairs, cur, onChange, ariaLabel) {
 export function addBtn(t, onClick) { const b = el('button', 'qc-btn-link rb-add'); b.type = 'button'; b.textContent = t; b.addEventListener('click', onClick); return b; }
 export function iconBtn(t, onClick, label = 'Remove') { const b = el('button', 'rb-x'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-label', label); b.addEventListener('click', onClick); return b; }
 
+// ---- master-detail molecules (shared by editor-engine and presentation-editor)
+// One outline group (a titled list with an optional "+ add" and an active item)
+// and one detail header (title + optional sub-line + optional Remove). Both
+// pages built these by hand with the same de-* markup; now there is one source.
+export function outlineGroup({ title, items, activeIndex = -1, onPick, onAdd }) {
+  const sec = el('div', 'de-group');
+  const head = el('div', 'de-group__head');
+  head.appendChild(el('span', null, { text: title }));
+  if (onAdd) head.appendChild(addBtn('+ add', onAdd));
+  sec.appendChild(head);
+  (items || []).forEach((label, i) => {
+    sec.appendChild(el('button', 'de-item' + (i === activeIndex ? ' is-active' : ''), { type: 'button', text: label, on: { click: () => onPick(i) } }));
+  });
+  return sec;
+}
+export function detailTitle(title, { sub, onRemove } = {}) {
+  const h = el('div', 'de-title');
+  const left = el('div');
+  left.appendChild(el('h3', null, { text: title }));
+  if (sub) left.appendChild(el('div', 'de-title__sub', { text: sub }));
+  h.appendChild(left);
+  if (onRemove) h.appendChild(el('button', 'qc-btn-link', { type: 'button', text: 'Remove', on: { click: onRemove } }));
+  return h;
+}
+
 // expression control bound to an AST slot; `apply(ast|undefined)` owns the update
 export function exprInput(getAst, apply, { placeholder, multiline, required } = {}) {
   const wrap = el('div', 'de-expr');

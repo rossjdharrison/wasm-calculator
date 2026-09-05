@@ -16,7 +16,7 @@
 //   } ] }
 // Widgets receive an `api` and return an element the engine appends. See WIDGETS.
 // =============================================================================
-import { el, row, textRow, numRow, checkRow, selectRow, hint, exprRow, addBtn, makeRuleUI } from './editor-ui.mjs';
+import { el, row, textRow, numRow, checkRow, selectRow, hint, exprRow, makeRuleUI, outlineGroup, detailTitle } from './editor-ui.mjs';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -42,18 +42,13 @@ export function createEditor({ schema, doc, outline, detail, ctx, onChange }) {
   function renderOutline() {
     outline.innerHTML = '';
     cols().forEach((c, ci) => {
-      const sec = el('div', 'de-group');
-      const head = el('div', 'de-group__head');
-      const h = el('span'); h.textContent = c.title; head.appendChild(h);
-      if (c.add) head.appendChild(addBtn('+ add', () => addItem(ci)));
-      sec.appendChild(head);
-      itemsOf(c).forEach((_, i) => {
-        const b = el('button', 'de-item'); b.type = 'button'; b.textContent = labelOf(c, i);
-        if (sel.c === ci && sel.i === i) b.classList.add('is-active');
-        b.addEventListener('click', () => { sel = { c: ci, i }; renderOutline(); renderDetail(); notify(); });
-        sec.appendChild(b);
-      });
-      outline.appendChild(sec);
+      outline.appendChild(outlineGroup({
+        title: c.title,
+        items: itemsOf(c).map((_, i) => labelOf(c, i)),
+        activeIndex: sel.c === ci ? sel.i : -1,
+        onPick: (i) => { sel = { c: ci, i }; renderOutline(); renderDetail(); notify(); },
+        onAdd: c.add ? () => addItem(ci) : null,
+      }));
     });
   }
 
@@ -65,13 +60,10 @@ export function createEditor({ schema, doc, outline, detail, ctx, onChange }) {
     if (sel.i >= list.length) sel.i = list.length - 1;
     const item = itemAt(c, sel.i);
 
-    // header
-    const head = el('div', 'de-title'); const left = el('div');
-    const t = el('h3'); t.textContent = `${c.singular || c.title}: ${labelOf(c, sel.i)}`; left.appendChild(t);
-    if (c.sub && item[c.sub] !== undefined) { const s = el('div', 'de-title__sub'); s.textContent = `${c.sub}: ${item[c.sub]}`; left.appendChild(s); }
-    head.appendChild(left);
-    if (c.removable !== false && c.add) { const b = el('button', 'qc-btn-link'); b.type = 'button'; b.textContent = 'Remove'; b.addEventListener('click', () => removeItem()); head.appendChild(b); }
-    detail.appendChild(head);
+    detail.appendChild(detailTitle(`${c.singular || c.title}: ${labelOf(c, sel.i)}`, {
+      sub: (c.sub && item[c.sub] !== undefined) ? `${c.sub}: ${item[c.sub]}` : undefined,
+      onRemove: (c.removable !== false && c.add) ? () => removeItem() : undefined,
+    }));
 
     // form fields
     for (const spec of c.form || []) {

@@ -67,7 +67,12 @@ export function openModal({ root, inert, overlayClass, modalClass, label, onClos
   const opener = document.activeElement;
   if (inert) try { inert.inert = true; } catch (_) { /* older browsers */ }
   const overlay = el('div', overlayClass);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  // backdrop click closes — but only when the press STARTED on the backdrop, so a
+  // drag that begins inside the dialog (e.g. selecting text in a field) and
+  // releases on the backdrop does not discard it.
+  let downOnOverlay = false;
+  overlay.addEventListener('mousedown', (e) => { downOnOverlay = e.target === overlay; });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay && downOnOverlay) close(); });
   const modal = el('div', modalClass, { role: 'dialog', 'aria-modal': 'true', tabIndex: -1 });
   if (label) modal.setAttribute('aria-label', label);
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };

@@ -8,7 +8,7 @@
 // =============================================================================
 import { currentData, currentPres, savePres, loadDefaultPres } from './store.mjs';
 import { validateBinding } from './binding.mjs';
-import { el, textRow, numRow, checkRow, selectRow, hint, addBtn, makeRuleUI } from './editor-ui.mjs';
+import { el, textRow, numRow, checkRow, selectRow, hint, makeRuleUI, outlineGroup, detailTitle } from './editor-ui.mjs';
 import { mountConfigurator } from './render-form.mjs';
 import { pickImage } from './asset-picker.mjs';
 import { resolve as resolveAsset } from './assets.mjs';
@@ -77,18 +77,13 @@ function renderAll() { renderOutline(); renderDetail(); renderIssues(); schedule
 function renderOutline() {
   const root = $('outline'); root.innerHTML = '';
   for (const g of GROUPS) {
-    const sec = el('div', 'de-group');
-    const head = el('div', 'de-group__head');
-    const h = el('span'); h.textContent = g.title; head.appendChild(h);
-    if (g.addable) head.appendChild(addBtn('+ add', () => addItem(g.key)));
-    sec.appendChild(head);
-    items(g.key).forEach((it, i) => {
-      const b = el('button', 'de-item'); b.type = 'button'; b.textContent = g.label(it, i);
-      if (sel.group === g.key && sel.index === i) b.classList.add('is-active');
-      b.addEventListener('click', () => selectItem(g.key, i));
-      sec.appendChild(b);
-    });
-    root.appendChild(sec);
+    root.appendChild(outlineGroup({
+      title: g.title,
+      items: items(g.key).map((it, i) => g.label(it, i)),
+      activeIndex: sel.group === g.key ? sel.index : -1,
+      onPick: (i) => selectItem(g.key, i),
+      onAdd: g.addable ? () => addItem(g.key) : null,
+    }));
   }
 }
 
@@ -118,7 +113,7 @@ function renderDetail() {
 // Collection-level presentation settings: the header/brand, the CTA, and the
 // carry-over behaviour when the main option changes (all top-level presentation).
 function settingsEditor(_it, _idx, root) {
-  root.appendChild(titleRow('Collection settings'));
+  root.appendChild(detailTitle('Collection settings'));
   root.appendChild(textRow('Name', pres.name || '', (v) => set(pres, 'name', v || undefined)));
   root.appendChild(checkRow('Carry selections over when the main option changes', pres.carryOverOnPrimaryChange !== false, (v) => set(pres, 'carryOverOnPrimaryChange', v)));
   root.appendChild(hint('On: keep trim/options while browsing the range (good when options are comparable). Off: reset to defaults for each new option.'));
@@ -131,14 +126,14 @@ function settingsEditor(_it, _idx, root) {
 }
 
 function sectionEditor(s, idx, root) {
-  root.appendChild(titleRow(`Section: ${s.id}`, () => removeItem('sections', idx)));
+  root.appendChild(detailTitle(`Section: ${s.id}`, { onRemove: () => removeItem('sections', idx) }));
   root.appendChild(textRow('Label', s.label || '', (v) => set(s, 'label', v)));
   root.appendChild(numRow('Order', s.order, (v) => set(s, 'order', v)));
 }
 
 function fieldEditor(f, idx, root) {
   const pf = ensurePresField(f.id);
-  root.appendChild(titleRow(`Field: ${f.id}`, null, `type: ${f.type}`));
+  root.appendChild(detailTitle(`Field: ${f.id}`, { sub: `type: ${f.type}` }));
   root.appendChild(textRow('Label', pf.label || '', (v) => set(pf, 'label', v || undefined)));
   root.appendChild(selectRow('Control', CONTROLS[f.type] || ['input'], pf.control || (CONTROLS[f.type] || [''])[0], (v) => set(pf, 'control', v)));
   root.appendChild(selectRow('Section', ['(none)', ...(pres.sections || []).map((s) => s.id)], pf.section || '(none)', (v) => set(pf, 'section', v === '(none)' ? undefined : v)));
@@ -164,7 +159,7 @@ function fieldEditor(f, idx, root) {
 }
 
 function outputEditor(o, idx, root) {
-  root.appendChild(titleRow(`Output: ${o.id}`, () => removeItem('outputs', idx)));
+  root.appendChild(detailTitle(`Output: ${o.id}`, { onRemove: () => removeItem('outputs', idx) }));
   root.appendChild(selectRow('Value', dataValueIds(), o.id, (v) => set(o, 'id', v)));
   root.appendChild(textRow('Label', o.label || '', (v) => set(o, 'label', v)));
   o.format = o.format || { type: 'number' };
@@ -184,14 +179,6 @@ function addItem(group) {
 function removeItem(group, idx) { if (!confirm('Remove this item?')) return; pres[group].splice(idx, 1); sel.index = Math.max(0, idx - 1); renderAll(); }
 
 // ---- helpers ----
-function titleRow(t, onRemove, sub) {
-  const h = el('div', 'de-title'); const left = el('div');
-  const a = el('h3'); a.textContent = t; left.appendChild(a);
-  if (sub) { const s = el('div', 'de-title__sub'); s.textContent = sub; left.appendChild(s); }
-  h.appendChild(left);
-  if (onRemove) { const b = el('button', 'qc-btn-link'); b.type = 'button'; b.textContent = 'Remove'; b.addEventListener('click', onRemove); h.appendChild(b); }
-  return h;
-}
 function set(obj, key, val) { if (val === undefined) delete obj[key]; else obj[key] = val; if (['label', 'id', 'order'].includes(key)) renderOutline(); renderIssues(); scheduleRebuild(); }
 
 // ---- binding issues --------------------------------------------------------
