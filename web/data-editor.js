@@ -139,37 +139,22 @@ function renderInlineChecklist(cov) {
   detail.appendChild(box);
 }
 
-function refsOf(ast, out = new Set()) {
-  if (!ast || typeof ast !== 'object') return out;
-  if (ast.op === 'field') out.add(ast.args[0]);
-  else if (ast.op === 'has' || ast.op === 'notHas') out.add(ast.args[0]);
-  else if (ast.op === 'lookup') ast.args.slice(1).forEach((a) => refsOf(a, out));
-  else (ast.args || []).forEach((a) => refsOf(a, out));
-  return out;
-}
-function allExprs() {
-  const list = [];
-  for (const f of data.fields || []) {
-    [f.min, f.max, f.step].forEach((e) => list.push([f.id, e]));
-    for (const o of f.options || []) list.push([f.id, o.availableWhen]);
-  }
-  for (const c of data.computed || []) list.push([c.id, c.formula]);
-  for (const v of data.validations || []) list.push([v.field, v.when]);
-  for (const e of data.effects || []) list.push([e.setField, e.when]);
-  return list.filter(([, e]) => e && typeof e === 'object');
+// the value-dependency edges — from the engine's authoritative graph() when an
+// engine is loaded, else the JS derivation (coverage.edgesOf) as a fallback.
+// edge {from: dependency, to: dependent}. The single edge source for this page.
+function currentEdges() {
+  return (lastEngine && lastEngine.graph && lastEngine.graph(1)) || edgesOf(data);
 }
 function renderRelationships() {
   const host = $('deps'); host.innerHTML = '';
   const id = editor && editor.selectedId();
   const knownIds = new Set([...(data.fields || []).map((f) => f.id), ...(data.computed || []).map((c) => c.id)]);
   if (!id || !knownIds.has(id)) { host.appendChild(hint('Select a field or computed value to see relationships.')); return; }
-  const dep = new Set();
-  for (const [owner, e] of allExprs()) if (owner === id) refsOf(e, dep);
-  dep.delete(id);
-  const used = new Set();
-  for (const [owner, e] of allExprs()) if (owner && owner !== id && refsOf(e).has(id)) used.add(owner);
-  host.appendChild(depList('Depends on', [...dep].filter((x) => knownIds.has(x))));
-  host.appendChild(depList('Used by', [...used]));
+  const edges = currentEdges();
+  const dep = [...new Set(edges.filter((e) => e.to === id).map((e) => e.from))].filter((x) => x !== id && knownIds.has(x));
+  const used = [...new Set(edges.filter((e) => e.from === id).map((e) => e.to))].filter((x) => x !== id);
+  host.appendChild(depList('Depends on', dep));
+  host.appendChild(depList('Used by', used));
 }
 function depList(label, ids) {
   const box = el('div', 'de-deps');
@@ -186,7 +171,8 @@ function recompute() {
       assembledOk = assembled; lastEngine = engine;
       setStatus('ok', `Valid — ${assembled.ir.fields.length} fields, ${assembled.ir.computedIR.length} computed, ${assembled.ir.outputs.length} outputs.`);
       renderStaticPreview($('preview'), assembled.ir, res);
-      if (!$('graph').hidden) renderGraph();   // repaint with the engine's authoritative edges
+      renderRelationships();                    // now the engine is loaded, use its authoritative edges
+      if (!$('graph').hidden) renderGraph();
     })
     .catch((e) => {
       assembledOk = null;
@@ -223,10 +209,7 @@ function renderGraph() {
   const host = $('graph'); host.innerHTML = '';
   const nodes = [...(data.fields || []).map((f) => ({ id: f.id, kind: 'field' })), ...(data.computed || []).map((c) => ({ id: c.id, kind: 'computed' }))];
   const ids = new Set(nodes.map((n) => n.id));
-  // edges from the engine's own reflection (the authority); fall back to the JS
-  // derivation only if the engine or its graph() export isn't available.
-  const rawEdges = (lastEngine && lastEngine.graph && lastEngine.graph(1)) || edgesOf(data);
-  const edges = rawEdges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  const edges = currentEdges().filter((e) => ids.has(e.from) && ids.has(e.to));
   const layer = new Map(nodes.map((n) => [n.id, 0]));
   for (let pass = 0, changed = true; changed && pass < 200; pass++) {
     changed = false;
