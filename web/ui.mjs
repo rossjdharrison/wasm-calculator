@@ -31,6 +31,15 @@ export const ICONS = {
   bag: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg>',
 };
 
+// ---- util: stable identity key for a config (order-insensitive for arrays) ----
+// Two configs with the same selections produce the same key — used to dedupe a
+// basket line (→ quantity) and to detect whether the current build is already saved.
+export const configKey = (config) => {
+  const norm = {};
+  for (const k of Object.keys(config || {}).sort()) { const v = config[k]; norm[k] = Array.isArray(v) ? [...v].map(String).sort() : v; }
+  return JSON.stringify(norm);
+};
+
 // ---- atom: currency formatter ----
 export const money = (v, currency = 'GBP', decimals = 0) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(v);

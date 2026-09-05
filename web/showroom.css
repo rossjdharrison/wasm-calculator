@@ -324,6 +324,7 @@
   .save-btn { margin-top: 8px; width: 100%; padding: 10px; border-radius: 11px; border: 1px solid var(--border-strong); background: none;
     color: var(--text-soft); font: inherit; font-size: 13px; cursor: pointer; transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
   .save-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .save-btn.is-saved { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
   .save-btn:disabled { color: var(--ok); border-color: var(--ok); cursor: default; }
 
   /* saved-builds list */

@@ -15,7 +15,7 @@
 
 import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
-import { save as savedSave, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
+import { save as savedSave, remove as savedRemove, findByConfig as savedFindByConfig, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
 export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig }) {
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
@@ -424,7 +424,11 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const cur = () => model.currency || 'GBP';
   // a snapshot of the compare-relevant outputs at the current config (for compare-saved)
   const buildSpecs = (res) => COMPARE_ROWS.map((r) => ({ label: r.label, dir: r.dir, value: res.out[r.id] ? res.out[r.id].value : null, fmt: res.out[r.id] ? fmt(res.out[r.id]) : '—' })).filter((s) => s.value != null);
-  function saveCurrentBuild() {
+  // save is a TOGGLE: if this exact build (model + config) is already saved,
+  // clicking again removes it; otherwise it saves a fresh snapshot.
+  function toggleSaveBuild() {
+    const existing = savedFindByConfig(modelId, state);
+    if (existing) { savedRemove(existing.id); return false; }
     const res = compute(state);
     const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
     const title = opt.label || state[primary.id];
@@ -434,6 +438,15 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       total: res.out[emOutput().id].value, currency: cur(), image: opt.image || null,
       config: { ...state }, specs: buildSpecs(res),
     });
+    return true;
+  }
+  // reflect whether the current build is saved (heart filled + label)
+  function syncSaveBtn() {
+    const b = $('sh-save'); if (!b) return;
+    const on = !!savedFindByConfig(modelId, state);
+    b.classList.toggle('is-saved', on);
+    b.textContent = on ? '♥ Saved' : '♡ Save this build';
+    b.setAttribute('aria-pressed', String(on));
   }
   let bdModal = null;
   function closeBreakdown() { if (bdModal) bdModal.close(); }
@@ -521,13 +534,14 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   }
   function render() {
     const res = compute(state); Object.assign(state, res.st);
-    carousel.update(); renderStage(); renderRail(res); renderSpecs(res);
+    carousel.update(); renderStage(); renderRail(res); renderSpecs(res); syncSaveBtn();
   }
 
   $('sh-cta').textContent = brand.cta || 'Request this build ▸';
   $('sh-cta').setAttribute('aria-haspopup', 'dialog');
   $('sh-cta').addEventListener('click', openBreakdown);
-  $('sh-save').addEventListener('click', () => { saveCurrentBuild(); const b = $('sh-save'); b.disabled = true; b.textContent = 'Saved ✓'; setTimeout(() => { b.disabled = false; b.textContent = '♡ Save this build'; }, 1400); });
+  $('sh-save').addEventListener('click', () => { toggleSaveBuild(); syncSaveBtn(); });
+  savedOnChange(syncSaveBtn);   // keep in sync if a build is removed from the saved dialog
 
   render();
   // resolve associated images and TEST-LOAD each independently — repaint as each

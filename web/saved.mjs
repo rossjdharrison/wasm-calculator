@@ -6,7 +6,7 @@
 // carries its full config (to re-open) + a specs snapshot (to compare) so the
 // list/compare need no engine. Data + a view built on the ui.mjs primitives.
 // =============================================================================
-import { el, openModal, money, placeholderSVG } from './ui.mjs';
+import { el, openModal, money, placeholderSVG, configKey } from './ui.mjs';
 import { add as basketAdd } from './basket.mjs';
 
 const BAG_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg>';
@@ -34,6 +34,10 @@ export function save(item) {
 export function remove(id) { write(read().filter((it) => it.id !== id)); }
 export function rename(id, name) { const items = read(); const it = items.find((x) => x.id === id); if (it) { it.name = name; write(items); } }
 export function clear() { write([]); }
+
+// identity: is the exact build (model + config) already saved? (for the save toggle)
+export function findByConfig(modelId, config) { const k = configKey(config); return read().find((it) => it.modelId === modelId && configKey(it.config) === k) || null; }
+export function isSaved(modelId, config) { return !!findByConfig(modelId, config); }
 
 // "open" hand-off: stash the config, then the target configurator restores it on load
 export function stashRestore(modelId, config) { try { localStorage.setItem(RKEY, JSON.stringify({ modelId, config })); } catch (_) { /* ignore */ } }
