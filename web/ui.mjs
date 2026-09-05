@@ -44,6 +44,20 @@ export const configKey = (config) => {
 export const money = (v, currency = 'GBP', decimals = 0) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(v);
 
+// ---- atom: format one output value (currency / percent / unit / number) ----
+// o is the flattened output IR shape { value, format, currencyCode, decimals,
+// unit }. The single home for output formatting — shared by the live
+// Configurator (render-form) and the studio preview. `opts` is reserved for
+// later unit/currency conversion (a factor + a display unit/currency); it is
+// unused today, so output is byte-identical to the copies this replaced.
+export const formatOutput = (o, _opts = {}) => {
+  const v = o.value; const nf = (fmtOpts) => new Intl.NumberFormat(undefined, fmtOpts).format(v);
+  if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
+  if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
+  if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
+  return nf({ maximumFractionDigits: o.decimals ?? 2 });
+};
+
 // ---- atom: neutral placeholder (a framed monogram of a label) ----
 // Domain-agnostic stand-in until a real image is attached — works for a car, a
 // painting, a chandelier, anything. Returns an <svg> string.

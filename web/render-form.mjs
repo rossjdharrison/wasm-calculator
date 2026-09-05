@@ -11,6 +11,8 @@
 // element. Emits the stable qc-* DOM contract.
 // =============================================================================
 
+import { formatOutput } from './ui.mjs';
+
 const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 const setChecked = (b, on) => { b.setAttribute('aria-checked', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
 const setPressed = (b, on) => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
@@ -170,13 +172,7 @@ export function mountConfigurator(root, { model, ir, engine, onEdit }) {
     if (field.type === 'boolean') return num !== 0;
     return num;
   };
-  const fmt = (o) => {
-    const v = o.value; const nf = (opts) => new Intl.NumberFormat(undefined, opts).format(v);
-    if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-    if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-    if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
-    return nf({ maximumFractionDigits: o.decimals ?? 2 });
-  };
+  const fmt = formatOutput;   // shared output formatter (ui.mjs)
   function paint(res) {
     for (const f of ir.fields) {
       const wrap = wraps[f.id], c = controls[f.id];

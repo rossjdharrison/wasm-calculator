@@ -4,7 +4,7 @@
 // Extracted from the two verbatim copies; the fmt() percent branch is reconciled
 // to the fuller rule (min + max fraction digits).
 // =============================================================================
-import { el } from './ui.mjs';
+import { el, formatOutput } from './ui.mjs';
 
 // default inputs for a live preview — first option / empty / false / 0 per type
 export function buildDefaults(ir) {
@@ -18,14 +18,9 @@ export function buildDefaults(ir) {
   return inp;
 }
 
-// format one output value (currency / percent / unit / number)
-export function fmt(o) {
-  const v = o.value; const nf = (opt) => new Intl.NumberFormat(undefined, opt).format(v);
-  if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
-  return nf({ maximumFractionDigits: o.decimals ?? 2 });
-}
+// format one output value — the shared formatter (ui.mjs), re-exported so the
+// studio preview and the live Configurator can never drift.
+export const fmt = formatOutput;
 
 // the static "Default quote" list of visible outputs
 export function renderStaticPreview(host, ir, res, title = 'Default quote (live)') {
