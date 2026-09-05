@@ -55,14 +55,14 @@ schemaCase('no collections', 'collections must be an array', (s) => { delete s.c
 schemaCase('empty collections', 'must not be empty', (s) => { s.collections = []; });
 schemaCase('collection missing key', '"key" is required', (s) => { delete fields(s).key; });
 schemaCase('duplicate collection key', 'duplicated', (s) => { s.collections[1].key = s.collections[0].key; });
-schemaCase('kind typo', '"kind" must be exactly', (s) => { fields(s).kind = 'list'; });
+schemaCase('kind typo', '"kind" must be', (s) => { fields(s).kind = 'list'; });
 schemaCase('array missing itemLabel', 'requires a non-empty string "itemLabel"', (s) => { delete fields(s).itemLabel; });
 schemaCase('form not an array', '"form" must be an array', (s) => { fields(s).form = { prop: 'unit', widget: 'text' }; });
 schemaCase('unknown widget', 'unknown widget', (s) => { fields(s).form[0].widget = 'textbox'; });
 schemaCase('value widget missing prop', 'requires a non-empty string "prop"', (s) => { delete fields(s).form[0].prop; });
 schemaCase('duplicate form prop', 'same prop', (s) => { fields(s).form.push({ prop: 'unit', widget: 'text', label: 'Dup' }); });
 schemaCase('when missing eq', 'when requires an "eq"', (s) => { delete fields(s).form[0].when.eq; });
-schemaCase('when missing prop', 'when.prop is required', (s) => { delete fields(s).form[0].when.prop; });
+schemaCase('when missing prop', 'requires a non-empty "prop"', (s) => { delete fields(s).form[0].when.prop; });
 schemaCase('select without options or source', 'requires one of', (s) => {
   const sev = coll(s, 'validations').form.find((f) => f.prop === 'severity'); delete sev.options;
 });
@@ -100,4 +100,35 @@ test('dangling source-select ref is a warning, not an error', () => {
   const r = validateDocAgainstSchema(SCHEMA, d);
   assert.equal(r.errors.length, 0, `unexpected errors: ${errs(r)}`);
   assert.ok(r.warnings.some((w) => w.includes('ghostField')), `expected a ghostField warning, got: ${r.warnings.join(' | ')}`);
+});
+
+// ---- new collection shapes (presentation-editor adoption substrate) --------
+test('accepts a singleton collection (no itemLabel / add needed)', () => {
+  const s = { collections: [{ key: 'settings', kind: 'singleton', title: 'Collection', titleText: 'Collection settings', form: [
+    { widget: 'text', prop: 'name', label: 'Name', target: 'root' },
+    { widget: 'toggle', prop: 'carryOverOnPrimaryChange', label: 'Carry over', target: 'root', default: true, explicit: true },
+    { widget: 'text', prop: 'brandMark', path: 'brand.mark', label: 'Brand mark', target: 'root' },
+  ] }] };
+  const r = validateEditorSchema(s);
+  assert.equal(r.errors.length, 0, `errors: ${errs(r)}`);
+});
+test('cross-doc collection requires editIn', () => {
+  const s = { collections: [{ key: 'fields', kind: 'array', itemLabel: 'id', title: 'Fields', docSource: 'data.fields', form: [{ widget: 'text', prop: 'label', label: 'Label' }] }] };
+  const r = validateEditorSchema(s);
+  assert.ok(r.errors.some((e) => e.includes('editIn')), `expected editIn error, got: ${errs(r)}`);
+});
+test('add.seed skips the static-template itemLabel requirement', () => {
+  const withSeed = { collections: [{ key: 'outputs', kind: 'array', itemLabel: 'id', title: 'Outputs', add: { seed: 'output' }, form: [{ widget: 'text', prop: 'label', label: 'Label' }] }] };
+  assert.equal(validateEditorSchema(withSeed).errors.length, 0, 'seed add should be legal without a template');
+  const noSeed = { collections: [{ key: 'outputs', kind: 'array', itemLabel: 'id', title: 'Outputs', add: { template: {} }, form: [] }] };
+  assert.ok(validateEditorSchema(noSeed).errors.some((e) => e.includes('seed the itemLabel')), 'a template add must still seed itemLabel');
+});
+test('when accepts exists and a nested path with source', () => {
+  const s = { collections: [{ key: 'fields', kind: 'array', itemLabel: 'id', title: 'Fields', docSource: 'data.fields', editIn: 'fields', form: [
+    { widget: 'number', prop: 'decimals', label: 'Decimals', when: { from: 'source', prop: 'type', eq: 'number' } },
+    { widget: 'optionRows', when: { from: 'source', prop: 'options', exists: true } },
+    { widget: 'text', prop: 'unit', path: 'format.unit', label: 'Unit', when: { path: 'format.type', eq: 'unit' } },
+  ] }] };
+  const r = validateEditorSchema(s);
+  assert.equal(r.errors.length, 0, `errors: ${errs(r)}`);
 });

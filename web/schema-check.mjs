@@ -55,7 +55,7 @@ export function validateEditorSchema(schema, opts = {}) {
     else seenKeys.set(c.key, at);
 
     // kind — must be exact; the engine treats anything else as "array" silently
-    if (c.kind !== 'array' && c.kind !== 'map') E(`${cid}: "kind" must be exactly "array" or "map" (got ${JSON.stringify(c.kind)})`);
+    if (!['array', 'map', 'singleton'].includes(c.kind)) E(`${cid}: "kind" must be "array", "map", or "singleton" (got ${JSON.stringify(c.kind)})`);
 
     // title
     if (!isStr(c.title)) E(`${cid}: "title" is required and must be a non-empty string`);
@@ -71,6 +71,11 @@ export function validateEditorSchema(schema, opts = {}) {
     // itemLabel — arrays need it for labels + identity
     if (c.kind === 'array' && !isStr(c.itemLabel)) E(`${cid}: kind "array" requires a non-empty string "itemLabel"`);
 
+    // cross-doc collection: outline sourced from a read-only companion (docSource),
+    // edits written into doc[editIn], linked by id.
+    if ('docSource' in c && !isStr(c.docSource)) E(`${cid}: "docSource" must be a non-empty string`);
+    if (isStr(c.docSource) && !isStr(c.editIn)) E(`${cid}: a docSource collection needs "editIn" (the doc slice edits are written to)`);
+
     // add
     if ('add' in c) {
       const add = c.add;
@@ -79,7 +84,10 @@ export function validateEditorSchema(schema, opts = {}) {
         if ('template' in add && !isObj(add.template)) E(`${cid}: add.template must be a plain object`);
         if ('prompt' in add && typeof add.prompt !== 'string') W(`${cid}: add.prompt should be a string`);
         if ('into' in add && typeof add.into !== 'string') W(`${cid}: add.into should be a string`);
-        if (c.kind === 'array') {
+        if ('seed' in add && !isStr(add.seed)) E(`${cid}: add.seed must be a string naming a ctx.seeds factory`);
+        // a seeded add supplies its own (dynamic) template incl. the itemLabel, so
+        // the static-template checks below don't apply.
+        if (c.kind === 'array' && !add.seed) {
           if (isStr(add.prompt)) {
             if (!isStr(add.into)) E(`${cid}: add has a "prompt" but no "into" — the typed value is discarded and the new item has no label`);
             else if (isStr(c.itemLabel) && add.into !== c.itemLabel) W(`${cid}: add.into ("${add.into}") differs from itemLabel ("${c.itemLabel}") — added items may render as "#i"`);
@@ -134,11 +142,13 @@ export function validateEditorSchema(schema, opts = {}) {
 
         if ('when' in spec) {
           const w = spec.when;
-          if (!isObj(w)) E(`${sat}: "when" must be an object { prop, eq }`);
+          if (!isObj(w)) E(`${sat}: "when" must be an object`);
           else {
-            if (!isStr(w.prop)) E(`${sat}: when.prop is required and must be a non-empty string`);
-            else if (!knowable.has(w.prop)) W(`${sat}: when.prop "${w.prop}" is never seeded on items — the field may show/hide unconditionally`);
-            if (!('eq' in w)) E(`${sat}: when requires an "eq" value (without it visibility is inverted)`);
+            // prop (top-level or nested via path) may read the item (default) or
+            // the read-only cross-doc source (from:'source'); test eq or existence.
+            if (!isStr(w.prop) && !isStr(w.path)) E(`${sat}: when requires a non-empty "prop" or "path"`);
+            else if (isStr(w.prop) && !w.path && w.from !== 'source' && !knowable.has(w.prop)) W(`${sat}: when.prop "${w.prop}" is never seeded on items — the field may show/hide unconditionally`);
+            if (!('eq' in w) && !('exists' in w)) E(`${sat}: when requires an "eq" value or an "exists" boolean`);
           }
         }
       });
