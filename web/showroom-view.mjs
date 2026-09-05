@@ -15,8 +15,9 @@
 
 import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary } from './ui.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
+import { save as savedSave, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
-export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId }) {
+export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig }) {
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
   resolveImage = resolveImage || (async () => null);
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -62,7 +63,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const nf = (opts) => new Intl.NumberFormat('en-GB', opts).format(v);
     if (r.format === 'currency') return nf({ style: 'currency', currency: r.currencyCode || 'GBP', minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 });
     if (r.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 });
-    if (r.format === 'unit') return nf({ maximumFractionDigits: r.decimals ?? 0 }) + (r.unit ? ' ' + r.unit : '');
+    if (r.format === 'unit') return nf({ minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 }) + (r.unit ? ' ' + r.unit : '');
     return nf({ maximumFractionDigits: r.decimals ?? 0 });
   };
   const money0 = (v) => money(v, model.currency || 'GBP');
@@ -81,6 +82,8 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // ---------- state ----------
   const state = {};
   for (const f of ir.fields) state[f.id] = f.type === 'multichoice' ? (f.defaultRaw ? f.defaultRaw.slice() : []) : f.type === 'boolean' ? !!f.defaultRaw : f.type === 'number' ? (f.defaultRaw ?? null) : (f.defaultRaw ?? f.options[0].id);
+  // restore a saved build opened from the saved list (only known fields; VM re-validates)
+  if (initialConfig) for (const f of ir.fields) if (Object.prototype.hasOwnProperty.call(initialConfig, f.id)) state[f.id] = initialConfig[f.id];
   const primaryOpts = () => modelFieldById[primary.id].options || [];
   const emOutput = () => ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
   // a config built from field DEFAULTS (not the live selection) — the base every
@@ -134,13 +137,17 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const tagEl = el('div', 'tag'); tagEl.textContent = brand.tagline || '';
   hd.appendChild(brandEl);
   if (links && links.length) { const nav = el('nav', 'sh-nav'); nav.setAttribute('aria-label', 'Edit'); for (const l of links) { const a = el('a'); a.href = l.href; a.textContent = l.label; nav.appendChild(a); } hd.appendChild(nav); }
-  // cross-collection basket indicator (opens the basket dialog; live count)
+  // cross-collection saved-builds + basket indicators (live counts; open their dialogs)
+  const savedBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncSaved = () => { const n = savedCount(); savedBtn.innerHTML = `<span aria-hidden="true">♡</span> Saved${n ? `<span class="basket-count">${n}</span>` : ''}`; savedBtn.setAttribute('aria-label', `Saved builds, ${n}`); };
+  syncSaved(); savedOnChange(syncSaved);
+  savedBtn.addEventListener('click', () => openSavedModal(root, { resolveImage, inert: shell, onAddToBasket: basketAdd }));
   const basketBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
   const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = `<span aria-hidden="true">◈</span> Basket${n ? `<span class="basket-count">${n}</span>` : ''}`; basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); };
   syncBasket(); basketOnChange(syncBasket);
   basketBtn.addEventListener('click', () => openBasketModal(root, { resolveImage, inert: shell }));
-  hd.appendChild(basketBtn);
-  hd.appendChild(tagEl);
+  const actions = el('div', 'hd-actions'); actions.append(savedBtn, basketBtn, tagEl);
+  hd.appendChild(actions);
   const body = el('div', 'body');
   const stage = el('section', 'stage'); stage.setAttribute('aria-label', 'Showroom stage');
   const turntable = el('div', 'turntable');
@@ -169,7 +176,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     <div class="rail-body" id="sh-specs"></div>
     <div class="plate"><div class="micro"><span id="sh-veh">—</span><span id="sh-gauge" style="display:flex;align-items:center;gap:8px"><span id="sh-range" class="num">—</span><span class="gauge"><i id="sh-rangebar" style="width:0"></i></span></span></div>
       <div class="otr-label" id="sh-otr-label">Total</div><div class="otr"><span class="fig num" id="sh-otr">—</span></div>
-      <div class="monthly" id="sh-monthly"></div><div class="savings" id="sh-savings"></div><button class="cta" id="sh-cta">Request this build ▸</button></div>`;
+      <div class="monthly" id="sh-monthly"></div><div class="savings" id="sh-savings"></div><button class="cta" id="sh-cta">Request this build ▸</button><button class="save-btn" id="sh-save" type="button">♡ Save this build</button></div>`;
   body.append(stage, rail);
   shell.append(hd, body);
   root.appendChild(shell);
@@ -401,6 +408,19 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     return lines;
   };
   const cur = () => model.currency || 'GBP';
+  // a snapshot of the compare-relevant outputs at the current config (for compare-saved)
+  const buildSpecs = (res) => COMPARE_ROWS.map((r) => ({ label: r.label, dir: r.dir, value: res.out[r.id] ? res.out[r.id].value : null, fmt: res.out[r.id] ? fmt(res.out[r.id]) : '—' })).filter((s) => s.value != null);
+  function saveCurrentBuild() {
+    const res = compute(state);
+    const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
+    const title = opt.label || state[primary.id];
+    const bits = ir.fields.filter((f) => f.type === 'choice' && f.id !== primary.id).slice(0, 2).map((f) => { const o = f.options.find((x) => x.id === state[f.id]); return o ? (o.label || o.id) : null; }).filter(Boolean);
+    savedSave({
+      name: [title, ...bits].join(' · '), modelId, collection: brand.descriptor || (brand.rest || ''), title,
+      total: res.out[emOutput().id].value, currency: cur(), image: opt.image || null,
+      config: { ...state }, specs: buildSpecs(res),
+    });
+  }
   let bdModal = null;
   function closeBreakdown() { if (bdModal) bdModal.close(); }
   function openBreakdown() {
@@ -466,15 +486,25 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     $('sh-monthly').innerHTML = rec && rec.visible ? `from <b>${fmt(rec)}</b> / mo` : '';
     // spec sheet: the model's declared headline figures (read-only)
     const shownSpecs = specIds.filter((id) => res.out[id] && res.out[id].visible);
+    $('sh-specsheet').style.gridTemplateColumns = `repeat(${Math.max(1, shownSpecs.length)}, 1fr)`;
     $('sh-specsheet').innerHTML = shownSpecs.map((id) => { const o = res.out[id]; return `<div class="spec"><span class="spec-v num">${fmt(o)}</span><span class="spec-l">${o.label}</span></div>`; }).join('');
     const sav = activeSavings();
     $('sh-savings').innerHTML = sav > 0 ? `Bundle savings <b class="num">−${money0(sav)}</b>` : '';
   }
 
-  // Selecting a model keeps the other fields as-is; the engine (or any field) that
-  // becomes invalid for the new model is corrected by the VM's own availability
-  // fallback during evaluation, so state stays valid without domain-specific code.
-  function setField(id, v) { state[id] = v; render(); }
+  // Selecting a new primary option: by default the other fields carry over (a
+  // comparison-friendly "keep my spec while I browse" — the VM's availability
+  // fallback fixes anything invalid for the new option). A model can opt out with
+  // presentation `carryOverOnPrimaryChange: false`, which resets the rest to their
+  // defaults on each primary change (better when options aren't cross-comparable).
+  function setField(id, v) {
+    state[id] = v;
+    if (id === primary.id && model.carryOverOnPrimaryChange === false) {
+      const d = defaultsConfig();
+      for (const f of ir.fields) if (f.id !== primary.id) state[f.id] = d[f.id];
+    }
+    render();
+  }
   function render() {
     const res = compute(state); Object.assign(state, res.st);
     carousel.update(); renderStage(); renderRail(res); renderSpecs(res);
@@ -483,6 +513,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   $('sh-cta').textContent = brand.cta || 'Request this build ▸';
   $('sh-cta').setAttribute('aria-haspopup', 'dialog');
   $('sh-cta').addEventListener('click', openBreakdown);
+  $('sh-save').addEventListener('click', () => { saveCurrentBuild(); const b = $('sh-save'); b.disabled = true; b.textContent = 'Saved ✓'; setTimeout(() => { b.disabled = false; b.textContent = '♡ Save this build'; }, 1400); });
 
   render();
   // resolve associated images and TEST-LOAD each independently — repaint as each

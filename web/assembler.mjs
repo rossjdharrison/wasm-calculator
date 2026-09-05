@@ -51,7 +51,7 @@ const DATA_TOP = ['$schema', 'id', 'version', 'currency'];
 const DATA_BLOCKS = ['effects', 'tables', 'computed', 'validations', 'bundles'];
 const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'formula'];
 const DATA_OPTION = ['id', 'availableWhen'];
-const PRES_TOP = ['name', 'brand'];
+const PRES_TOP = ['name', 'brand', 'carryOverOnPrimaryChange'];
 const PRES_FIELD = ['id', 'label', 'control', 'section', 'width', 'help', 'decimals', 'visibleWhen', 'enabledWhen'];
 const PRES_OPTION = ['id', 'label', 'priceDelta', 'image'];
 

@@ -112,6 +112,9 @@ const cur0 = { type: 'currency', decimals: 0, currencyCode: 'GBP' };
 const pres = {
   name: 'Fine Art & Antiques',
   brand: { mark: 'ROWBLAA', rest: 'LUXURY', descriptor: 'Art & Antiques', tagline: 'Haarlem', cta: 'Enquire about this piece ▸' },
+  // pieces are heterogeneous (a rug vs a painting) — start each fresh rather than
+  // carrying provenance/condition/framing across, unlike the shared-taxonomy cars.
+  carryOverOnPrimaryChange: false,
   sections: [
     { id: 's_piece', label: 'The piece', order: 1 },
     { id: 's_provenance', label: 'Provenance & condition', order: 2 },

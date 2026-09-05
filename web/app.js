@@ -9,6 +9,7 @@ import { assemble, loadEngine } from './assembler.mjs';
 import { currentModel, isCustom, resetModel, MODEL_ID } from './store.mjs';
 import { mountShowroom } from './showroom-view.mjs';
 import { resolve as resolveImage } from './assets.mjs';
+import { takeRestore } from './saved.mjs';
 
 const WASM_URL = 'quote.wasm';
 // editor links carry the active model id so they edit THIS collection, not vehicles
@@ -34,6 +35,7 @@ const LINKS = [
 
   mountShowroom(document.getElementById('app'), {
     model, ir: assembled.ir, engine, brand: model.brand, resolveImage, links: LINKS, modelId: MODEL_ID,
+    initialConfig: takeRestore(MODEL_ID),   // restore a "saved build" opened from the saved list
   });
 })();
 

@@ -37,7 +37,8 @@ test('adding an engine option flags every table the field indexes (the cascade)'
   d.fields.find((f) => f.id === 'engine').options.push({ id: 'phev' });
   const r = analyzeCoverage(d, clone(PRES));
   const tables = r.findings.filter((f) => f.kind === 'missing-table-key' && f.option === 'phev').map((f) => f.table).sort();
-  assert.deepEqual(tables, ['engineDelta', 'engineRange', 'roadTax']);
+  // every engine-indexed table must be flagged (price, tax, range + the realism factors)
+  assert.deepEqual(tables, ['engineAccelFactor', 'engineDelta', 'engineHpFactor', 'engineRange', 'engineTopFactor', 'engineWeightDelta', 'roadTax']);
 });
 
 test('applyFix connects every orphan back to a clean model', () => {

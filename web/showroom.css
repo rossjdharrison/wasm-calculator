@@ -277,10 +277,11 @@
     background: linear-gradient(180deg, var(--accent-hi), var(--accent)); color: var(--accent-ink); font-size: 10px; letter-spacing: 0; font-weight: 600; }
   .lp-hd-right { display: flex; align-items: center; gap: 16px; }
 
-  .bk-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 4vh 3vw; overflow: auto;
+  .bk-overlay, .sv-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 4vh 3vw; overflow: auto;
     background: radial-gradient(120% 90% at 50% -10%, rgba(216,162,74,.10), transparent 55%), rgba(6,7,9,.72); backdrop-filter: blur(6px); animation: cmp-fade .18s ease both; }
-  .bk-modal { width: min(520px, 96vw); max-height: 92vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #16181d, #101216);
+  .bk-modal, .sv-modal { width: min(520px, 96vw); max-height: 92vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #16181d, #101216);
     border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 40px 100px -30px rgba(0,0,0,.85); overflow: hidden; animation: cmp-rise .28s cubic-bezier(.2,.7,.2,1) both; }
+  .sv-modal { width: min(600px, 96vw); }
   .bk-hd { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 20px; border-bottom: 1px solid var(--border); }
   .bk-title { font-family: var(--display); font-weight: 600; font-size: 19px; display: flex; align-items: baseline; gap: 10px; }
   .bk-eyebrow { font-family: var(--sans); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
@@ -301,6 +302,33 @@
   .bk-total { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
   .bk-total span:first-child { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-soft); }
   .bk-total span:last-child { font-family: var(--display); font-weight: 600; font-size: 26px; color: var(--accent); font-variant-numeric: tabular-nums lining-nums; }
+
+  /* header action group + plate save button */
+  .hd-actions { display: flex; align-items: center; gap: 12px; }
+  @media (max-width: 640px) { .hd-actions { gap: 8px; } }
+  .save-btn { margin-top: 8px; width: 100%; padding: 10px; border-radius: 11px; border: 1px solid var(--border-strong); background: none;
+    color: var(--text-soft); font: inherit; font-size: 13px; cursor: pointer; transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+  .save-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .save-btn:disabled { color: var(--ok); border-color: var(--ok); cursor: default; }
+
+  /* saved-builds list */
+  .sv-list { overflow: auto; padding: 6px 12px; }
+  .sv-item { display: grid; grid-template-columns: auto 52px 1fr auto auto; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  .sv-item:last-child { border-bottom: 0; }
+  .sv-item.is-sel { background: var(--accent-soft); border-radius: 8px; }
+  .sv-chk { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .sv-thumb { width: 52px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .sv-thumb img, .sv-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sv-info { min-width: 0; }
+  .sv-name { width: 100%; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--text); background: none; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; }
+  .sv-name:hover { border-color: var(--border); }
+  .sv-name:focus { border-color: var(--accent); background: var(--surface-2); outline: none; }
+  .sv-sub { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; padding-left: 6px; }
+  .sv-sub .num { color: var(--accent); letter-spacing: 0; }
+  .sv-open { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .sv-open:hover { background: var(--accent); color: var(--accent-ink); }
+  .sv-back { align-self: flex-start; margin: 8px 14px 0; background: none; border: 0; color: var(--text-soft); font: inherit; font-size: 12px; cursor: pointer; }
+  .sv-back:hover { color: var(--accent); }
 
   /* powertrain radio list */
   .plist { display: flex; flex-direction: column; gap: 8px; }

@@ -451,19 +451,6 @@
       }
     },
     {
-      "id": "range",
-      "label": "Range / economy",
-      "format": {
-        "type": "unit",
-        "unit": "mi",
-        "decimals": 0
-      },
-      "spec": true,
-      "compare": "high",
-      "compareLabel": "Range",
-      "gaugeMax": 520
-    },
-    {
       "id": "hp",
       "label": "Power",
       "format": {
@@ -495,6 +482,31 @@
       },
       "spec": true,
       "compare": "low"
+    },
+    {
+      "id": "weight",
+      "label": "Weight",
+      "format": {
+        "type": "unit",
+        "unit": "kg",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "low"
+    },
+    {
+      "id": "range",
+      "label": "Range / economy",
+      "format": {
+        "type": "unit",
+        "unit": "mi",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "high",
+      "compareLabel": "Range",
+      "gaugeMax": 520
     }
-  ]
+  ],
+  "carryOverOnPrimaryChange": true
 }

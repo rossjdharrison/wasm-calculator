@@ -8,6 +8,7 @@ import { loadCatalog } from './store.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 import { el, placeholderSVG } from './ui.mjs';
 import { count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
+import { count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
 (async function boot() {
   const root = document.getElementById('landing');
@@ -20,11 +21,15 @@ import { count as basketCount, onChange as basketOnChange, openBasketModal } fro
   const hd = el('header', 'lp-hd');
   const brandEl = el('div', 'brand', { html: `<b>${brand.mark}</b> ${brand.rest || ''}` });
   const right = el('div', 'lp-hd-right');
+  const savedBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncSaved = () => { const n = savedCount(); savedBtn.innerHTML = `<span aria-hidden="true">♡</span> Saved${n ? `<span class="basket-count">${n}</span>` : ''}`; savedBtn.setAttribute('aria-label', `Saved builds, ${n}`); };
+  syncSaved(); savedOnChange(syncSaved);
+  savedBtn.addEventListener('click', () => openSavedModal(document.body, { resolveImage, inert: root, onAddToBasket: () => {} }));
   const basketBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
   const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = `<span aria-hidden="true">◈</span> Basket${n ? `<span class="basket-count">${n}</span>` : ''}`; basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); };
   syncBasket(); basketOnChange(syncBasket);
   basketBtn.addEventListener('click', () => openBasketModal(document.body, { resolveImage, inert: root }));
-  right.append(basketBtn, el('div', 'tag', { text: 'Haarlem' }));
+  right.append(savedBtn, basketBtn, el('div', 'tag', { text: 'Haarlem' }));
   hd.append(brandEl, right);
   const hero = el('div', 'lp-hero');
   hero.innerHTML = `<div class="lp-eyebrow">The Collections</div>

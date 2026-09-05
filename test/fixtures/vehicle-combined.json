@@ -10,6 +10,7 @@
     "descriptor": "Vehicles",
     "tagline": "Haarlem"
   },
+  "carryOverOnPrimaryChange": true,
   "sections": [
     {
       "id": "s_model",
@@ -1154,6 +1155,96 @@
         "midSupercar": 2.9,
         "hypercar": 2.4
       }
+    },
+    "specWeight": {
+      "kind": "1d",
+      "map": {
+        "hotHatch": 1450,
+        "sleekEstate": 1750,
+        "gtCoupe": 1720,
+        "ruggedOffroader": 2250,
+        "luxuryPickup": 2600,
+        "flagshipSuv": 2450,
+        "midSupercar": 1550,
+        "hypercar": 1400
+      }
+    },
+    "engineHpFactor": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 0.88,
+        "petrol20turbo": 1,
+        "hybrid": 1.1,
+        "electric": 1.22
+      }
+    },
+    "trimHpFactor": {
+      "kind": "1d",
+      "map": {
+        "standard": 1,
+        "sport": 1.06,
+        "luxury": 1,
+        "offRoad": 0.97
+      }
+    },
+    "engineWeightDelta": {
+      "kind": "1d",
+      "map": {
+        "petrol15": -60,
+        "petrol20turbo": 0,
+        "hybrid": 190,
+        "electric": 340
+      }
+    },
+    "drivetrainWeightDelta": {
+      "kind": "1d",
+      "map": {
+        "fwd": 0,
+        "awd": 75
+      }
+    },
+    "trimWeightDelta": {
+      "kind": "1d",
+      "map": {
+        "standard": 0,
+        "sport": 10,
+        "luxury": 55,
+        "offRoad": 90
+      }
+    },
+    "engineTopFactor": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 0.9,
+        "petrol20turbo": 1,
+        "hybrid": 0.98,
+        "electric": 0.93
+      }
+    },
+    "engineAccelFactor": {
+      "kind": "1d",
+      "map": {
+        "petrol15": 1.08,
+        "petrol20turbo": 1,
+        "hybrid": 0.96,
+        "electric": 0.88
+      }
+    },
+    "drivetrainAccelFactor": {
+      "kind": "1d",
+      "map": {
+        "fwd": 1,
+        "awd": 0.93
+      }
+    },
+    "trimAccelFactor": {
+      "kind": "1d",
+      "map": {
+        "standard": 1,
+        "sport": 0.96,
+        "luxury": 1,
+        "offRoad": 1.05
+      }
     }
   },
   "computed": [
@@ -1813,13 +1904,42 @@
     {
       "id": "hp",
       "formula": {
-        "op": "lookup",
+        "op": "mul",
         "args": [
-          "specHp",
           {
-            "op": "field",
+            "op": "lookup",
             "args": [
-              "model"
+              "specHp",
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "engineHpFactor",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "trimHpFactor",
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              }
             ]
           }
         ]
@@ -1828,13 +1948,30 @@
     {
       "id": "topSpeed",
       "formula": {
-        "op": "lookup",
+        "op": "mul",
         "args": [
-          "specTopSpeed",
           {
-            "op": "field",
+            "op": "lookup",
             "args": [
-              "model"
+              "specTopSpeed",
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "engineTopFactor",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
             ]
           }
         ]
@@ -1843,17 +1980,115 @@
     {
       "id": "zeroToSixty",
       "formula": {
-        "op": "lookup",
+        "op": "mul",
         "args": [
-          "specZeroTo60",
           {
-            "op": "field",
+            "op": "lookup",
             "args": [
-              "model"
+              "specZeroTo60",
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "engineAccelFactor",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "drivetrainAccelFactor",
+              {
+                "op": "field",
+                "args": [
+                  "drivetrain"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "trimAccelFactor",
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              }
             ]
           }
         ]
       }
+    },
+    {
+      "id": "weight",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "lookup",
+            "args": [
+              "specWeight",
+              {
+                "op": "field",
+                "args": [
+                  "model"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "engineWeightDelta",
+              {
+                "op": "field",
+                "args": [
+                  "engine"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "drivetrainWeightDelta",
+              {
+                "op": "field",
+                "args": [
+                  "drivetrain"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "trimWeightDelta",
+              {
+                "op": "field",
+                "args": [
+                  "trim"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "label": "Weight"
     }
   ],
   "validations": [
@@ -2077,19 +2312,6 @@
       }
     },
     {
-      "id": "range",
-      "label": "Range / economy",
-      "format": {
-        "type": "unit",
-        "unit": "mi",
-        "decimals": 0
-      },
-      "spec": true,
-      "compare": "high",
-      "compareLabel": "Range",
-      "gaugeMax": 520
-    },
-    {
       "id": "hp",
       "label": "Power",
       "format": {
@@ -2121,6 +2343,30 @@
       },
       "spec": true,
       "compare": "low"
+    },
+    {
+      "id": "weight",
+      "label": "Weight",
+      "format": {
+        "type": "unit",
+        "unit": "kg",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "low"
+    },
+    {
+      "id": "range",
+      "label": "Range / economy",
+      "format": {
+        "type": "unit",
+        "unit": "mi",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "high",
+      "compareLabel": "Range",
+      "gaugeMax": 520
     }
   ]
 }
