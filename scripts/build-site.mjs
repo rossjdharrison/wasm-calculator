@@ -53,6 +53,7 @@ const FILES = [
   [join(ROOT, 'web', 'coverage.mjs'), 'coverage.mjs'],
   [join(ROOT, 'web', 'binding.mjs'), 'binding.mjs'],
   [join(ROOT, 'web', 'data.schema.json'), 'data.schema.json'],
+  [join(ROOT, 'web', 'presentation.schema.json'), 'presentation.schema.json'],
   [join(ROOT, 'web', 'model.schema.json'), 'model.schema.json'],
   [join(ROOT, 'web', 'qc-base.css'), 'qc-base.css'],
   [join(ROOT, 'web', 'theme.css'), 'theme.css'],

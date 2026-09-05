@@ -1,0 +1,79 @@
+{
+  "collections": [
+    {
+      "key": "settings",
+      "kind": "singleton",
+      "title": "Collection",
+      "singular": "Collection",
+      "titleText": "Collection settings",
+      "itemLabel": "Settings",
+      "form": [
+        { "widget": "text", "prop": "name", "label": "Name", "target": "root" },
+        { "widget": "toggle", "prop": "carryOverOnPrimaryChange", "label": "Carry selections over when the main option changes", "target": "root", "default": true, "explicit": true },
+        { "widget": "note", "text": "On: keep trim/options while browsing the range (good when options are comparable). Off: reset to defaults for each new option." },
+        { "widget": "text", "prop": "brandMark", "path": "brand.mark", "label": "Brand mark", "target": "root" },
+        { "widget": "text", "prop": "brandRest", "path": "brand.rest", "label": "Brand rest", "target": "root" },
+        { "widget": "text", "prop": "brandDescriptor", "path": "brand.descriptor", "label": "Collection descriptor", "target": "root" },
+        { "widget": "text", "prop": "brandTagline", "path": "brand.tagline", "label": "Maison / tagline", "target": "root" },
+        { "widget": "text", "prop": "brandCta", "path": "brand.cta", "label": "Call to action", "target": "root" }
+      ]
+    },
+    {
+      "key": "sections",
+      "kind": "array",
+      "title": "Sections",
+      "singular": "Section",
+      "itemId": "id",
+      "itemLabel": "label",
+      "add": { "seed": "section" },
+      "form": [
+        { "widget": "text", "prop": "label", "label": "Label", "clearEmpty": false },
+        { "widget": "number", "prop": "order", "label": "Order" }
+      ]
+    },
+    {
+      "key": "fields",
+      "kind": "array",
+      "title": "Fields",
+      "singular": "Field",
+      "docSource": "data.fields",
+      "editIn": "fields",
+      "linkBy": "id",
+      "itemId": "id",
+      "itemLabel": "id",
+      "labelFrom": "source",
+      "sub": "type",
+      "subFrom": "source",
+      "form": [
+        { "widget": "text", "prop": "label", "label": "Label" },
+        { "widget": "select", "prop": "control", "label": "Control", "source": "controls", "noAutoSelect": true },
+        { "widget": "select", "prop": "section", "label": "Section", "source": "sections", "allowNone": true },
+        { "widget": "select", "prop": "width", "label": "Width", "options": ["full", "half", "third", "quarter"], "noAutoSelect": true },
+        { "widget": "text", "prop": "help", "label": "Help" },
+        { "widget": "number", "prop": "decimals", "label": "Decimals", "when": { "from": "source", "prop": "type", "eq": "number" } },
+        { "widget": "rule", "prop": "visibleWhen", "label": "Show when" },
+        { "widget": "rule", "prop": "enabledWhen", "label": "Enable when" },
+        { "widget": "optionRows", "when": { "from": "source", "prop": "options", "exists": true } }
+      ]
+    },
+    {
+      "key": "outputs",
+      "kind": "array",
+      "title": "Outputs",
+      "singular": "Output",
+      "itemId": "id",
+      "itemLabel": "id",
+      "add": { "seed": "output" },
+      "form": [
+        { "widget": "select", "prop": "id", "label": "Value", "source": "values", "noAutoSelect": true },
+        { "widget": "text", "prop": "label", "label": "Label", "clearEmpty": false },
+        { "widget": "select", "prop": "formatType", "path": "format.type", "label": "Format", "options": ["currency", "number", "unit", "percent"], "noAutoSelect": true, "rerender": true },
+        { "widget": "number", "prop": "formatDecimals", "path": "format.decimals", "label": "Decimals" },
+        { "widget": "text", "prop": "formatUnit", "path": "format.unit", "label": "Unit", "when": { "path": "format.type", "eq": "unit" } },
+        { "widget": "text", "prop": "formatCurrency", "path": "format.currencyCode", "label": "Currency code", "when": { "path": "format.type", "eq": "currency" } },
+        { "widget": "toggle", "prop": "emphasis", "label": "Emphasis (headline)" },
+        { "widget": "rule", "prop": "visibleWhen", "label": "Show when" }
+      ]
+    }
+  ]
+}

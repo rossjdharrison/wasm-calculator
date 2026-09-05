@@ -24,6 +24,11 @@ import { WIDGET_TYPES, WIDGET_CONTRACTS } from './editor-engine.mjs';
 // page never provides (which would silently render an empty dropdown).
 export const DATA_SOURCES = ['fields'];
 
+// Source names the Presentation page wires into ctx.sources (presentation.schema.json
+// references these). controls = the controls valid for a field's type; sections =
+// the section ids; values = the data field/computed ids an output can bind to.
+export const PRES_SOURCES = ['controls', 'sections', 'values'];
+
 const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const isStr = (x) => typeof x === 'string' && x.length > 0;
 

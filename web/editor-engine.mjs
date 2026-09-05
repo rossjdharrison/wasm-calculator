@@ -262,6 +262,7 @@ const WIDGETS = {
   default: (a) => defaultWidget(a),
   optionList: (a) => optionListWidget(a),
   optionRows: (a) => optionRowsWidget(a),
+  note: (a) => hint(a.spec.text || ''),
   grid: (a) => gridWidget(a),
 };
 
@@ -292,6 +293,7 @@ export const WIDGET_CONTRACTS = {
   default: { needsProp: true, item: 'fieldType' },
   optionList: { needsProp: false, needsFields: true, item: 'optionList' },
   optionRows: { needsProp: false, needsAssets: true },
+  note: { needsProp: false },
   grid: { needsProp: false, item: 'table' },
 };
 

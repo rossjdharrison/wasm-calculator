@@ -7,7 +7,7 @@
 import { readFile } from 'node:fs/promises';
 import { assemble, mergeModel } from '../web/assembler.mjs';
 import { validateBinding } from '../web/binding.mjs';
-import { validateEditorSchema, validateDocAgainstSchema } from '../web/schema-check.mjs';
+import { validateEditorSchema, validateDocAgainstSchema, PRES_SOURCES } from '../web/schema-check.mjs';
 import { analyzeCoverage } from '../web/coverage.mjs';
 
 let data, pres, model;
@@ -41,6 +41,27 @@ try {
     process.exit(1);
   }
   console.log(`✓ editor schema "${editorSchema.title || 'data'}": ${editorSchema.collections.length} collections conform.`);
+}
+
+// presentation-editor schema conformance: the presentation.schema.json that will
+// drive the presentation editor must be well-formed (with the presentation source
+// names it references) and the presentation model must render cleanly through it.
+{
+  let presSchema;
+  try {
+    presSchema = JSON.parse(await readFile('web/presentation.schema.json', 'utf8'));
+  } catch (e) {
+    console.error(`✖ could not read/parse web/presentation.schema.json: ${e.message}`);
+    process.exit(1);
+  }
+  const s1 = validateEditorSchema(presSchema, { sources: PRES_SOURCES });
+  const s2 = validateDocAgainstSchema(presSchema, pres);
+  for (const w of [...s1.warnings, ...s2.warnings]) console.warn(`  ⚠ pres-schema: ${w}`);
+  if (s1.errors.length || s2.errors.length) {
+    for (const e of [...s1.errors, ...s2.errors]) console.error(`✖ pres-schema: ${e}`);
+    process.exit(1);
+  }
+  console.log(`✓ presentation schema: ${presSchema.collections.length} collections conform.`);
 }
 
 // model coverage (Area 1): a shipped model must be COMPLETE — every option an

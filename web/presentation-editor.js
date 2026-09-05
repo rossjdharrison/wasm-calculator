@@ -1,185 +1,87 @@
 // =============================================================================
 // presentation-editor.js — the PRESENTATION design page (Phase B).
 //
-// Left: schema-like editors for sections, per-field bindings, and outputs.
-// Right: a LIVE WYSIWYG preview — the *real* Configurator (render-form.mjs),
-// rebuilt as you edit, with two-way click-to-edit selection between the form and
-// the editors. Cross-file binding check + Save reopens the Configurator.
+// Left: the generic createEditor (editor-engine.mjs), driven by
+// presentation.schema.json — the same engine the Data page uses. The pres model
+// is the mutated doc; the data model is injected read-only (ctx.docs) so the
+// Fields group can list data.fields but write pres.fields, linked by id.
+// Right: a LIVE WYSIWYG — the real Configurator (render-form.mjs), rebuilt on
+// every edit, with two-way click-to-edit selection between form and editor.
 // =============================================================================
 import { currentData, currentPres, savePres, loadDefaultPres } from './store.mjs';
 import { validateBinding } from './binding.mjs';
-import { el, textRow, numRow, checkRow, selectRow, hint, makeRuleUI, outlineGroup, detailTitle } from './editor-ui.mjs';
 import { mountConfigurator } from './render-form.mjs';
 import { pickImage } from './asset-picker.mjs';
 import { resolve as resolveAsset } from './assets.mjs';
+import { createEditor } from './editor-engine.mjs';
 import { $, clone, debounce, setStatus, message, assembleLive } from './studio-dom.mjs';
 import { mountStudioShell } from './studio-shell.mjs';
 
 const WASM_URL = 'quote.wasm';
-
+// the controls valid for each field type (the Fields "Control" select reads this
+// off the source field's type via ctx.sources.controls)
 const CONTROLS = { choice: ['radio', 'dropdown', 'buttons'], multichoice: ['buttons', 'checkboxes'], number: ['input', 'stepper'], boolean: ['switch', 'checkbox'] };
-const WIDTHS = ['full', 'half', 'third', 'quarter'];
-const FORMATS = ['currency', 'number', 'unit', 'percent'];
 
-let data = null, pres = null, wasm = null;
-let assembledOk = null, preview = null, previewToken = 0;
-let sel = { group: 'fields', index: 0 };
-
-const rules = makeRuleUI(() => (data.fields || []).map((f) => ({ id: f.id, type: f.type, options: f.options || [] })));
+let data = null, pres = null, wasm = null, schema = null;
+let editor = null, assembledOk = null, preview = null, previewToken = 0;
+let lastSel = { key: null, id: null };   // remembered selection, re-applied after each rebuild
 
 boot();
 async function boot() {
   mountStudioShell($('studio-head'), { active: 'pres', title: 'Presentation', blurb: 'How the data is shown: bind each field to a control, place it in a section, set labels &amp; option text, choose outputs and formats. The logic lives on the Data page; this only changes the look and layout.' });
   try {
-    [data, pres, wasm] = await Promise.all([
+    [data, pres, wasm, schema] = await Promise.all([
       currentData(), currentPres().then(clone),
       fetch(WASM_URL).then((r) => r.arrayBuffer()).then((b) => new Uint8Array(b)),
+      fetch('presentation.schema.json').then((r) => r.json()),
     ]);
   } catch (e) { $('status').textContent = `Load failed: ${e.message}`; return; }
   $('btn-save').addEventListener('click', save);
   $('btn-revert').addEventListener('click', () => location.reload());
-  $('btn-default').addEventListener('click', async () => { pres = clone(await loadDefaultPres()); renderAll(); });
-  renderAll();
+  $('btn-default').addEventListener('click', async () => { pres = clone(await loadDefaultPres()); mountEditor(); });
+  mountEditor();
 }
 
-const GROUPS = [
-  { key: 'settings', title: 'Collection', label: () => 'Settings' },
-  { key: 'sections', title: 'Sections', label: (x) => x.label || x.id, addable: true },
-  { key: 'fields', title: 'Fields', label: (x) => x.id },
-  { key: 'outputs', title: 'Outputs', label: (x, i) => x.id || `#${i}`, addable: true },
-];
-function items(group) { return group === 'fields' ? (data.fields || []) : group === 'settings' ? [{ id: 'Settings' }] : (pres[group] || []); }
-function dataValueIds() { return [...(data.computed || []).map((c) => c.id), ...(data.fields || []).map((f) => f.id)]; }
-function ensurePresField(id) { pres.fields = pres.fields || []; let pf = pres.fields.find((f) => f.id === id); if (!pf) { pf = { id }; pres.fields.push(pf); } return pf; }
-function ensurePresOption(pf, oid) { pf.options = pf.options || []; let o = pf.options.find((x) => x.id === oid); if (!o) { o = { id: oid }; pf.options.push(o); } return o; }
+const dataValueIds = () => [...(data.computed || []).map((c) => c.id), ...(data.fields || []).map((f) => f.id)];
 
-// Per-option image control: thumbnail + Choose/Change/Remove, backed by the
-// asset picker. Stores a reference ("asset:<id>" or a URL) on the option.
-function imageCell(po) {
-  const cell = el('div', 'de-opt-img');
-  const thumb = el('div', 'de-opt-thumb'); thumb.setAttribute('aria-hidden', 'true');
-  const btn = el('button', 'qc-btn-link'); btn.type = 'button';
-  const rm = el('button', 'qc-btn-link de-opt-rm'); rm.type = 'button'; rm.textContent = '✕'; rm.title = 'Remove image';
-  const paint = () => {
-    thumb.innerHTML = '';
-    if (po.image) { const im = el('img'); resolveAsset(po.image).then((u) => { if (u) im.src = u; }); thumb.appendChild(im); thumb.classList.add('has'); btn.textContent = 'Change'; rm.hidden = false; }
-    else { thumb.classList.remove('has'); btn.textContent = 'Image…'; rm.hidden = true; }
-  };
-  btn.addEventListener('click', async () => { const ref = await pickImage({ current: po.image }); if (ref) { set(po, 'image', ref); paint(); } });
-  rm.addEventListener('click', () => { set(po, 'image', undefined); paint(); });
-  cell.append(thumb, btn, rm);
-  paint();
-  return cell;
+function mountEditor() {
+  editor = createEditor({
+    schema, doc: pres, outline: $('outline'), detail: $('detail'),
+    ctx: {
+      fields: () => (data.fields || []).map((f) => ({ id: f.id, type: f.type, options: f.options || [] })),
+      docs: { 'data.fields': () => data.fields || [] },   // read-only companion for the cross-doc Fields group
+      sources: {
+        controls: (_item, source) => CONTROLS[source && source.type] || ['input'],
+        sections: () => (pres.sections || []).map((s) => s.id),
+        values: () => dataValueIds(),
+      },
+      assets: { pick: pickImage, resolve: resolveAsset },
+      seeds: {
+        section: () => { const id = prompt('New section id:'); if (!id) return null; return { id, label: id, order: (pres.sections ? pres.sections.length : 0) + 1 }; },
+        output: () => ({ id: dataValueIds()[0], label: '', format: { type: 'number', decimals: 2 } }),
+      },
+    },
+    // selection must NOT rebuild the live preview (that would remount it on every
+    // click); only real edits do. Both keep the binding issues fresh.
+    onChange: (info) => { if (info && info.reason === 'select') return; renderIssues(); scheduleRebuild(); },
+    onSelect: (key, id) => { lastSel = { key, id }; applyHighlight(); },
+  });
+  renderIssues();
+  scheduleRebuild();     // createEditor's initial render fires onSelect, not onChange — kick the first preview
 }
 
-function renderAll() { renderOutline(); renderDetail(); renderIssues(); scheduleRebuild(); }
-
-function renderOutline() {
-  const root = $('outline'); root.innerHTML = '';
-  for (const g of GROUPS) {
-    root.appendChild(outlineGroup({
-      title: g.title,
-      items: items(g.key).map((it, i) => g.label(it, i)),
-      activeIndex: sel.group === g.key ? sel.index : -1,
-      onPick: (i) => selectItem(g.key, i),
-      onAdd: g.addable ? () => addItem(g.key) : null,
-    }));
-  }
-}
-
-// ---- selection (two-way with the preview) ----------------------------------
-function selectItem(group, index) { sel = { group, index }; renderOutline(); renderDetail(); highlightSelection(); }
-function highlightSelection() {
+// map an editor collection to the preview's highlight kind (settings has none)
+const HL_KIND = { sections: 'section', fields: 'field', outputs: 'output' };
+function applyHighlight() {
   if (!preview) return;
-  const list = items(sel.group); const it = list[sel.index]; if (!it) return;
-  const kind = { sections: 'section', fields: 'field', outputs: 'output' }[sel.group];
-  if (!kind) return;   // settings has no preview target
-  preview.highlight(kind, it.id);
+  const kind = HL_KIND[lastSel.key];
+  if (kind && lastSel.id) preview.highlight(kind, lastSel.id);
 }
+// two-way: clicking a field/section/output in the live form selects it on the left
 function onEdit(kind, id) {
-  if (kind === 'field') { const i = (data.fields || []).findIndex((f) => f.id === id); if (i >= 0) selectItem('fields', i); }
-  else if (kind === 'section') { const i = (pres.sections || []).findIndex((s) => s.id === id); if (i >= 0) selectItem('sections', i); }
-  else if (kind === 'output') { const i = (pres.outputs || []).findIndex((o) => o.id === id); if (i >= 0) selectItem('outputs', i); }
+  const key = { section: 'sections', field: 'fields', output: 'outputs' }[kind];
+  if (key && editor) editor.select(key, id);
 }
-
-function renderDetail() {
-  const root = $('detail'); root.innerHTML = '';
-  const list = items(sel.group);
-  if (!list.length) { root.appendChild(hint('Nothing here yet.')); return; }
-  if (sel.index >= list.length) sel.index = list.length - 1;
-  ({ settings: settingsEditor, sections: sectionEditor, fields: fieldEditor, outputs: outputEditor }[sel.group])(list[sel.index], sel.index, root);
-}
-
-// Collection-level presentation settings: the header/brand, the CTA, and the
-// carry-over behaviour when the main option changes (all top-level presentation).
-function settingsEditor(_it, _idx, root) {
-  root.appendChild(detailTitle('Collection settings'));
-  root.appendChild(textRow('Name', pres.name || '', (v) => set(pres, 'name', v || undefined)));
-  root.appendChild(checkRow('Carry selections over when the main option changes', pres.carryOverOnPrimaryChange !== false, (v) => set(pres, 'carryOverOnPrimaryChange', v)));
-  root.appendChild(hint('On: keep trim/options while browsing the range (good when options are comparable). Off: reset to defaults for each new option.'));
-  pres.brand = pres.brand || {};
-  root.appendChild(textRow('Brand mark', pres.brand.mark || '', (v) => set(pres.brand, 'mark', v || undefined)));
-  root.appendChild(textRow('Brand rest', pres.brand.rest || '', (v) => set(pres.brand, 'rest', v || undefined)));
-  root.appendChild(textRow('Collection descriptor', pres.brand.descriptor || '', (v) => set(pres.brand, 'descriptor', v || undefined)));
-  root.appendChild(textRow('Maison / tagline', pres.brand.tagline || '', (v) => set(pres.brand, 'tagline', v || undefined)));
-  root.appendChild(textRow('Call to action', pres.brand.cta || '', (v) => set(pres.brand, 'cta', v || undefined)));
-}
-
-function sectionEditor(s, idx, root) {
-  root.appendChild(detailTitle(`Section: ${s.id}`, { onRemove: () => removeItem('sections', idx) }));
-  root.appendChild(textRow('Label', s.label || '', (v) => set(s, 'label', v)));
-  root.appendChild(numRow('Order', s.order, (v) => set(s, 'order', v)));
-}
-
-function fieldEditor(f, idx, root) {
-  const pf = ensurePresField(f.id);
-  root.appendChild(detailTitle(`Field: ${f.id}`, { sub: `type: ${f.type}` }));
-  root.appendChild(textRow('Label', pf.label || '', (v) => set(pf, 'label', v || undefined)));
-  root.appendChild(selectRow('Control', CONTROLS[f.type] || ['input'], pf.control || (CONTROLS[f.type] || [''])[0], (v) => set(pf, 'control', v)));
-  root.appendChild(selectRow('Section', ['(none)', ...(pres.sections || []).map((s) => s.id)], pf.section || '(none)', (v) => set(pf, 'section', v === '(none)' ? undefined : v)));
-  root.appendChild(selectRow('Width', WIDTHS, pf.width || 'full', (v) => set(pf, 'width', v)));
-  root.appendChild(textRow('Help', pf.help || '', (v) => set(pf, 'help', v || undefined)));
-  if (f.type === 'number') root.appendChild(numRow('Decimals', pf.decimals, (v) => set(pf, 'decimals', v)));
-  root.appendChild(rules.ruleRow('Show when', () => pf.visibleWhen, (a) => set(pf, 'visibleWhen', a)));
-  root.appendChild(rules.ruleRow('Enable when', () => pf.enabledWhen, (a) => set(pf, 'enabledWhen', a)));
-  if (f.options) {
-    const box = el('div', 'de-sub');
-    const bh = el('div', 'de-sub__head'); bh.textContent = 'Option labels, prices & images'; box.appendChild(bh);
-    for (const o of f.options) {
-      const po = ensurePresOption(pf, o.id);
-      const r = el('div', 'de-opt-row');
-      const id = el('code', 'de-opt__id'); id.textContent = o.id; r.appendChild(id);
-      const li = el('input', 'qc-input'); li.placeholder = 'label'; li.setAttribute('aria-label', `${o.id} label`); li.value = po.label || ''; li.addEventListener('input', () => set(po, 'label', li.value || undefined)); r.appendChild(li);
-      const pd = el('input', 'qc-input de-price'); pd.type = 'number'; pd.placeholder = 'price'; pd.setAttribute('aria-label', `${o.id} price delta`); pd.value = po.priceDelta ?? ''; pd.addEventListener('input', () => set(po, 'priceDelta', pd.value === '' ? undefined : Number(pd.value))); r.appendChild(pd);
-      r.appendChild(imageCell(po, o.id));
-      box.appendChild(r);
-    }
-    root.appendChild(box);
-  }
-}
-
-function outputEditor(o, idx, root) {
-  root.appendChild(detailTitle(`Output: ${o.id}`, { onRemove: () => removeItem('outputs', idx) }));
-  root.appendChild(selectRow('Value', dataValueIds(), o.id, (v) => set(o, 'id', v)));
-  root.appendChild(textRow('Label', o.label || '', (v) => set(o, 'label', v)));
-  o.format = o.format || { type: 'number' };
-  root.appendChild(selectRow('Format', FORMATS, o.format.type || 'number', (v) => { set(o.format, 'type', v); renderDetail(); }));
-  root.appendChild(numRow('Decimals', o.format.decimals, (v) => set(o.format, 'decimals', v)));
-  if (o.format.type === 'unit') root.appendChild(textRow('Unit', o.format.unit || '', (v) => set(o.format, 'unit', v)));
-  if (o.format.type === 'currency') root.appendChild(textRow('Currency code', o.format.currencyCode || '', (v) => set(o.format, 'currencyCode', v)));
-  root.appendChild(checkRow('Emphasis (headline)', o.emphasis, (v) => set(o, 'emphasis', v || undefined)));
-  root.appendChild(rules.ruleRow('Show when', () => o.visibleWhen, (a) => set(o, 'visibleWhen', a)));
-}
-
-function addItem(group) {
-  if (group === 'sections') { const id = prompt('New section id:'); if (!id) return; pres.sections = pres.sections || []; pres.sections.push({ id, label: id, order: pres.sections.length + 1 }); sel = { group, index: pres.sections.length - 1 }; }
-  else if (group === 'outputs') { pres.outputs = pres.outputs || []; pres.outputs.push({ id: dataValueIds()[0], label: '', format: { type: 'number', decimals: 2 } }); sel = { group, index: pres.outputs.length - 1 }; }
-  renderAll();
-}
-function removeItem(group, idx) { if (!confirm('Remove this item?')) return; pres[group].splice(idx, 1); sel.index = Math.max(0, idx - 1); renderAll(); }
-
-// ---- helpers ----
-function set(obj, key, val) { if (val === undefined) delete obj[key]; else obj[key] = val; if (['label', 'id', 'order'].includes(key)) renderOutline(); renderIssues(); scheduleRebuild(); }
 
 // ---- binding issues --------------------------------------------------------
 function renderIssues() {
@@ -199,7 +101,7 @@ function rebuildPreview() {
     assembledOk = assembled;
     setStatus('ok', 'Live preview — click any field to edit it.');
     preview = mountConfigurator($('preview'), { model, ir: assembled.ir, engine, onEdit });
-    highlightSelection();
+    applyHighlight();                   // re-ring the current selection after the remount
   }).catch((e) => {
     if (token !== previewToken) return;
     assembledOk = null; preview = null;
