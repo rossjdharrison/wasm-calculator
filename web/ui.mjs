@@ -44,17 +44,43 @@ export const configKey = (config) => {
 export const money = (v, currency = 'GBP', decimals = 0) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(v);
 
+// the unit family (from a model.units map) that contains a given unit id
+const unitFamily = (units, u) => Object.values(units || {}).find((fam) => fam && fam.members && u in fam.members);
+
 // ---- atom: format one output value (currency / percent / unit / number) ----
 // o is the flattened output IR shape { value, format, currencyCode, decimals,
-// unit }. The single home for output formatting — shared by the live
-// Configurator (render-form) and the studio preview. `opts` is reserved for
-// later unit/currency conversion (a factor + a display unit/currency); it is
-// unused today, so output is byte-identical to the copies this replaced.
-export const formatOutput = (o, _opts = {}) => {
-  const v = o.value; const nf = (fmtOpts) => new Intl.NumberFormat(undefined, fmtOpts).format(v);
-  if (o.format === 'currency') return nf({ style: 'currency', currency: o.currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
+// unit, canonicalUnit?, baseCurrency? }. The value is always CANONICAL (the
+// engine never converts); conversion happens here at format time. The single
+// home for output formatting — shared by the live Configurator, the showroom and
+// the studio preview.
+//   opts.units      model.units families ({ family: { canonical, members:{ u:{factor,system} } } })
+//   opts.rates      model.rates ({ base, <code>: rateFromBase })
+//   opts.unitSystem 'metric' | 'imperial' — pick the family member with that system
+//   opts.currency   display currency code — convert via rates
+//   opts.locale     Intl locale (default: system)
+// With no opts, nothing converts and output is byte-identical to the canonical.
+export const formatOutput = (o, opts = {}) => {
+  const { units, rates, unitSystem, currency, locale } = opts;
+  let v = o.value, unit = o.unit, currencyCode = o.currencyCode;
+
+  if (o.format === 'unit' && o.canonicalUnit && units && unitSystem) {
+    const fam = unitFamily(units, o.canonicalUnit);
+    const target = fam && Object.keys(fam.members).find((u) => fam.members[u].system === unitSystem);
+    if (target && target !== o.canonicalUnit) {
+      const cf = fam.members[o.canonicalUnit].factor || 1;
+      v = v * (fam.members[target].factor / cf); unit = target;
+    } else if (target) { unit = target; }
+  } else if (o.format === 'currency' && currency && rates) {
+    const base = o.baseCurrency || rates.base;
+    const rt = currency === rates.base ? 1 : rates[currency];
+    const rb = base === rates.base ? 1 : rates[base];
+    if (rt && rb) { v = v * (rt / rb); currencyCode = currency; }
+  }
+
+  const nf = (fmtOpts) => new Intl.NumberFormat(locale, fmtOpts).format(v);
+  if (o.format === 'currency') return nf({ style: 'currency', currency: currencyCode, minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
   if (o.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals });
-  if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return o.unit ? `${n} ${o.unit}` : n; }
+  if (o.format === 'unit') { const n = nf({ minimumFractionDigits: o.decimals, maximumFractionDigits: o.decimals }); return unit ? `${n} ${unit}` : n; }
   return nf({ maximumFractionDigits: o.decimals ?? 2 });
 };
 

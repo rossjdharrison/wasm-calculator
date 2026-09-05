@@ -48,8 +48,8 @@ const pickDefined = (obj, keys) => {
 
 // Which keys are owned by which file. Split by ownership (see docs/editor-architecture.md §3).
 const DATA_TOP = ['$schema', 'id', 'version', 'currency'];
-const DATA_BLOCKS = ['effects', 'tables', 'computed', 'validations', 'bundles'];
-const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'formula'];
+const DATA_BLOCKS = ['effects', 'tables', 'computed', 'validations', 'bundles', 'units', 'rates'];
+const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'canonicalUnit', 'formula'];
 const DATA_OPTION = ['id', 'availableWhen'];
 const PRES_TOP = ['name', 'brand', 'carryOverOnPrimaryChange'];
 const PRES_FIELD = ['id', 'label', 'control', 'section', 'width', 'help', 'decimals', 'visibleWhen', 'enabledWhen'];
@@ -309,6 +309,7 @@ export function buildIR(model) {
       id: o.id, slot: slotOf.get(o.id), label: o.label || o.id,
       formatType: fmt.type || 'number', unit: fmt.unit || null,
       currencyCode: fmt.currencyCode || model.currency || 'USD', decimals: fmt.decimals ?? 2,
+      canonicalUnit: fmt.canonicalUnit || null, baseCurrency: fmt.baseCurrency || model.currency || null,
       visibleWhenNode: parseOpt(o.visibleWhen),
     };
   });
@@ -349,6 +350,7 @@ export function buildIR(model) {
     effects, validations, outputs, tables, nodes,
     fieldById, fieldOptions,
     currency: model.currency || 'USD',
+    units: model.units || null, rates: model.rates || null,
     settleMaxPasses: (model.effects?.length || 0) + fields.reduce((n, f) => n + f.options.length, 0) + 4,
   };
 }
@@ -526,6 +528,7 @@ export function referenceEvaluate(ir, rawInputs) {
     id: o.id, label: o.label, value: V[o.slot],
     visible: o.visibleWhenNode < 0 ? true : e(o.visibleWhenNode) !== 0,
     format: o.formatType, unit: o.unit, currencyCode: o.currencyCode, decimals: o.decimals,
+    canonicalUnit: o.canonicalUnit, baseCurrency: o.baseCurrency,
   }));
 
   const messages = ir.validations.filter((v) => e(v.condNode) !== 0)
@@ -703,6 +706,7 @@ export async function loadEngine(source, assembled) {
       id: o.id, label: o.label, value: f64at(io.outValuesOff + i * 8),
       visible: i32at(io.outVisOff + i * 4) !== 0,
       format: o.formatType, unit: o.unit, currencyCode: o.currencyCode, decimals: o.decimals,
+      canonicalUnit: o.canonicalUnit, baseCurrency: o.baseCurrency,
     }));
 
     const visible = {}, enabled = {}, limits = {}, optionState = {}, forced = [];
