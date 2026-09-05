@@ -1,0 +1,318 @@
+{
+  "name": "Fine Art & Antiques",
+  "brand": {
+    "mark": "ROWBLAA",
+    "rest": "LUXURY",
+    "descriptor": "Art & Antiques",
+    "tagline": "Haarlem",
+    "cta": "Enquire about this piece ▸"
+  },
+  "sections": [
+    {
+      "id": "s_piece",
+      "label": "The piece",
+      "order": 1
+    },
+    {
+      "id": "s_provenance",
+      "label": "Provenance & condition",
+      "order": 2
+    },
+    {
+      "id": "s_presentation",
+      "label": "Framing & presentation",
+      "order": 3
+    },
+    {
+      "id": "s_services",
+      "label": "Services",
+      "order": 4
+    },
+    {
+      "id": "s_settlement",
+      "label": "Settlement",
+      "order": 5
+    }
+  ],
+  "fields": [
+    {
+      "id": "piece",
+      "label": "Piece",
+      "control": "buttons",
+      "section": "s_piece",
+      "width": "full",
+      "options": [
+        {
+          "id": "mingVase",
+          "label": "Ming Dynasty Vase"
+        },
+        {
+          "id": "baroqueConsole",
+          "label": "Baroque Giltwood Console"
+        },
+        {
+          "id": "impressionistOil",
+          "label": "Impressionist Oil, c.1890"
+        },
+        {
+          "id": "turnerWatercolour",
+          "label": "Turner Watercolour Study"
+        },
+        {
+          "id": "artDecoClock",
+          "label": "Art Deco Mantel Clock"
+        },
+        {
+          "id": "rodinBronze",
+          "label": "Bronze, School of Rodin"
+        },
+        {
+          "id": "persianRug",
+          "label": "Antique Persian Rug"
+        },
+        {
+          "id": "muranoChandelier",
+          "label": "Murano Glass Chandelier"
+        }
+      ]
+    },
+    {
+      "id": "provenance",
+      "label": "Provenance",
+      "control": "buttons",
+      "section": "s_provenance",
+      "width": "full",
+      "options": [
+        {
+          "id": "documented",
+          "label": "Documented"
+        },
+        {
+          "id": "certified",
+          "label": "Certified"
+        },
+        {
+          "id": "museum",
+          "label": "Museum dossier"
+        }
+      ]
+    },
+    {
+      "id": "condition",
+      "label": "Condition",
+      "control": "buttons",
+      "section": "s_provenance",
+      "width": "full",
+      "options": [
+        {
+          "id": "asFound",
+          "label": "As found"
+        },
+        {
+          "id": "conserved",
+          "label": "Conserved"
+        },
+        {
+          "id": "restored",
+          "label": "Restored"
+        }
+      ]
+    },
+    {
+      "id": "framing",
+      "label": "Framing",
+      "control": "buttons",
+      "section": "s_presentation",
+      "width": "full",
+      "visibleWhen": {
+        "op": "or",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "piece"
+                ]
+              },
+              "impressionistOil"
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "piece"
+                ]
+              },
+              "turnerWatercolour"
+            ]
+          }
+        ]
+      },
+      "options": [
+        {
+          "id": "none",
+          "label": "Unframed"
+        },
+        {
+          "id": "gallery",
+          "label": "Gallery frame"
+        },
+        {
+          "id": "gilt",
+          "label": "Gilt frame"
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "label": "Services",
+      "control": "buttons",
+      "section": "s_services",
+      "width": "full",
+      "options": [
+        {
+          "id": "insuranceValuation",
+          "label": "Insurance valuation"
+        },
+        {
+          "id": "conditionReport",
+          "label": "Condition report"
+        },
+        {
+          "id": "whiteGlove",
+          "label": "White-glove delivery"
+        },
+        {
+          "id": "climatePackaging",
+          "label": "Climate packaging"
+        },
+        {
+          "id": "installation",
+          "label": "Installation"
+        },
+        {
+          "id": "uvGlazing",
+          "label": "UV museum glazing"
+        }
+      ]
+    },
+    {
+      "id": "settlement",
+      "label": "Settlement",
+      "control": "buttons",
+      "section": "s_settlement",
+      "width": "full",
+      "options": [
+        {
+          "id": "full",
+          "label": "Settle in full"
+        },
+        {
+          "id": "plan6",
+          "label": "6 monthly"
+        },
+        {
+          "id": "plan12",
+          "label": "12 monthly"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "itemPrice",
+      "label": "Acquisition",
+      "format": {
+        "type": "currency",
+        "decimals": 0,
+        "currencyCode": "GBP"
+      }
+    },
+    {
+      "id": "total",
+      "label": "Guide price",
+      "format": {
+        "type": "currency",
+        "decimals": 0,
+        "currencyCode": "GBP"
+      },
+      "emphasis": true,
+      "compare": "low",
+      "compareLabel": "Guide price"
+    },
+    {
+      "id": "monthlyPayment",
+      "label": "Instalment",
+      "format": {
+        "type": "currency",
+        "decimals": 0,
+        "currencyCode": "GBP"
+      },
+      "visibleWhen": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "settlement"
+                ]
+              },
+              "full"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "height",
+      "label": "Height",
+      "format": {
+        "type": "unit",
+        "unit": "cm",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "high"
+    },
+    {
+      "id": "width",
+      "label": "Width",
+      "format": {
+        "type": "unit",
+        "unit": "cm",
+        "decimals": 0
+      },
+      "spec": true,
+      "compare": "high"
+    },
+    {
+      "id": "weight",
+      "label": "Weight",
+      "format": {
+        "type": "unit",
+        "unit": "kg",
+        "decimals": 0
+      },
+      "spec": true
+    },
+    {
+      "id": "insuranceValue",
+      "label": "Insurance value",
+      "format": {
+        "type": "currency",
+        "decimals": 0,
+        "currencyCode": "GBP"
+      },
+      "spec": true,
+      "compare": "high"
+    }
+  ]
+}

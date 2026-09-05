@@ -1,0 +1,19 @@
+{
+  "brand": { "mark": "ROWBLAA", "rest": "LUXURY" },
+  "models": [
+    {
+      "id": "vehicles",
+      "title": "Vehicles",
+      "descriptor": "Vehicles",
+      "blurb": "Bespoke motorcars, configured to the millimetre.",
+      "hero": "cars/gt-coupe.png"
+    },
+    {
+      "id": "antiques",
+      "title": "Art & Antiques",
+      "descriptor": "Art & Antiques",
+      "blurb": "Fine art and rare objects, with provenance and white-glove care.",
+      "hero": ""
+    }
+  ]
+}

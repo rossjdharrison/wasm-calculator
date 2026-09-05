@@ -13,8 +13,8 @@ import { analyzeCoverage } from '../web/coverage.mjs';
 let data, pres, model;
 try {
   [data, pres] = await Promise.all([
-    readFile('web/data-model.json', 'utf8').then(JSON.parse),
-    readFile('web/presentation-model.json', 'utf8').then(JSON.parse),
+    readFile('web/models/vehicles/data-model.json', 'utf8').then(JSON.parse),
+    readFile('web/models/vehicles/presentation-model.json', 'utf8').then(JSON.parse),
   ]);
   model = mergeModel(data, pres);
 } catch (e) {

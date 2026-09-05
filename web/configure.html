@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0b0c0e" />
-    <title>ROWBLAA LUXURY</title>
+    <title>ROWBLAA LUXURY — Configure</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='84'>◆</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,9 +12,10 @@
     <link rel="stylesheet" href="showroom.css" />
   </head>
   <body>
-    <!-- The landing: ROWBLAA LUXURY + the collection catalogue (models/catalog.json).
-         Each collection opens its own configurator at configure.html?m=<id>. -->
-    <div id="landing"></div>
-    <script type="module" src="landing.js"></script>
+    <!-- The configurator IS the showroom: showroom-view.mjs builds the full stage
+         + glass rail into #app, driven by the live wasm engine. The model shown is
+         chosen by ?m=<id> (see store.mjs), defaulting to vehicles. -->
+    <div id="app"></div>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

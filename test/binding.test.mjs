@@ -10,8 +10,8 @@ import { validateBinding } from '../web/binding.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const web = (f) => readFile(join(here, '..', 'web', f), 'utf8').then(JSON.parse);
-const data = await web('data-model.json');
-const pres = await web('presentation-model.json');
+const data = await web('models/vehicles/data-model.json');
+const pres = await web('models/vehicles/presentation-model.json');
 
 test('the shipped models bind cleanly (no errors, no warnings)', () => {
   const { errors, warnings } = validateBinding(data, pres);

@@ -11,7 +11,7 @@ import { assemble, referenceEvaluate, loadEngine, mergeModel } from '../web/asse
 
 const here = dirname(fileURLToPath(import.meta.url));
 const web = (f) => readFile(join(here, '..', 'web', f), 'utf8').then(JSON.parse);
-const model = mergeModel(await web('data-model.json'), await web('presentation-model.json'));
+const model = mergeModel(await web('models/vehicles/data-model.json'), await web('models/vehicles/presentation-model.json'));
 const wasm = await readFile(join(here, '..', 'build', 'quote.wasm'));
 
 const assembled = assemble(model);

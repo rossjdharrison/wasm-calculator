@@ -7,8 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { analyzeCoverage, applyFix, inferIndexing } from '../web/coverage.mjs';
 
 const readJson = (p) => readFile(new URL(p, import.meta.url)).then((b) => JSON.parse(b));
-const DATA = await readJson('../web/data-model.json');
-const PRES = await readJson('../web/presentation-model.json');
+const DATA = await readJson('../web/models/vehicles/data-model.json');
+const PRES = await readJson('../web/models/vehicles/presentation-model.json');
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 test('the shipped model is fully connected (no coverage findings)', () => {

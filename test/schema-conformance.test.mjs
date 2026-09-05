@@ -11,7 +11,7 @@ import { WIDGET_TYPES, WIDGET_CONTRACTS } from '../web/editor-engine.mjs';
 
 const readJson = (p) => readFile(new URL(p, import.meta.url)).then((b) => JSON.parse(b));
 const SCHEMA = await readJson('../web/data.schema.json');
-const DOC = await readJson('../web/data-model.json');
+const DOC = await readJson('../web/models/vehicles/data-model.json');
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const errs = (r) => r.errors.join(' | ');
 

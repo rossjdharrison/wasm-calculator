@@ -12,8 +12,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFile(join(here, p), 'utf8').then(JSON.parse);
 
 const fixture = await read('fixtures/vehicle-combined.json'); // the pre-split combined model
-const data = await read('../web/data-model.json');
-const presentation = await read('../web/presentation-model.json');
+const data = await read('../web/models/vehicles/data-model.json');
+const presentation = await read('../web/models/vehicles/presentation-model.json');
 
 test('merge(split(model)) === model (lossless split)', () => {
   const s = splitModel(fixture);

@@ -6,15 +6,17 @@
 // =============================================================================
 
 import { assemble, loadEngine } from './assembler.mjs';
-import { currentModel, isCustom, resetModel } from './store.mjs';
+import { currentModel, isCustom, resetModel, MODEL_ID } from './store.mjs';
 import { mountShowroom } from './showroom-view.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 
 const WASM_URL = 'quote.wasm';
+// editor links carry the active model id so they edit THIS collection, not vehicles
 const LINKS = [
-  { href: 'data-editor.html', label: 'Data model' },
-  { href: 'presentation-editor.html', label: 'Presentation' },
-  { href: 'editor.html', label: 'JSON' },
+  { href: 'index.html', label: 'Collections' },
+  { href: `data-editor.html?m=${MODEL_ID}`, label: 'Data model' },
+  { href: `presentation-editor.html?m=${MODEL_ID}`, label: 'Presentation' },
+  { href: `editor.html?m=${MODEL_ID}`, label: 'JSON' },
 ];
 
 (async function boot() {

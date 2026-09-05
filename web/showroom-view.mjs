@@ -16,13 +16,17 @@
 const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 
 export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links }) {
-  brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY EXPERIENCES', tagline: '' };
+  brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
   resolveImage = resolveImage || (async () => null);
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const modelFieldById = Object.fromEntries(model.fields.map((f) => [f.id, f]));
   const slotToField = Object.fromEntries(ir.fields.map((f) => [f.slot, f.id]));
   const emphasis = new Set((model.outputs || []).filter((o) => o.emphasis).map((o) => o.id));
+  // presentation-declared roles (domain-agnostic): which outputs are headline spec
+  // tiles, which appear in Compare (with a best-direction), and which drives the plate gauge.
+  const specIds = (model.outputs || []).filter((o) => o.spec).map((o) => o.id);
+  const gaugeMeta = (model.outputs || []).find((o) => o.gaugeMax);
   const primary = ir.fields.find((f) => f.type === 'choice' && f.options && f.options.length) || ir.fields[0];
   const sections = [...(model.sections || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -62,25 +66,22 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   };
   const money0 = (v) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(v);
 
-  // ---------- car visuals (image asset, else silhouette) ----------
+  // ---------- item visuals (image asset, else a neutral placeholder) ----------
+  // Colour swatch palette (used only by a field flagged render:"swatch", e.g. paint).
   const PAINT = { solid: ['#8a9099', '#6d737c'], metallic: ['#aeb7c4', '#7c8794'], premium: ['#3a4c6b', '#243149'], matte: ['#4a4d52', '#3a3d42'] };
-  // silhouette fallback per model id (used only until an image is attached)
-  const CAR_SHAPE = { hotHatch: 'hatch', sleekEstate: 'sedan', gtCoupe: 'coupe', ruggedOffroader: 'suv', luxuryPickup: 'suv', flagshipSuv: 'suv', midSupercar: 'coupe', hypercar: 'coupe' };
-  const carType = (id) => CAR_SHAPE[id] || 'sedan';
-  function carSVG(type, opts = {}) {
-    const paint = PAINT[opts.colour] || PAINT.solid, gid = 'g' + Math.random().toString(36).slice(2, 7);
-    const wheelR = { w17: 20, w18: 22, w19: 24, w20: 26 }[opts.wheels] || 20;
-    const lift = type === 'suv' ? 12 : type === 'hatch' ? 3 : 0;
-    const bodies = { hatch: 'M40 92 Q46 66 78 62 L120 40 Q140 30 168 32 L214 34 Q236 36 248 56 L300 66 Q330 72 336 92 Z', sedan: 'M30 94 Q38 70 92 66 L150 38 Q176 26 226 30 L286 34 Q322 40 338 62 L372 74 Q384 80 382 94 Z', suv: 'M36 90 Q40 58 74 56 L110 32 Q128 22 170 24 L240 26 Q272 28 286 52 L330 60 Q352 66 352 90 Z', coupe: 'M26 96 Q36 78 96 74 L156 48 Q192 30 244 36 L306 44 Q346 50 360 70 L382 82 Q390 88 386 96 Z' };
-    const glass = { hatch: 'M92 62 L126 44 Q142 37 164 39 L206 41 Q220 43 230 58 Z', sedan: 'M104 64 L156 42 Q178 33 220 36 L270 39 Q292 43 300 60 Z', suv: 'M96 56 L122 36 Q136 28 168 30 L234 32 Q258 34 268 54 Z', coupe: 'M118 72 L160 50 Q194 36 236 41 L282 46 Q300 52 306 70 Z' };
-    const wx = type === 'sedan' ? [110, 300] : type === 'suv' ? [104, 300] : type === 'coupe' ? [112, 306] : [104, 292];
-    const wy = 96 - lift, wheel = (cx) => `<g transform="translate(${cx} ${wy})"><circle r="${wheelR}" fill="#111316" stroke="#2a2d33" stroke-width="2"/><circle r="${wheelR * 0.55}" fill="#1a1d22" stroke="#3a3f47" stroke-width="1.5"/><circle r="${wheelR * 0.16}" fill="#4a4f58"/></g>`;
-    return `<svg viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${paint[0]}"/><stop offset="1" stop-color="${paint[1]}"/></linearGradient></defs><g transform="translate(0 ${-lift})"><path d="${bodies[type]}" fill="url(#${gid})" stroke="rgba(0,0,0,.35)" stroke-width="1"/><path d="${glass[type]}" fill="#10151c" opacity=".85"/><path d="${bodies[type]}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/></g>${wheel(wx[0])}${wheel(wx[1])}</svg>`;
+  // domain-agnostic placeholder shown until an image is attached: a framed monogram
+  // of the option's label (works for a car, a painting, a chandelier — anything).
+  function placeholderSVG(optId) {
+    const o = (modelFieldById[primary.id].options || []).find((x) => x.id === optId);
+    const lbl = (o && o.label) || optId;
+    const initials = String(lbl).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '◆';
+    const gid = 'ph' + Math.random().toString(36).slice(2, 7);
+    return `<svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#232830"/><stop offset="1" stop-color="#12141a"/></linearGradient></defs><rect width="400" height="250" fill="url(#${gid})"/><rect x="148" y="52" width="104" height="146" rx="4" fill="none" stroke="rgba(216,162,74,.45)" stroke-width="2"/><text x="200" y="142" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="46" fill="rgba(244,239,231,.9)">${initials}</text></svg>`;
   }
   const imgUrl = {}; // primary optionId -> resolved image URL
-  function carVisual(optId, opts) {
+  function carVisual(optId) {
     if (imgUrl[optId]) return `<img class="carimg" src="${imgUrl[optId]}" alt="">`;
-    return carSVG(carType(optId), opts);
+    return placeholderSVG(optId);
   }
 
   // ---------- state ----------
@@ -95,27 +96,47 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     for (const f of ir.fields) b[f.id] = f.type === 'multichoice' ? [] : f.type === 'boolean' ? !!f.defaultRaw : f.type === 'number' ? (f.defaultRaw ?? null) : (f.defaultRaw ?? f.options[0].id);
     return b;
   };
-  // "from" = the genuine entry price: base/default config with the cheapest AVAILABLE engine
-  const fromPrice = (id) => {
-    const em = emOutput();
-    const engField = ir.fields.find((f) => f.id === 'engine');
-    const engines = engField ? engField.options.map((o) => o.id) : [null];
-    let best = Infinity;
-    for (const e of engines) {
-      const base = Object.assign(defaultsConfig(), { [primary.id]: id, packages: [], financing: 'cash' });
-      if (e) base.engine = e;
-      const r = compute(base);
-      if (e && r.avail.engine && r.avail.engine[e] === false) continue;
-      best = Math.min(best, r.out[em.id].value);
-    }
-    return best === Infinity ? compute(Object.assign(defaultsConfig(), { [primary.id]: id })).out[em.id].value : best;
+  // "from" = the price of the model's DEFAULT build for this option (all other fields
+  // at their declared defaults). Domain-agnostic — no per-field ("cheapest engine")
+  // special-casing — so it equals the landing headline and the breakdown's base line.
+  const baseConfigFor = (id) => Object.assign(defaultsConfig(), { [primary.id]: id, packages: [], financing: 'cash' });
+  const fromPrice = (id) => compute(baseConfigFor(id)).out[emOutput().id].value;
+
+  // ---------- model-driven price deltas (relative to the CURRENT selection) ----------
+  // Every "+£x" / "−£x" shown on an option is the genuine change the MODEL computes
+  // for choosing it, versus the price you're on now — derived by re-evaluating the
+  // model, never a hand-authored number that can drift from the pricing tables.
+  const emId = emOutput() ? emOutput().id : null;
+  const emOutIdx = Math.max(0, ir.outputs.findIndex((o) => emphasis.has(o.id)));
+  const priceIf = (overrides) => {
+    const ei = {}; for (const f of ir.fields) { const v = (overrides && f.id in overrides) ? overrides[f.id] : state[f.id]; ei[f.id] = f.type === 'number' ? (v ?? 0) : v; }
+    const r = engine.evaluate(ei); const o = r.outputs[emOutIdx];
+    return o ? o.value : null;
+  };
+  const signed = (d) => ({ text: (d > 0 ? '+' : '−') + money0(Math.abs(d)), cls: d > 0 ? 'up' : 'down' });
+  // delta of switching a single-choice field to optId; null for the current option,
+  // for unavailable options, and for a zero change.
+  const relDelta = (fieldId, optId, cur, av) => {
+    if (state[fieldId] === optId) return null;
+    if (av && av[optId] === false) return null;
+    const p = priceIf({ [fieldId]: optId }); if (p == null) return null;
+    const d = Math.round(p - cur); return d ? signed(d) : null;
+  };
+  // marginal cost to ADD a multichoice option (captures any bundle effect it triggers).
+  const addDelta = (fieldId, optId, cur, av) => {
+    if (av && av[optId] === false) return null;
+    const set = new Set(state[fieldId] || []); set.add(optId);
+    const p = priceIf({ [fieldId]: [...set] }); if (p == null) return null;
+    const d = Math.round(p - cur); return d ? signed(d) : null;
   };
 
   // ---------- shell ----------
   root.innerHTML = '';
   const shell = el('div', 'vdm');
   const hd = el('header', 'hd');
-  const brandEl = el('div', 'brand'); brandEl.innerHTML = `<b>${brand.mark}</b> ${brand.rest || ''}`.trim();
+  const brandEl = el('div', 'brand');
+  brandEl.innerHTML = `<a class="brand-home" href="index.html"><b>${brand.mark}</b> ${brand.rest || ''}</a>`.trim()
+    + (brand.descriptor ? `<span class="descriptor">${brand.descriptor}</span>` : '');
   const tagEl = el('div', 'tag'); tagEl.textContent = brand.tagline || '';
   hd.appendChild(brandEl);
   if (links && links.length) { const nav = el('nav', 'sh-nav'); nav.setAttribute('aria-label', 'Edit'); for (const l of links) { const a = el('a'); a.href = l.href; a.textContent = l.label; nav.appendChild(a); } hd.appendChild(nav); }
@@ -123,15 +144,40 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const body = el('div', 'body');
   const stage = el('section', 'stage'); stage.setAttribute('aria-label', 'Showroom stage');
   const turntable = el('div', 'turntable');
-  const dock = el('div', 'dock'); dock.setAttribute('role', 'radiogroup'); dock.setAttribute('aria-label', 'Choose a model');
-  const dockLabel = el('span', 'dock-label'); dockLabel.textContent = 'The range'; dock.appendChild(dockLabel);
+  const dock = el('div', 'dock');
+  const dockHd = el('div', 'dock-hd');
+  const dockLabel = el('span', 'dock-label'); dockLabel.textContent = 'The range';
+  const cmpBtn = el('button', 'compare-btn'); cmpBtn.type = 'button'; cmpBtn.innerHTML = '<span aria-hidden="true">⇆</span> Compare'; cmpBtn.setAttribute('aria-haspopup', 'dialog');
+  cmpBtn.addEventListener('click', openCompare);
+  dockHd.append(dockLabel, cmpBtn);
+  // the range as a single-row coverflow "deck": the selected car is face-up & centred,
+  // neighbours fan away in 3D, and it loops (the last card's right neighbour is the first).
+  const deck = el('div', 'deck');
+  // the radiogroup owns ONLY the radio cards (nav arrows sit outside it so the
+  // group's membership stays clean); the track is a positioning layer for the cards.
+  const deckTrack = el('div', 'deck-track'); deckTrack.setAttribute('role', 'radiogroup'); deckTrack.setAttribute('aria-label', 'Choose a model');
+  const navPrev = el('button', 'deck-nav prev'); navPrev.type = 'button'; navPrev.innerHTML = '<span aria-hidden="true">‹</span>'; navPrev.setAttribute('aria-label', 'Previous vehicle');
+  const navNext = el('button', 'deck-nav next'); navNext.type = 'button'; navNext.innerHTML = '<span aria-hidden="true">›</span>'; navNext.setAttribute('aria-label', 'Next vehicle');
+  // loop only when there are enough cards to hide the wrap off-stage (>=7); with
+  // fewer, a wrapping card would visibly pop across the deck, so clamp at the ends.
+  const stepDeck = (dir) => { const opts = primaryOpts(); const n = opts.length; const i = Math.max(0, opts.findIndex((o) => o.id === state[primary.id])); const j = n >= 7 ? ((i + dir) % n + n) % n : Math.max(0, Math.min(n - 1, i + dir)); const nx = opts[j].id; setField(primary.id, nx); const c = deckCards && deckCards[nx]; if (c) c.focus({ preventScroll: true }); };
+  navPrev.addEventListener('click', () => stepDeck(-1)); navNext.addEventListener('click', () => stepDeck(1));
+  deckTrack.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); stepDeck(1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); stepDeck(-1); }
+    else if (k === 'Home') { e.preventDefault(); const o = primaryOpts()[0]; setField(primary.id, o.id); deckCards[o.id] && deckCards[o.id].focus({ preventScroll: true }); }
+    else if (k === 'End') { e.preventDefault(); const os = primaryOpts(); const o = os[os.length - 1]; setField(primary.id, o.id); deckCards[o.id] && deckCards[o.id].focus({ preventScroll: true }); }
+  });
+  deck.append(deckTrack, navPrev, navNext);
+  dock.append(dockHd, deck);
   stage.append(turntable, dock);
   const rail = el('aside', 'rail'); rail.setAttribute('aria-label', 'Specification');
   rail.innerHTML = `<div class="rail-hd"><div class="marque" id="sh-marque"></div><h1 id="sh-name">—</h1><div class="sub" id="sh-sub"></div></div>
     <div class="specsheet" id="sh-specsheet"></div>
     <div class="rail-body" id="sh-specs"></div>
-    <div class="plate"><div class="micro"><span id="sh-veh">—</span><span style="display:flex;align-items:center;gap:8px"><span id="sh-range" class="num">—</span><span class="gauge"><i id="sh-rangebar" style="width:0"></i></span></span></div>
-      <div class="otr-label">On-the-road</div><div class="otr"><span class="fig num" id="sh-otr">—</span></div>
+    <div class="plate"><div class="micro"><span id="sh-veh">—</span><span id="sh-gauge" style="display:flex;align-items:center;gap:8px"><span id="sh-range" class="num">—</span><span class="gauge"><i id="sh-rangebar" style="width:0"></i></span></span></div>
+      <div class="otr-label" id="sh-otr-label">Total</div><div class="otr"><span class="fig num" id="sh-otr">—</span></div>
       <div class="monthly" id="sh-monthly"></div><div class="savings" id="sh-savings"></div><button class="cta" id="sh-cta">Request this build ▸</button></div>`;
   body.append(stage, rail);
   shell.append(hd, body);
@@ -141,10 +187,10 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // ---------- controls (chips / powertrain / swatch / stepper) ----------
   function chip(label, delta, checked, disabled, onClick, extra) {
     const b = el('button', 'chip'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(checked)); if (disabled) b.disabled = true;
-    b.innerHTML = (extra || '') + `<span>${label}</span>` + (delta ? `<span class="cd num">${delta}</span>` : '');
+    const dHtml = delta ? `<span class="cd num ${delta.cls || ''}">${delta.text}</span>` : '';
+    b.innerHTML = (extra || '') + `<span>${label}</span>` + dHtml;
     b.addEventListener('click', onClick); return b;
   }
-  const deltaStr = (d) => (d ? '+' + money0(d) : '');
 
   function renderField(f, res) {
     const mf = modelFieldById[f.id];
@@ -152,11 +198,14 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const lab = el('div', 'flabel'); lab.innerHTML = `<span>${f.label || f.id}</span>` + (res.forced[f.id] ? '<span class="auto">Auto</span>' : '');
     wrap.appendChild(lab);
     const av = res.avail[f.id] || {};
+    const curP = emId != null ? res.out[emId].value : 0;   // current headline price, for relative deltas
     if (f.type === 'choice' && f.control === 'radio') {
       const list = el('div', 'plist');
       for (const o of f.options) {
         const b = el('button', 'prow'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(state[f.id] === o.id)); if (av[o.id] === false) b.disabled = true;
-        b.innerHTML = `<span class="rd"></span><span><span class="pn">${o.label || o.id}</span></span><span class="pd num">${deltaStr(o.priceDelta)}</span>`;
+        const dd = relDelta(f.id, o.id, curP, av);
+        const pd = dd ? `<span class="pd num ${dd.cls}">${dd.text}</span>` : '<span class="pd num"></span>';
+        b.innerHTML = `<span class="rd"></span><span><span class="pn">${o.label || o.id}</span></span>${pd}`;
         b.addEventListener('click', () => setField(f.id, o.id)); list.appendChild(b);
       }
       wrap.appendChild(list);
@@ -165,14 +214,14 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       for (const o of f.options) {
         const swatch = f.id === 'colour' ? `<span class="dot" style="background:linear-gradient(135deg,${(PAINT[o.id] || PAINT.solid).join(',')})"></span>` : '';
         const glyph = f.id === 'wheels' ? `<span class="glyph" style="width:${10 + f.options.indexOf(o) * 2}px;height:${10 + f.options.indexOf(o) * 2}px"></span>` : '';
-        box.appendChild(chip(o.label || o.id, deltaStr(o.priceDelta), state[f.id] === o.id, av[o.id] === false, () => setField(f.id, o.id), swatch + glyph));
+        box.appendChild(chip(o.label || o.id, relDelta(f.id, o.id, curP, av), state[f.id] === o.id, av[o.id] === false, () => setField(f.id, o.id), swatch + glyph));
       }
       wrap.appendChild(box);
     } else if (f.type === 'multichoice') {
       const box = el('div', 'chips');
       for (const o of f.options) {
         const on = (state[f.id] || []).includes(o.id);
-        const b = chip(o.label || o.id, deltaStr(o.priceDelta), on, av[o.id] === false && !on, () => { const s = new Set(state[f.id] || []); s.has(o.id) ? s.delete(o.id) : s.add(o.id); setField(f.id, [...s]); });
+        const b = chip(o.label || o.id, on ? null : addDelta(f.id, o.id, curP, av), on, av[o.id] === false && !on, () => { const s = new Set(state[f.id] || []); s.has(o.id) ? s.delete(o.id) : s.add(o.id); setField(f.id, [...s]); });
         b.setAttribute('role', 'checkbox'); b.setAttribute('aria-pressed', String(on)); b.removeAttribute('aria-checked'); box.appendChild(b);
       }
       wrap.appendChild(box);
@@ -229,15 +278,207 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   }
   const activeSavings = () => (model.bundles || []).reduce((s, b) => s + (b.requires.every((r) => (state.packages || []).includes(r)) ? b.discount : 0), 0);
 
-  function renderDock() {
-    dock.querySelectorAll('.car-card').forEach((n) => n.remove());
+  // ---------- comparison (premium, flexible: 2–4 cars, swappable, best-in-row) ----------
+  const COMPARE_ROWS = (model.outputs || []).filter((o) => o.compare)
+    .map((o) => ({ id: o.id, label: o.compareLabel || o.label, dir: o.compare }))
+    .filter((r) => ir.outputs.some((o) => o.id === r.id));
+  let compareIds = null;
+
+  // a model option's headline metrics at its default build (the same basis as "from")
+  function carMetrics(id) { return compute(baseConfigFor(id)); }
+  let cmpOpener = null;
+  function openCompare() {
+    const all = primaryOpts().map((o) => o.id);
+    const cur = state[primary.id];
+    compareIds = [cur, ...all.filter((id) => id !== cur)].slice(0, 3);
+    cmpOpener = document.activeElement;         // to restore focus on close
+    shell.inert = true;                          // make the app behind the dialog inert (no focus/AT reach)
+    renderCompare('init');
+  }
+  function closeCompare() { compareIds = null; shell.inert = false; const ov = root.querySelector('.cmp-overlay'); if (ov) ov.remove(); document.removeEventListener('keydown', cmpKey); if (cmpOpener && cmpOpener.focus) cmpOpener.focus(); cmpOpener = null; }
+  function cmpKey(e) { if (e.key === 'Escape') closeCompare(); }
+  // focusReq: 'init' (focus the dialog on open) | <number> (focus the i-th picker
+  // after a rebuild, so keyboard focus survives select/add/remove) | undefined.
+  function renderCompare(focusReq) {
+    if (!compareIds) return;
+    let ov = root.querySelector('.cmp-overlay');
+    if (!ov) { ov = el('div', 'cmp-overlay'); ov.addEventListener('click', (e) => { if (e.target === ov) closeCompare(); }); root.appendChild(ov); document.addEventListener('keydown', cmpKey); }
+    ov.innerHTML = '';
+    const modal = el('div', 'cmp-modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Compare vehicles');
+    const opts = primaryOpts();
+    const metrics = compareIds.map(carMetrics);
+    const best = {};
+    for (const row of COMPARE_ROWS) {
+      const vals = metrics.map((m) => (m ? m.out[row.id]?.value : null));
+      const valid = vals.filter((v) => v != null);
+      if (valid.length < 2) continue; // no winner to mark with a single car
+      const target = row.dir === 'low' ? Math.min(...valid) : Math.max(...valid);
+      best[row.id] = vals.map((v) => v != null && v === target);
+    }
+    const cell = (cls, html) => { const c = el('div', cls); if (html != null) c.innerHTML = html; return c; };
+    const hd = el('div', 'cmp-hd');
+    const title = el('div', 'cmp-title'); title.innerHTML = `<span class="cmp-eyebrow">${brand.mark}</span>Compare the range`;
+    const x = el('button', 'cmp-x'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close comparison'); x.addEventListener('click', closeCompare);
+    hd.append(title, x); modal.appendChild(hd);
+
+    const wrap = el('div', 'cmp-scroll');
+    // responsive columns (inline, so shrink them ourselves on small screens)
+    const narrow = (window.innerWidth || 1024) < 560;
+    const carW = narrow ? 126 : 148, labW = narrow ? 62 : 84;
+    const grid = el('div', 'cmp-grid'); grid.style.gridTemplateColumns = `${labW}px repeat(${compareIds.length}, ${carW}px)`;
+    // picker row
+    grid.appendChild(cell('cmp-lbl', ''));
+    compareIds.forEach((id, i) => {
+      const c = el('div', 'cmp-pick');
+      const sel = el('select', 'cmp-select'); sel.setAttribute('aria-label', `Vehicle ${i + 1}`);
+      for (const o of opts) { const op = el('option'); op.value = o.id; op.textContent = o.label; if (o.id === id) op.selected = true; sel.appendChild(op); }
+      sel.addEventListener('change', () => { compareIds[i] = sel.value; renderCompare(i); });
+      c.appendChild(sel);
+      if (compareIds.length > 2) { const rm = el('button', 'cmp-rm'); rm.type = 'button'; rm.textContent = '✕'; rm.setAttribute('aria-label', 'Remove vehicle'); rm.addEventListener('click', () => { compareIds.splice(i, 1); renderCompare(Math.min(i, compareIds.length - 1)); }); c.appendChild(rm); }
+      grid.appendChild(c);
+    });
+    // image row
+    grid.appendChild(cell('cmp-lbl', ''));
+    compareIds.forEach((id) => { const c = el('div', 'cmp-img'); if (imgUrl[id]) { const im = el('img'); im.src = imgUrl[id]; im.alt = ''; c.appendChild(im); } else c.innerHTML = placeholderSVG(id); grid.appendChild(c); });
+    // name row (mark the shopper's current build so there's a "you are here" anchor)
+    grid.appendChild(cell('cmp-lbl', ''));
+    compareIds.forEach((id) => { const o = opts.find((x) => x.id === id); grid.appendChild(cell('cmp-name', ((o && o.label) || id) + (id === state[primary.id] ? '<span class="cmp-current">Your build</span>' : ''))); });
+    // metric rows (the "From" price is the headline figure — give it accent weight)
+    for (const row of COMPARE_ROWS) {
+      grid.appendChild(cell('cmp-lbl', row.label));
+      compareIds.forEach((id, i) => { const m = metrics[i]; const o = m && m.out[row.id]; const cls = 'cmp-val' + (row.id === 'otr' ? ' cmp-price' : '') + (best[row.id] && best[row.id][i] ? ' is-best' : ''); grid.appendChild(cell(cls, o ? fmt(o) : '—')); });
+    }
+    // configure row
+    grid.appendChild(cell('cmp-lbl', ''));
+    compareIds.forEach((id) => { const c = el('div', 'cmp-cfg'); const b = el('button', 'cmp-configure'); b.type = 'button'; b.textContent = 'Configure ▸'; b.addEventListener('click', () => { setField(primary.id, id); closeCompare(); }); c.appendChild(b); grid.appendChild(c); });
+    wrap.appendChild(grid);
+    if (compareIds.length < 4) { const add = el('button', 'cmp-add'); add.type = 'button'; add.textContent = '+ Add a vehicle'; add.addEventListener('click', () => { const a = opts.map((o) => o.id).find((id) => !compareIds.includes(id)) || opts[0].id; compareIds.push(a); renderCompare(compareIds.length - 1); }); wrap.appendChild(add); }
+    modal.appendChild(wrap);
+    ov.appendChild(modal);
+    // horizontal-scroll affordance when the grid is wider than the modal (mobile)
+    if (wrap.scrollWidth > wrap.clientWidth + 2) { const hint = el('div', 'cmp-hint'); hint.textContent = '‹ swipe to compare ›'; hint.setAttribute('aria-hidden', 'true'); modal.appendChild(hint); }
+    // focus: into the dialog on open; back onto the rebuilt picker after an edit
+    if (focusReq === 'init') { modal.tabIndex = -1; modal.focus(); }
+    else if (typeof focusReq === 'number') { const sels = ov.querySelectorAll('.cmp-select'); (sels[Math.min(focusReq, sels.length - 1)] || modal).focus(); }
+  }
+
+  // ---------- itemised breakdown ("Request this build") ----------
+  // Model-driven & domain-agnostic: reads the model's own price outputs (subtotal +
+  // total), walks the config from its base one field at a time (so forced knock-on
+  // changes are captured and the lines sum EXACTLY to the total), itemises every
+  // choice, every selected multichoice option at its solo cost, every active bundle
+  // as a saving, and the total−subtotal gap as fees. No hard-coded pricing.
+  const optLabel = (f, id) => { const o = (f && f.options || []).find((x) => x.id === id); return (o && o.label) || id; };
+  function buildBreakdown() {
+    const em = emOutput();
+    const veh = ir.outputs.find((o) => /price/i.test(o.id) && o.id !== em.id) || null;   // subtotal (pre-fees)
+    const priceId = veh ? veh.id : em.id;
+    const val = (cfg, oid) => { const r = compute(cfg); const o = r.out[oid]; return o ? o.value : 0; };
+    const pkgF = ir.fields.find((f) => f.type === 'multichoice');
+    const total = val(state, em.id);
+    const baseCfg = baseConfigFor(state[primary.id]);
+    const primaryLabel = optLabel(modelFieldById[primary.id], state[primary.id]);
+    const baseSub = val(baseCfg, priceId);
+    const items = [];
+    let cfg = { ...baseCfg };
+    for (const f of ir.fields) {                          // choice fields, incremental from base
+      if (f.id === primary.id || f.type !== 'choice') continue;
+      const sel = state[f.id]; const baseOpt = (f.defaultRaw ?? f.options[0].id);
+      if (sel === baseOpt) { cfg[f.id] = sel; continue; }
+      const before = val(cfg, priceId); cfg = { ...cfg, [f.id]: sel }; const after = val(cfg, priceId);
+      if (Math.round(after - before) !== 0) items.push({ label: `${f.label} · ${optLabel(f, sel)}`, amount: after - before });
+    }
+    const savings = [];
+    if (pkgF) {                                           // packages: incremental in option order (respects deps)
+      const chosen = new Set(state[pkgF.id] || []);
+      const prefix = []; const seen = new Set();
+      for (const o of pkgF.options) {
+        if (!chosen.has(o.id)) continue;
+        const before = val({ ...cfg, [pkgF.id]: [...prefix] }, priceId);
+        prefix.push(o.id);
+        let delta = val({ ...cfg, [pkgF.id]: [...prefix] }, priceId) - before;
+        // if adding this option newly completes a bundle, add its discount back so the
+        // option reads at its gross price and the saving shows as its own line
+        for (const b of (model.bundles || [])) if (!seen.has(b.id) && b.requires.every((r) => prefix.includes(r))) { delta += b.discount; savings.push({ label: b.label, amount: -b.discount }); seen.add(b.id); }
+        if (Math.round(delta) !== 0) items.push({ label: optLabel(pkgF, o.id), amount: delta });
+      }
+    }
+    const fees = veh ? total - val(state, veh.id) : 0;
+    return { primaryLabel, baseSub, items, savings, fees, total, hasSub: !!veh, totalLabel: em.label || 'Total' };
+  }
+
+  let bdOpener = null;
+  function openBreakdown() { bdOpener = document.activeElement; shell.inert = true; renderBreakdown(); }
+  function closeBreakdown() { shell.inert = false; const ov = root.querySelector('.bd-overlay'); if (ov) ov.remove(); document.removeEventListener('keydown', bdKey); if (bdOpener && bdOpener.focus) bdOpener.focus(); bdOpener = null; }
+  function bdKey(e) { if (e.key === 'Escape') closeBreakdown(); }
+  function renderBreakdown() {
+    const b = buildBreakdown();
+    const ov = el('div', 'bd-overlay'); ov.addEventListener('click', (e) => { if (e.target === ov) closeBreakdown(); });
+    root.appendChild(ov); document.addEventListener('keydown', bdKey);
+    const modal = el('div', 'bd-modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', b.primaryLabel + ' build summary');
+    const hd = el('div', 'bd-hd');
+    hd.innerHTML = `<div class="bd-title"><span class="bd-eyebrow">${brand.mark}</span>${b.primaryLabel}</div>`;
+    const x = el('button', 'bd-x'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close summary'); x.addEventListener('click', closeBreakdown);
+    hd.appendChild(x); modal.appendChild(hd);
+    const body = el('div', 'bd-body');
+    const row = (label, amount, cls) => { const r = el('div', 'bd-row' + (cls ? ' ' + cls : '')); r.innerHTML = `<span class="bd-l">${label}</span><span class="bd-a num">${amount}</span>`; body.appendChild(r); };
+    row(b.primaryLabel + ' · Base specification', money0(b.baseSub), 'bd-base');
+    for (const it of b.items) row(it.label, (it.amount > 0 ? '+' : '−') + money0(Math.abs(it.amount)), it.amount < 0 ? 'bd-save' : '');
+    for (const s of b.savings) row(s.label, '−' + money0(Math.abs(s.amount)), 'bd-save');
+    if (b.hasSub && Math.round(b.fees) !== 0) row(b.totalLabel === 'Total' ? 'Fees' : 'Fees & taxes', (b.fees > 0 ? '+' : '−') + money0(Math.abs(b.fees)), 'bd-fees');
+    modal.appendChild(body);
+    const foot = el('div', 'bd-foot');
+    foot.innerHTML = `<div class="bd-total"><span>${b.totalLabel}</span><span class="num">${money0(b.total)}</span></div>`;
+    const cta = el('button', 'bd-cta'); cta.type = 'button'; cta.textContent = brand.cta || 'Request this build ▸';
+    cta.addEventListener('click', () => { cta.disabled = true; cta.textContent = 'Request submitted ✓'; setTimeout(closeBreakdown, 1500); });
+    foot.appendChild(cta); modal.appendChild(foot);
+    ov.appendChild(modal);
+    modal.tabIndex = -1; modal.focus();
+  }
+
+  // Build the deck cards ONCE (so CSS can animate their transforms between renders);
+  // fromPrice() is computed here, once per card, not on every re-render.
+  let deckCards = null;
+  function buildDeck() {
+    deckTrack.querySelectorAll('.deck-card').forEach((n) => n.remove());
+    deckCards = {};
     for (const o of primaryOpts()) {
-      const b = el('button', 'car-card'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(state[primary.id] === o.id));
-      b.innerHTML = carVisual(o.id, { colour: state.colour, wheels: 'w17' }) + `<div class="cname">${o.label || o.id}</div><div class="cfrom">from <b>${money0(fromPrice(o.id))}</b></div>`;
-      b.addEventListener('click', () => setField(primary.id, o.id));
-      dock.appendChild(b);
+      const b = el('button', 'deck-card'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.id = o.id;
+      b.innerHTML = `<div class="dc-img">${carVisual(o.id, { colour: state.colour, wheels: 'w17' })}</div>`
+        + `<div class="dc-cap"><div class="dc-name">${o.label || o.id}</div><div class="dc-from">from <b>${money0(fromPrice(o.id))}</b></div></div>`;
+      b.addEventListener('click', () => { setField(primary.id, o.id); b.focus({ preventScroll: true }); });
+      deckTrack.appendChild(b); deckCards[o.id] = b;
     }
   }
+  // Position every card by its signed circular offset from the centred (selected) car.
+  // |off|<=2 are visible & animate; |off|===3 is an off-stage buffer (still animates, so
+  // edges slide in/out); |off|===4 (the antipode) snaps with no transform transition, so
+  // the wrap-around never streaks across the deck.
+  function positionDeck() {
+    const opts = primaryOpts(); const n = opts.length;
+    const centerIdx = Math.max(0, opts.findIndex((o) => o.id === state[primary.id]));
+    opts.forEach((o, i) => {
+      const card = deckCards[o.id]; if (!card) return;
+      if (imgUrl[o.id] && !card.querySelector('img')) { const dci = card.querySelector('.dc-img'); if (dci) dci.innerHTML = `<img class="carimg" src="${imgUrl[o.id]}" alt="">`; }
+      let off = ((i - centerIdx) % n + n) % n; if (off > n / 2) off -= n;
+      const a = Math.abs(off), dir = Math.sign(off), hidden = a >= 3;
+      card.classList.toggle('is-center', off === 0);
+      card.style.opacity = hidden ? '0' : a === 2 ? '.46' : a === 1 ? '.9' : '1';
+      // off-stage cards are hidden VISUALLY only (opacity/pointer-events) — they stay
+      // in the a11y tree so the radiogroup always exposes the full range of options.
+      card.style.pointerEvents = hidden ? 'none' : 'auto';
+      card.setAttribute('aria-checked', String(off === 0));
+      card.tabIndex = off === 0 ? 0 : -1;
+      card.style.zIndex = String(40 - a * 8);
+      card.style.transitionProperty = a >= 4 ? 'opacity' : 'transform, opacity';
+      const x = off === 0 ? 0 : dir * (128 + (a - 1) * 82);
+      const rot = off === 0 ? 0 : -dir * Math.min(46, 30 + (a - 1) * 8);
+      const sc = off === 0 ? 1 : a === 1 ? 0.84 : a === 2 ? 0.66 : 0.56;
+      const lift = off === 0 ? -6 : 0;
+      card.style.transform = `translate(-50%, calc(-50% + ${lift}px)) translateX(${x}px) rotateY(${rot}deg) scale(${sc})`;
+    });
+  }
+  function renderDeck() { if (!deckCards) buildDeck(); positionDeck(); }
 
   function buildPodium() {
     const p = el('div', 'podium');
@@ -274,27 +515,37 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const emOut = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
     const veh = ir.outputs.find((o) => /price/i.test(o.id) && o.id !== emOut.id);
     $('sh-veh').textContent = veh ? (res.out[veh.id].label + ' ' + fmt(res.out[veh.id])) : '';
-    const range = ir.outputs.find((o) => (res.out[o.id].fmt || {}).format === 'unit');
-    if (range) { $('sh-range').textContent = fmt(res.out[range.id]); $('sh-rangebar').style.width = Math.min(100, (res.out[range.id].value / 520) * 100) + '%'; } else { $('sh-range').textContent = ''; }
+    // the plate gauge shows only for a model that declares one (gaugeMax); its bar
+    // scales to that declared maximum — no domain-specific constant.
+    const g = gaugeMeta && res.out[gaugeMeta.id] && res.out[gaugeMeta.id].visible ? gaugeMeta : null;
+    $('sh-gauge').style.display = g ? 'flex' : 'none';
+    if (g) { $('sh-range').textContent = fmt(res.out[g.id]); $('sh-rangebar').style.width = Math.min(100, (res.out[g.id].value / g.gaugeMax) * 100) + '%'; }
+    else { $('sh-range').textContent = ''; $('sh-rangebar').style.width = '0'; }
+    $('sh-otr-label').textContent = emOut.label || 'Total';
     const otrStr = fmt(res.out[emOut.id]); const otrEl = $('sh-otr');
     if (!RM && prevOtr !== null && prevOtr !== otrStr) otrEl.animate([{ transform: 'translateY(-6px)', opacity: .3 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
     otrEl.textContent = otrStr; prevOtr = otrStr;
     const mo = ir.outputs.find((o) => /month/i.test(o.id)); const rec = mo && res.out[mo.id];
     $('sh-monthly').innerHTML = rec && rec.visible ? `from <b>${fmt(rec)}</b> / mo` : '';
-    // spec sheet: headline figures (read-only)
-    const specIds = ['hp', 'topSpeed', 'zeroToSixty', 'range'].filter((id) => res.out[id] && res.out[id].visible);
-    $('sh-specsheet').innerHTML = specIds.map((id) => { const o = res.out[id]; return `<div class="spec"><span class="spec-v num">${fmt(o)}</span><span class="spec-l">${o.label}</span></div>`; }).join('');
+    // spec sheet: the model's declared headline figures (read-only)
+    const shownSpecs = specIds.filter((id) => res.out[id] && res.out[id].visible);
+    $('sh-specsheet').innerHTML = shownSpecs.map((id) => { const o = res.out[id]; return `<div class="spec"><span class="spec-v num">${fmt(o)}</span><span class="spec-l">${o.label}</span></div>`; }).join('');
     const sav = activeSavings();
     $('sh-savings').innerHTML = sav > 0 ? `Bundle savings <b class="num">−${money0(sav)}</b>` : '';
   }
 
+  // Selecting a model keeps the other fields as-is; the engine (or any field) that
+  // becomes invalid for the new model is corrected by the VM's own availability
+  // fallback during evaluation, so state stays valid without domain-specific code.
   function setField(id, v) { state[id] = v; render(); }
   function render() {
     const res = compute(state); Object.assign(state, res.st);
-    renderDock(); renderStage(); renderRail(res); renderSpecs(res);
+    renderDeck(); renderStage(); renderRail(res); renderSpecs(res);
   }
 
-  $('sh-cta').addEventListener('click', () => { const res = compute(state); const emOut = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0]; $('sh-cta').textContent = 'Enquiry drafted — ' + fmt(res.out[emOut.id]) + ' ✓'; setTimeout(() => { $('sh-cta').textContent = 'Request this build ▸'; }, 2200); });
+  $('sh-cta').textContent = brand.cta || 'Request this build ▸';
+  $('sh-cta').setAttribute('aria-haspopup', 'dialog');
+  $('sh-cta').addEventListener('click', openBreakdown);
 
   render();
   // resolve associated images and TEST-LOAD each independently — repaint as each

@@ -13,7 +13,7 @@
 // Run `npm run asbuild:release` first (npm run build does both).
 // Cross-platform: pure Node, no shell assumptions.
 
-import { rm, mkdir, copyFile, access, readdir } from 'node:fs/promises';
+import { rm, mkdir, copyFile, access, readdir, cp } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +23,8 @@ const DIST = join(ROOT, 'dist');
 // [source, destination-name-in-dist]
 const FILES = [
   [join(ROOT, 'web', 'index.html'), 'index.html'],
+  [join(ROOT, 'web', 'landing.js'), 'landing.js'],
+  [join(ROOT, 'web', 'configure.html'), 'configure.html'],
   [join(ROOT, 'web', 'app.js'), 'app.js'],
   [join(ROOT, 'web', 'render-form.mjs'), 'render-form.mjs'],
   [join(ROOT, 'web', 'showroom-view.mjs'), 'showroom-view.mjs'],
@@ -45,8 +47,6 @@ const FILES = [
   [join(ROOT, 'web', 'coverage.mjs'), 'coverage.mjs'],
   [join(ROOT, 'web', 'binding.mjs'), 'binding.mjs'],
   [join(ROOT, 'web', 'data.schema.json'), 'data.schema.json'],
-  [join(ROOT, 'web', 'data-model.json'), 'data-model.json'],
-  [join(ROOT, 'web', 'presentation-model.json'), 'presentation-model.json'],
   [join(ROOT, 'web', 'model.schema.json'), 'model.schema.json'],
   [join(ROOT, 'web', 'qc-base.css'), 'qc-base.css'],
   [join(ROOT, 'web', 'theme.css'), 'theme.css'],
@@ -74,6 +74,14 @@ async function main() {
   for (const [src, name] of FILES) {
     await copyFile(src, join(DIST, name));
     console.log(`  + dist/${name}`);
+  }
+
+  // Copy every model (web/models/<id>/*.json) + the catalogue that drives the
+  // landing page. Each configurator loads its own pair of files from here.
+  const modelsSrc = join(ROOT, 'web', 'models');
+  if (await exists(modelsSrc)) {
+    await cp(modelsSrc, join(DIST, 'models'), { recursive: true });
+    console.log('  + dist/models/** (all models + catalog)');
   }
 
   // Copy the car image folder (web/cars/*) if present — the model references

@@ -11,7 +11,7 @@ import { parseExpr, formatExpr, canonicalize } from '../web/expr.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const web = (f) => readFile(join(here, '..', 'web', f), 'utf8').then(JSON.parse);
-const model = mergeModel(await web('data-model.json'), await web('presentation-model.json'));
+const model = mergeModel(await web('models/vehicles/data-model.json'), await web('models/vehicles/presentation-model.json'));
 
 // collect every AST-valued expression slot in the model
 const isAst = (v) => v && typeof v === 'object' && typeof v.op === 'string';

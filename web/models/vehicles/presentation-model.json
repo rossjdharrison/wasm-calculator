@@ -2,7 +2,8 @@
   "name": "Vehicle Configurator",
   "brand": {
     "mark": "ROWBLAA",
-    "rest": "LUXURY EXPERIENCES",
+    "rest": "LUXURY",
+    "descriptor": "Vehicles",
     "tagline": "Haarlem"
   },
   "sections": [
@@ -419,7 +420,9 @@
         "decimals": 2,
         "currencyCode": "GBP"
       },
-      "emphasis": true
+      "emphasis": true,
+      "compare": "low",
+      "compareLabel": "From"
     },
     {
       "id": "monthlyPayment",
@@ -454,7 +457,11 @@
         "type": "unit",
         "unit": "mi",
         "decimals": 0
-      }
+      },
+      "spec": true,
+      "compare": "high",
+      "compareLabel": "Range",
+      "gaugeMax": 520
     },
     {
       "id": "hp",
@@ -463,7 +470,9 @@
         "type": "unit",
         "unit": "hp",
         "decimals": 0
-      }
+      },
+      "spec": true,
+      "compare": "high"
     },
     {
       "id": "topSpeed",
@@ -472,7 +481,9 @@
         "type": "unit",
         "unit": "mph",
         "decimals": 0
-      }
+      },
+      "spec": true,
+      "compare": "high"
     },
     {
       "id": "zeroToSixty",
@@ -481,7 +492,9 @@
         "type": "unit",
         "unit": "s",
         "decimals": 1
-      }
+      },
+      "spec": true,
+      "compare": "low"
     }
   ]
 }

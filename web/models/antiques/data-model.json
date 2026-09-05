@@ -1,0 +1,826 @@
+{
+  "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
+  "id": "antiques-configurator",
+  "version": "1.0.0",
+  "currency": "GBP",
+  "fields": [
+    {
+      "id": "piece",
+      "type": "choice",
+      "default": "mingVase",
+      "options": [
+        {
+          "id": "mingVase"
+        },
+        {
+          "id": "baroqueConsole"
+        },
+        {
+          "id": "impressionistOil"
+        },
+        {
+          "id": "turnerWatercolour"
+        },
+        {
+          "id": "artDecoClock"
+        },
+        {
+          "id": "rodinBronze"
+        },
+        {
+          "id": "persianRug"
+        },
+        {
+          "id": "muranoChandelier"
+        }
+      ]
+    },
+    {
+      "id": "provenance",
+      "type": "choice",
+      "default": "documented",
+      "options": [
+        {
+          "id": "documented"
+        },
+        {
+          "id": "certified"
+        },
+        {
+          "id": "museum"
+        }
+      ]
+    },
+    {
+      "id": "condition",
+      "type": "choice",
+      "default": "asFound",
+      "options": [
+        {
+          "id": "asFound",
+          "availableWhen": {
+            "op": "not",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "provenance"
+                    ]
+                  },
+                  "museum"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "conserved"
+        },
+        {
+          "id": "restored"
+        }
+      ]
+    },
+    {
+      "id": "framing",
+      "type": "choice",
+      "default": "none",
+      "options": [
+        {
+          "id": "none"
+        },
+        {
+          "id": "gallery",
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "impressionistOil"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "turnerWatercolour"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "gilt",
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "impressionistOil"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "turnerWatercolour"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "type": "multichoice",
+      "default": [],
+      "options": [
+        {
+          "id": "insuranceValuation"
+        },
+        {
+          "id": "conditionReport"
+        },
+        {
+          "id": "whiteGlove"
+        },
+        {
+          "id": "climatePackaging"
+        },
+        {
+          "id": "installation",
+          "availableWhen": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "baroqueConsole"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "persianRug"
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "piece"
+                    ]
+                  },
+                  "muranoChandelier"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "uvGlazing",
+          "availableWhen": {
+            "op": "not",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "field",
+                    "args": [
+                      "framing"
+                    ]
+                  },
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "settlement",
+      "type": "choice",
+      "default": "full",
+      "options": [
+        {
+          "id": "full"
+        },
+        {
+          "id": "plan6"
+        },
+        {
+          "id": "plan12"
+        }
+      ]
+    }
+  ],
+  "effects": [],
+  "tables": {
+    "pieceProvenancePrice": {
+      "kind": "2d",
+      "rows": {
+        "mingVase": {
+          "documented": 18000,
+          "certified": 24000,
+          "museum": 32000
+        },
+        "baroqueConsole": {
+          "documented": 12000,
+          "certified": 15500,
+          "museum": 21000
+        },
+        "impressionistOil": {
+          "documented": 145000,
+          "certified": 185000,
+          "museum": 240000
+        },
+        "turnerWatercolour": {
+          "documented": 42000,
+          "certified": 55000,
+          "museum": 72000
+        },
+        "artDecoClock": {
+          "documented": 6500,
+          "certified": 8500,
+          "museum": 12000
+        },
+        "rodinBronze": {
+          "documented": 88000,
+          "certified": 115000,
+          "museum": 155000
+        },
+        "persianRug": {
+          "documented": 9500,
+          "certified": 12500,
+          "museum": 17000
+        },
+        "muranoChandelier": {
+          "documented": 14000,
+          "certified": 18000,
+          "museum": 24500
+        }
+      }
+    },
+    "conditionDelta": {
+      "kind": "1d",
+      "map": {
+        "asFound": 0,
+        "conserved": 2500,
+        "restored": 6500
+      }
+    },
+    "framingDelta": {
+      "kind": "1d",
+      "map": {
+        "none": 0,
+        "gallery": 1800,
+        "gilt": 4200
+      }
+    },
+    "exportDoc": {
+      "kind": "1d",
+      "map": {
+        "documented": 0,
+        "certified": 150,
+        "museum": 400
+      }
+    },
+    "instalmentMonths": {
+      "kind": "1d",
+      "map": {
+        "full": 1,
+        "plan6": 6,
+        "plan12": 12
+      }
+    },
+    "specHeight": {
+      "kind": "1d",
+      "map": {
+        "mingVase": 45,
+        "baroqueConsole": 88,
+        "impressionistOil": 65,
+        "turnerWatercolour": 38,
+        "artDecoClock": 32,
+        "rodinBronze": 52,
+        "persianRug": 340,
+        "muranoChandelier": 110
+      }
+    },
+    "specWidth": {
+      "kind": "1d",
+      "map": {
+        "mingVase": 24,
+        "baroqueConsole": 132,
+        "impressionistOil": 81,
+        "turnerWatercolour": 54,
+        "artDecoClock": 20,
+        "rodinBronze": 28,
+        "persianRug": 240,
+        "muranoChandelier": 80
+      }
+    },
+    "specWeight": {
+      "kind": "1d",
+      "map": {
+        "mingVase": 6,
+        "baroqueConsole": 34,
+        "impressionistOil": 5,
+        "turnerWatercolour": 3,
+        "artDecoClock": 4,
+        "rodinBronze": 18,
+        "persianRug": 22,
+        "muranoChandelier": 28
+      }
+    }
+  },
+  "computed": [
+    {
+      "id": "servicesTotal",
+      "label": "Services total",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "insuranceValuation"
+                ]
+              },
+              650,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "conditionReport"
+                ]
+              },
+              450,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "whiteGlove"
+                ]
+              },
+              1200,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "climatePackaging"
+                ]
+              },
+              750,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "installation"
+                ]
+              },
+              900,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "services",
+                  "uvGlazing"
+                ]
+              },
+              550,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "bundlesDiscount",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "insuranceValuation"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "conditionReport"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "climatePackaging"
+                    ]
+                  }
+                ]
+              },
+              -300,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "conditionReport"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "whiteGlove"
+                    ]
+                  },
+                  {
+                    "op": "has",
+                    "args": [
+                      "services",
+                      "installation"
+                    ]
+                  }
+                ]
+              },
+              -350,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "itemPrice",
+      "label": "Acquisition",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "lookup",
+            "args": [
+              "pieceProvenancePrice",
+              {
+                "op": "field",
+                "args": [
+                  "piece"
+                ]
+              },
+              {
+                "op": "field",
+                "args": [
+                  "provenance"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "conditionDelta",
+              {
+                "op": "field",
+                "args": [
+                  "condition"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "lookup",
+            "args": [
+              "framingDelta",
+              {
+                "op": "field",
+                "args": [
+                  "framing"
+                ]
+              }
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "servicesTotal"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "bundlesDiscount"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "feesTotal",
+      "label": "Fees",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          250,
+          {
+            "op": "lookup",
+            "args": [
+              "exportDoc",
+              {
+                "op": "field",
+                "args": [
+                  "provenance"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "total",
+      "label": "Guide price",
+      "currency": true,
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "itemPrice"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "feesTotal"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "monthlyPayment",
+      "label": "Instalment",
+      "currency": true,
+      "formula": {
+        "op": "if",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "settlement"
+                ]
+              },
+              "full"
+            ]
+          },
+          0,
+          {
+            "op": "div",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "total"
+                ]
+              },
+              {
+                "op": "lookup",
+                "args": [
+                  "instalmentMonths",
+                  {
+                    "op": "field",
+                    "args": [
+                      "settlement"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "insuranceValue",
+      "label": "Insurance value",
+      "currency": true,
+      "formula": {
+        "op": "mul",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "itemPrice"
+            ]
+          },
+          1.15
+        ]
+      }
+    },
+    {
+      "id": "height",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specHeight",
+          {
+            "op": "field",
+            "args": [
+              "piece"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "width",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specWidth",
+          {
+            "op": "field",
+            "args": [
+              "piece"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "weight",
+      "formula": {
+        "op": "lookup",
+        "args": [
+          "specWeight",
+          {
+            "op": "field",
+            "args": [
+              "piece"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "validations": [
+    {
+      "id": "museum_note",
+      "field": "condition",
+      "severity": "info",
+      "message": "Museum-dossier pieces are supplied conserved.",
+      "when": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "provenance"
+            ]
+          },
+          "museum"
+        ]
+      }
+    },
+    {
+      "id": "restored_note",
+      "field": "condition",
+      "severity": "info",
+      "message": "Restoration is fully disclosed in the condition report.",
+      "when": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "condition"
+            ]
+          },
+          "restored"
+        ]
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "collectorsCare",
+      "label": "Collector's Care",
+      "requires": [
+        "insuranceValuation",
+        "conditionReport",
+        "climatePackaging"
+      ],
+      "discount": 300
+    },
+    {
+      "id": "presentationSuite",
+      "label": "Presentation Suite",
+      "requires": [
+        "conditionReport",
+        "whiteGlove",
+        "installation"
+      ],
+      "discount": 350
+    }
+  ]
+}
