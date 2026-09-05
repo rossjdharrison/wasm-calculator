@@ -44,35 +44,43 @@
       "options": [
         {
           "id": "mingVase",
-          "label": "Ming Dynasty Vase"
+          "label": "Ming Dynasty Vase",
+          "image": "antiques/ming-vase.png"
         },
         {
           "id": "baroqueConsole",
-          "label": "Baroque Giltwood Console"
+          "label": "Baroque Giltwood Console",
+          "image": "antiques/baroque-console.png"
         },
         {
           "id": "impressionistOil",
-          "label": "Impressionist Oil, c.1890"
+          "label": "Impressionist Oil, c.1890",
+          "image": "antiques/impressionist-oil.png"
         },
         {
           "id": "turnerWatercolour",
-          "label": "Turner Watercolour Study"
+          "label": "Turner Watercolour Study",
+          "image": "antiques/turner-watercolour.png"
         },
         {
           "id": "artDecoClock",
-          "label": "Art Deco Mantel Clock"
+          "label": "Art Deco Mantel Clock",
+          "image": "antiques/art-deco-clock.png"
         },
         {
           "id": "rodinBronze",
-          "label": "Bronze, School of Rodin"
+          "label": "Bronze, School of Rodin",
+          "image": "antiques/rodin-bronze.png"
         },
         {
           "id": "persianRug",
-          "label": "Antique Persian Rug"
+          "label": "Antique Persian Rug",
+          "image": "antiques/persian-rug.png"
         },
         {
           "id": "muranoChandelier",
-          "label": "Murano Glass Chandelier"
+          "label": "Murano Glass Chandelier",
+          "image": "antiques/murano-chandelier.png"
         }
       ]
     },

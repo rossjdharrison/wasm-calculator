@@ -120,7 +120,7 @@ const pres = {
     { id: 's_settlement', label: 'Settlement', order: 5 },
   ],
   fields: [
-    { id: 'piece', label: 'Piece', control: 'buttons', section: 's_piece', width: 'full', options: PIECES.map((p) => ({ id: p.id, label: p.label })) },
+    { id: 'piece', label: 'Piece', control: 'buttons', section: 's_piece', width: 'full', options: PIECES.map((p) => ({ id: p.id, label: p.label, image: 'antiques/' + p.id.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '.png' })) },
     { id: 'provenance', label: 'Provenance', control: 'buttons', section: 's_provenance', width: 'full', options: PROV.map((id) => ({ id, label: provLabel[id] })) },
     { id: 'condition', label: 'Condition', control: 'buttons', section: 's_provenance', width: 'full', options: ['asFound', 'conserved', 'restored'].map((id) => ({ id, label: condLabel[id] })) },
     { id: 'framing', label: 'Framing', control: 'buttons', section: 's_presentation', width: 'full', visibleWhen: painting, options: ['none', 'gallery', 'gilt'].map((id) => ({ id, label: frameLabel[id] })) },

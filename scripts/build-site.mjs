@@ -85,15 +85,15 @@ async function main() {
     console.log('  + dist/models/** (all models + catalog)');
   }
 
-  // Copy the car image folder (web/cars/*) if present — the model references
-  // these by relative path (option.image = "cars/<name>.jpg").
-  const carsSrc = join(ROOT, 'web', 'cars');
-  if (await exists(carsSrc)) {
-    const imgs = (await readdir(carsSrc)).filter((n) => /\.(jpe?g|png|webp|avif|svg)$/i.test(n));
-    if (imgs.length) {
-      await mkdir(join(DIST, 'cars'), { recursive: true });
-      for (const n of imgs) { await copyFile(join(carsSrc, n), join(DIST, 'cars', n)); console.log(`  + dist/cars/${n}`); }
-    }
+  // Copy per-model image folders (web/<dir>/*) — each model references its images
+  // by a relative path (option.image = "cars/<x>.png", "antiques/<x>.png", …).
+  for (const dir of ['cars', 'antiques']) {
+    const src = join(ROOT, 'web', dir);
+    if (!(await exists(src))) continue;
+    const imgs = (await readdir(src)).filter((n) => /\.(jpe?g|png|webp|avif|svg)$/i.test(n));
+    if (!imgs.length) continue;
+    await mkdir(join(DIST, dir), { recursive: true });
+    for (const n of imgs) { await copyFile(join(src, n), join(DIST, dir, n)); console.log(`  + dist/${dir}/${n}`); }
   }
   console.log('✓ dist/ ready to deploy');
 }
