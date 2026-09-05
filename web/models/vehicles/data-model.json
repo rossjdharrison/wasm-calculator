@@ -2,7 +2,14 @@
   "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
   "id": "vehicle-configurator",
   "version": "1.0.0",
-  "currency": "GBP",
+  "currency": "EUR",
+  "fxSurcharge": 0.05,
+  "currencies": ["EUR", "GBP", "USD", "CHF", "AED"],
+  "units": {
+    "speed": { "canonical": "mph", "members": { "mph": { "factor": 1, "system": "imperial" }, "kph": { "factor": 1.609344, "system": "metric" } } },
+    "mass": { "canonical": "kg", "members": { "kg": { "factor": 1, "system": "metric" }, "lb": { "factor": 2.2046226, "system": "imperial" } } },
+    "distance": { "canonical": "mi", "members": { "mi": { "factor": 1, "system": "imperial" }, "km": { "factor": 1.609344, "system": "metric" } } }
+  },
   "fields": [
     {
       "id": "model",

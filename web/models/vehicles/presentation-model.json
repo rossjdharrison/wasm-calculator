@@ -409,7 +409,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       }
     },
     {
@@ -418,7 +418,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       },
       "emphasis": true,
       "compare": "low",
@@ -430,7 +430,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       },
       "visibleWhen": {
         "op": "not",
@@ -467,7 +467,8 @@
       "format": {
         "type": "unit",
         "unit": "mph",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "mph"
       },
       "spec": true,
       "compare": "high"
@@ -489,7 +490,8 @@
       "format": {
         "type": "unit",
         "unit": "kg",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "kg"
       },
       "spec": true,
       "compare": "low"
@@ -500,7 +502,8 @@
       "format": {
         "type": "unit",
         "unit": "mi",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "mi"
       },
       "spec": true,
       "compare": "high",

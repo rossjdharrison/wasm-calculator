@@ -47,7 +47,7 @@ const pickDefined = (obj, keys) => {
 };
 
 // Which keys are owned by which file. Split by ownership (see docs/editor-architecture.md §3).
-const DATA_TOP = ['$schema', 'id', 'version', 'currency'];
+const DATA_TOP = ['$schema', 'id', 'version', 'currency', 'fxSurcharge', 'currencies'];
 const DATA_BLOCKS = ['effects', 'tables', 'computed', 'validations', 'bundles', 'units', 'rates'];
 const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'canonicalUnit', 'formula'];
 const DATA_OPTION = ['id', 'availableWhen'];

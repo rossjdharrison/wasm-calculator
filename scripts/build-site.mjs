@@ -29,6 +29,7 @@ const FILES = [
   [join(ROOT, 'web', 'render-form.mjs'), 'render-form.mjs'],
   [join(ROOT, 'web', 'showroom-view.mjs'), 'showroom-view.mjs'],
   [join(ROOT, 'web', 'ui.mjs'), 'ui.mjs'],
+  [join(ROOT, 'web', 'fx.mjs'), 'fx.mjs'],
   [join(ROOT, 'web', 'basket.mjs'), 'basket.mjs'],
   [join(ROOT, 'web', 'saved.mjs'), 'saved.mjs'],
   [join(ROOT, 'web', 'showroom.css'), 'showroom.css'],

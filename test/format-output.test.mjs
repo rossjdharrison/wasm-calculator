@@ -33,6 +33,17 @@ test('currency converts via rates (GBP→EUR) and defaults to base', () => {
   assert.equal(formatOutput({ value: 100, format: 'currency', currencyCode: 'GBP', decimals: 0, baseCurrency: 'GBP' }, { rates, currency: 'GBP', locale: L }), '£100');
 });
 
+test('non-base currency takes the FX surcharge; base currency does not', () => {
+  const eurRates = { base: 'EUR', EUR: 1, GBP: 0.86, USD: 1.16 };
+  const o = { value: 1000, format: 'currency', currencyCode: 'EUR', decimals: 0, baseCurrency: 'EUR' };
+  // EUR (base): no conversion, no surcharge
+  assert.equal(formatOutput(o, { rates: eurRates, currency: 'EUR', fxSurcharge: 0.05, locale: L }), '€1,000');
+  // GBP: 1000 * 0.86 * 1.05 = 903
+  assert.equal(formatOutput(o, { rates: eurRates, currency: 'GBP', fxSurcharge: 0.05, locale: L }), '£903');
+  // without a surcharge configured: 1000 * 0.86 = 860
+  assert.equal(formatOutput(o, { rates: eurRates, currency: 'GBP', locale: L }), '£860');
+});
+
 test('a unit with no canonicalUnit is never converted (e.g. hp, seconds)', () => {
   assert.equal(formatOutput({ value: 120, format: 'unit', unit: 'hp', decimals: 0 }, { units, unitSystem: 'metric', locale: L }), '120 hp');
   assert.equal(formatOutput({ value: 4.032, format: 'unit', unit: 's', decimals: 1 }, { units, unitSystem: 'metric', locale: L }), '4.0 s');

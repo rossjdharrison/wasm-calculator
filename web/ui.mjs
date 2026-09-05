@@ -74,7 +74,11 @@ export const formatOutput = (o, opts = {}) => {
     const base = o.baseCurrency || rates.base;
     const rt = currency === rates.base ? 1 : rates[currency];
     const rb = base === rates.base ? 1 : rates[base];
-    if (rt && rb) { v = v * (rt / rb); currencyCode = currency; }
+    if (rt && rb) {
+      v = v * (rt / rb);
+      if (currency !== base && opts.fxSurcharge) v *= (1 + opts.fxSurcharge);   // non-base FX surcharge
+      currencyCode = currency;
+    }
   }
 
   const nf = (fmtOpts) => new Intl.NumberFormat(locale, fmtOpts).format(v);

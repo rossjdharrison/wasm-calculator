@@ -2,7 +2,15 @@
   "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
   "id": "vehicle-configurator",
   "version": "1.0.0",
-  "currency": "GBP",
+  "currency": "EUR",
+  "fxSurcharge": 0.05,
+  "currencies": [
+    "EUR",
+    "GBP",
+    "USD",
+    "CHF",
+    "AED"
+  ],
   "name": "Vehicle Configurator",
   "brand": {
     "mark": "ROWBLAA",
@@ -2263,6 +2271,47 @@
       "discount": 400
     }
   ],
+  "units": {
+    "speed": {
+      "canonical": "mph",
+      "members": {
+        "mph": {
+          "factor": 1,
+          "system": "imperial"
+        },
+        "kph": {
+          "factor": 1.609344,
+          "system": "metric"
+        }
+      }
+    },
+    "mass": {
+      "canonical": "kg",
+      "members": {
+        "kg": {
+          "factor": 1,
+          "system": "metric"
+        },
+        "lb": {
+          "factor": 2.2046226,
+          "system": "imperial"
+        }
+      }
+    },
+    "distance": {
+      "canonical": "mi",
+      "members": {
+        "mi": {
+          "factor": 1,
+          "system": "imperial"
+        },
+        "km": {
+          "factor": 1.609344,
+          "system": "metric"
+        }
+      }
+    }
+  },
   "outputs": [
     {
       "id": "vehiclePrice",
@@ -2270,7 +2319,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       }
     },
     {
@@ -2279,7 +2328,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       },
       "emphasis": true,
       "compare": "low",
@@ -2291,7 +2340,7 @@
       "format": {
         "type": "currency",
         "decimals": 2,
-        "currencyCode": "GBP"
+        "currencyCode": "EUR"
       },
       "visibleWhen": {
         "op": "not",
@@ -2328,7 +2377,8 @@
       "format": {
         "type": "unit",
         "unit": "mph",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "mph"
       },
       "spec": true,
       "compare": "high"
@@ -2350,7 +2400,8 @@
       "format": {
         "type": "unit",
         "unit": "kg",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "kg"
       },
       "spec": true,
       "compare": "low"
@@ -2361,7 +2412,8 @@
       "format": {
         "type": "unit",
         "unit": "mi",
-        "decimals": 0
+        "decimals": 0,
+        "canonicalUnit": "mi"
       },
       "spec": true,
       "compare": "high",

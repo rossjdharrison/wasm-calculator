@@ -13,7 +13,8 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
+import { el, placeholderSVG as placeholder, money, formatOutput, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
+import { loadRates } from './fx.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 import { save as savedSave, remove as savedRemove, findByConfig as savedFindByConfig, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
@@ -58,15 +59,18 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     return { st, forced, avail, out, vis, msgs, limits };
   }
 
-  const fmt = (o) => {
-    const v = o.value, r = o.fmt || {};
-    const nf = (opts) => new Intl.NumberFormat('en-GB', opts).format(v);
-    if (r.format === 'currency') return nf({ style: 'currency', currency: r.currencyCode || 'GBP', minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 });
-    if (r.format === 'percent') return nf({ style: 'percent', minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 });
-    if (r.format === 'unit') return nf({ minimumFractionDigits: r.decimals ?? 0, maximumFractionDigits: r.decimals ?? 0 }) + (r.unit ? ' ' + r.unit : '');
-    return nf({ maximumFractionDigits: r.decimals ?? 0 });
-  };
-  const money0 = (v) => money(v, model.currency || 'GBP');
+  // view-preference state: unit system (null = as authored) + display currency
+  // (defaults to the base). fx rates load asynchronously; until then non-base
+  // currencies simply render in the base. Conversion happens in formatOutput.
+  const baseCurrency = model.currency || 'EUR';
+  let unitSystem = null, displayCurrency = baseCurrency, fxRates = null;
+  const fmtOpts = () => ({
+    units: model.units, unitSystem,
+    rates: fxRates ? { base: fxRates.base, ...fxRates.rates } : null,
+    currency: displayCurrency, fxSurcharge: model.fxSurcharge || 0, locale: 'en-GB',
+  });
+  const fmt = (o) => formatOutput({ ...(o.fmt || {}), value: o.value }, fmtOpts());
+  const money0 = (v) => money(v, baseCurrency);
 
   // ---------- item visuals (image asset, else a neutral placeholder) ----------
   // Colour swatch palette (used only by a field flagged render:"swatch", e.g. paint).
@@ -148,7 +152,24 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = ICON.bag + (n ? `<span class="hdx-n">${n}</span>` : ''); basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); basketBtn.title = `Basket (${n})`; };
   syncBasket(); basketOnChange(syncBasket);
   basketBtn.addEventListener('click', () => openBasketModal(root, { resolveImage, inert: shell }));
-  const actions = el('div', 'hd-actions'); actions.append(savedBtn, basketBtn);
+  // view options: display currency + measurement units (discreet selects). Both
+  // are pure view preferences — the basket/order stays in the base currency.
+  const view = el('div', 'hd-view');
+  if ((model.currencies || []).length > 1) {
+    const curSel = el('select', 'hd-sel', { 'aria-label': 'Display currency', title: 'Display currency' });
+    for (const c of model.currencies) { const op = el('option'); op.value = c; op.textContent = c; if (c === displayCurrency) op.selected = true; curSel.appendChild(op); }
+    curSel.addEventListener('change', () => { displayCurrency = curSel.value; render(); });
+    view.appendChild(curSel);
+  }
+  if (model.units) {
+    const uSel = el('select', 'hd-sel', { 'aria-label': 'Measurement units', title: 'Measurement units' });
+    for (const [v, t] of [['', 'Standard units'], ['metric', 'Metric'], ['imperial', 'Imperial']]) { const op = el('option'); op.value = v; op.textContent = t; uSel.appendChild(op); }
+    uSel.addEventListener('change', () => { unitSystem = uSel.value || null; render(); });
+    view.appendChild(uSel);
+  }
+  const actions = el('div', 'hd-actions');
+  if (view.children.length) actions.appendChild(view);
+  actions.append(savedBtn, basketBtn);
   if (links && links.length) {
     const studio = el('div', 'studio');
     const sbtn = el('button', 'studio-btn', { type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false', html: '<span aria-hidden="true" class="studio-ico">✎</span><span class="studio-lbl">Studio</span>' });
@@ -544,6 +565,11 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   savedOnChange(syncSaveBtn);   // keep in sync if a build is removed from the saved dialog
 
   render();
+  // fetch daily ECB rates (Frankfurter) so the currency selector can convert;
+  // the base currency renders immediately, conversions light up once rates land.
+  if ((model.currencies || []).some((c) => c !== baseCurrency)) {
+    loadRates({ base: baseCurrency, symbols: model.currencies }).then((r) => { fxRates = r; render(); }).catch(() => {});
+  }
   // resolve associated images and TEST-LOAD each independently — repaint as each
   // one arrives (so the default car shows first, not after all 8), and a missing
   // image simply never loads, leaving its silhouette (no broken icons).

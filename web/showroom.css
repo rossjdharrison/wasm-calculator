@@ -326,6 +326,15 @@
   /* header action group + plate save button */
   .hd-actions { display: flex; align-items: center; gap: 12px; }
   @media (max-width: 640px) { .hd-actions { gap: 8px; } }
+  /* view options: display currency + measurement units */
+  .hd-view { display: inline-flex; align-items: center; gap: 6px; }
+  .hd-sel { -webkit-appearance: none; appearance: none; background: none; border: 1px solid var(--border-strong); color: var(--text-soft);
+    font: inherit; font-size: 12px; padding: 5px 26px 5px 9px; border-radius: 9px; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-soft) 50%), linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+    background-position: right 11px center, right 6px center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+  .hd-sel:hover { color: var(--accent); border-color: var(--accent); }
+  @media (max-width: 640px) { .hd-view { display: none; } }
   .save-btn { margin-top: 8px; width: 100%; padding: 10px; border-radius: 11px; border: 1px solid var(--border-strong); background: none;
     color: var(--text-soft); font: inherit; font-size: 13px; cursor: pointer; transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
   .save-btn:hover { color: var(--accent); border-color: var(--accent); }
