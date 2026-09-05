@@ -7,6 +7,10 @@
 // list/compare need no engine. Data + a view built on the ui.mjs primitives.
 // =============================================================================
 import { el, openModal, money, placeholderSVG } from './ui.mjs';
+import { add as basketAdd } from './basket.mjs';
+
+const BAG_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg>';
+const CHECK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L19 7"/></svg>';
 
 const KEY = 'qc:saved:v1';
 const RKEY = 'qc:restore:v1';                 // transient hand-off for "open"
@@ -39,7 +43,7 @@ export function takeRestore(modelId) {
 }
 
 // ---- the saved-builds view (list + inline rename + open + compare + basket) ----
-export function openSavedModal(root, { resolveImage = async () => null, inert, onAddToBasket } = {}) {
+export function openSavedModal(root, { resolveImage = async () => null, inert } = {}) {
   const selected = new Set();
   const m = openModal({ root, inert, overlayClass: 'sv-overlay', modalClass: 'sv-modal', label: 'Saved builds' });
   render();
@@ -62,9 +66,16 @@ export function openSavedModal(root, { resolveImage = async () => null, inert, o
       const name = el('input', 'sv-name', { value: it.name || it.title, 'aria-label': 'Build name' });
       name.addEventListener('change', () => rename(it.id, name.value.trim() || it.title));
       info.append(name, el('div', 'sv-sub', { html: `${it.collection || ''} · <span class="num">${money(it.total, it.currency || 'GBP')}</span>` }));
+      const addB = el('button', 'sv-add', { type: 'button', title: 'Add to basket', 'aria-label': `Add ${it.name} to basket`, html: BAG_ICON });
+      addB.addEventListener('click', () => {
+        basketAdd({ modelId: it.modelId, collection: it.collection, title: it.title, total: it.total, currency: it.currency, image: it.image });
+        addB.classList.add('is-added'); addB.innerHTML = CHECK_ICON;
+        setTimeout(() => { addB.classList.remove('is-added'); addB.innerHTML = BAG_ICON; }, 1100);
+      });
       const open = el('button', 'sv-open', { type: 'button', text: 'Open ▸', on: { click: () => { stashRestore(it.modelId, it.config); location.href = `configure.html?m=${encodeURIComponent(it.modelId)}`; } } });
       const rm = el('button', 'bk-rm', { type: 'button', text: '✕', 'aria-label': `Delete ${it.name}`, on: { click: () => { remove(it.id); render(); } } });
-      row.append(chk, media, info, open, rm);
+      const acts = el('div', 'sv-acts'); acts.append(addB, open, rm);
+      row.append(chk, media, info, acts);
       listEl.appendChild(row);
       if (it.image) resolveImage(it.image).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = ''; media.appendChild(im); }; im.src = u; im.alt = ''; }).catch(() => {});
     }

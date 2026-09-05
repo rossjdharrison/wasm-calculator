@@ -12,9 +12,9 @@ import { resolve as resolveImage } from './assets.mjs';
 import { takeRestore } from './saved.mjs';
 
 const WASM_URL = 'quote.wasm';
-// editor links carry the active model id so they edit THIS collection, not vehicles
+// editor/studio links carry the active model id so they edit THIS collection.
+// (The brand lockup links home to the collections; these live in the Studio menu.)
 const LINKS = [
-  { href: 'index.html', label: 'Collections' },
   { href: `data-editor.html?m=${MODEL_ID}`, label: 'Data model' },
   { href: `presentation-editor.html?m=${MODEL_ID}`, label: 'Presentation' },
   { href: `editor.html?m=${MODEL_ID}`, label: 'JSON' },

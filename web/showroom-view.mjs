@@ -13,7 +13,7 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary } from './ui.mjs';
+import { el, placeholderSVG as placeholder, money, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 import { save as savedSave, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
@@ -131,22 +131,36 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   root.innerHTML = '';
   const shell = el('div', 'vdm');
   const hd = el('header', 'hd');
-  const brandEl = el('div', 'brand');
-  brandEl.innerHTML = `<a class="brand-home" href="index.html"><b>${brand.mark}</b> ${brand.rest || ''}</a>`.trim()
-    + (brand.descriptor ? `<span class="descriptor">${brand.descriptor}</span>` : '');
-  const tagEl = el('div', 'tag'); tagEl.textContent = brand.tagline || '';
+  // brand lockup: the mark over a small maison · collection subline; the whole
+  // lockup is the link home to the collections (logo-as-home convention).
+  const brandEl = el('a', 'brandlock', { href: 'index.html', 'aria-label': `${brand.mark} ${brand.rest || ''} — collections` });
+  const sub = [brand.tagline, brand.descriptor].filter(Boolean).join(' · ');
+  brandEl.innerHTML = `<span class="brandmark"><b>${brand.mark}</b> ${brand.rest || ''}</span>` + (sub ? `<span class="brandsub">${sub}</span>` : '');
   hd.appendChild(brandEl);
-  if (links && links.length) { const nav = el('nav', 'sh-nav'); nav.setAttribute('aria-label', 'Edit'); for (const l of links) { const a = el('a'); a.href = l.href; a.textContent = l.label; nav.appendChild(a); } hd.appendChild(nav); }
-  // cross-collection saved-builds + basket indicators (live counts; open their dialogs)
-  const savedBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
-  const syncSaved = () => { const n = savedCount(); savedBtn.innerHTML = `<span aria-hidden="true">♡</span> Saved${n ? `<span class="basket-count">${n}</span>` : ''}`; savedBtn.setAttribute('aria-label', `Saved builds, ${n}`); };
+
+  // right: saved + basket as icon buttons with a live count, then a discreet
+  // "Studio" menu holding the editor tools (keeps the customer header uncluttered).
+  const savedBtn = el('button', 'hdx', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncSaved = () => { const n = savedCount(); savedBtn.innerHTML = ICON.save + (n ? `<span class="hdx-n">${n}</span>` : ''); savedBtn.setAttribute('aria-label', `Saved builds, ${n}`); savedBtn.title = `Saved builds (${n})`; };
   syncSaved(); savedOnChange(syncSaved);
-  savedBtn.addEventListener('click', () => openSavedModal(root, { resolveImage, inert: shell, onAddToBasket: basketAdd }));
-  const basketBtn = el('button', 'basket-btn', { type: 'button', 'aria-haspopup': 'dialog' });
-  const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = `<span aria-hidden="true">◈</span> Basket${n ? `<span class="basket-count">${n}</span>` : ''}`; basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); };
+  savedBtn.addEventListener('click', () => openSavedModal(root, { resolveImage, inert: shell }));
+  const basketBtn = el('button', 'hdx', { type: 'button', 'aria-haspopup': 'dialog' });
+  const syncBasket = () => { const n = basketCount(); basketBtn.innerHTML = ICON.bag + (n ? `<span class="hdx-n">${n}</span>` : ''); basketBtn.setAttribute('aria-label', `Basket, ${n} item${n === 1 ? '' : 's'}`); basketBtn.title = `Basket (${n})`; };
   syncBasket(); basketOnChange(syncBasket);
   basketBtn.addEventListener('click', () => openBasketModal(root, { resolveImage, inert: shell }));
-  const actions = el('div', 'hd-actions'); actions.append(savedBtn, basketBtn, tagEl);
+  const actions = el('div', 'hd-actions'); actions.append(savedBtn, basketBtn);
+  if (links && links.length) {
+    const studio = el('div', 'studio');
+    const sbtn = el('button', 'studio-btn', { type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false', html: '<span aria-hidden="true" class="studio-ico">✎</span><span class="studio-lbl">Studio</span>' });
+    const menu = el('div', 'studio-menu', { role: 'menu' }); menu.hidden = true;
+    for (const l of links) menu.appendChild(el('a', 'studio-item', { href: l.href, role: 'menuitem', text: l.label }));
+    const onDoc = (e) => { if (!studio.contains(e.target)) closeM(); };
+    const onEsc = (e) => { if (e.key === 'Escape') { closeM(); sbtn.focus(); } };
+    function closeM() { menu.hidden = true; sbtn.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onEsc); }
+    function openM() { menu.hidden = false; sbtn.setAttribute('aria-expanded', 'true'); setTimeout(() => { document.addEventListener('click', onDoc); document.addEventListener('keydown', onEsc); }, 0); const a = menu.querySelector('a'); if (a) a.focus(); }
+    sbtn.addEventListener('click', () => (menu.hidden ? openM() : closeM()));
+    studio.append(sbtn, menu); actions.appendChild(studio);
+  }
   hd.appendChild(actions);
   const body = el('div', 'body');
   const stage = el('section', 'stage'); stage.setAttribute('aria-label', 'Showroom stage');

@@ -25,6 +25,12 @@ export const el = (tag, cls, props) => {
   return e;
 };
 
+// ---- atoms: small line icons (currentColor stroke) ----
+export const ICONS = {
+  save: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20V4z"/></svg>',
+  bag: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7V5.5a3 3 0 0 1 6 0V7"/></svg>',
+};
+
 // ---- atom: currency formatter ----
 export const money = (v, currency = 'GBP', decimals = 0) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(v);
