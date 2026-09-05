@@ -24,7 +24,6 @@ const CONTROLS = { choice: ['radio', 'dropdown', 'buttons'], multichoice: ['butt
 
 let data = null, pres = null, wasm = null, schema = null;
 let editor = null, assembledOk = null, preview = null, previewToken = 0;
-let lastSel = { key: null, id: null };   // remembered selection, re-applied after each rebuild
 
 boot();
 async function boot() {
@@ -64,7 +63,7 @@ function mountEditor() {
     // selection must NOT rebuild the live preview (that would remount it on every
     // click); only real edits do. Both keep the binding issues fresh.
     onChange: (info) => { if (info && info.reason === 'select') return; renderIssues(); scheduleRebuild(); },
-    onSelect: (key, id) => { lastSel = { key, id }; applyHighlight(); },
+    onSelect: () => applyHighlight(),
   });
   renderIssues();
   scheduleRebuild();     // createEditor's initial render fires onSelect, not onChange — kick the first preview
@@ -72,10 +71,14 @@ function mountEditor() {
 
 // map an editor collection to the preview's highlight kind (settings has none)
 const HL_KIND = { sections: 'section', fields: 'field', outputs: 'output' };
+// re-derive the current selection from the engine at paint time (never a cached
+// id) so an edit that rewrites the selected item's id — e.g. an output's Value —
+// still re-rings the right node after the preview rebuilds.
 function applyHighlight() {
-  if (!preview) return;
-  const kind = HL_KIND[lastSel.key];
-  if (kind && lastSel.id) preview.highlight(kind, lastSel.id);
+  if (!preview || !editor) return;
+  const { key, id } = editor.selected();
+  const kind = HL_KIND[key];
+  if (kind && id) preview.highlight(kind, id);
 }
 // two-way: clicking a field/section/output in the live form selects it on the left
 function onEdit(kind, id) {
