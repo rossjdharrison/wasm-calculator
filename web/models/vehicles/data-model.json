@@ -4,11 +4,53 @@
   "version": "1.0.0",
   "currency": "EUR",
   "fxSurcharge": 0.05,
-  "currencies": ["EUR", "GBP", "USD", "CHF", "AED"],
+  "currencies": [
+    "EUR",
+    "GBP",
+    "USD",
+    "CHF",
+    "AED"
+  ],
   "units": {
-    "speed": { "canonical": "mph", "members": { "mph": { "factor": 1, "system": "imperial" }, "kph": { "factor": 1.609344, "system": "metric" } } },
-    "mass": { "canonical": "kg", "members": { "kg": { "factor": 1, "system": "metric" }, "lb": { "factor": 2.2046226, "system": "imperial" } } },
-    "distance": { "canonical": "mi", "members": { "mi": { "factor": 1, "system": "imperial" }, "km": { "factor": 1.609344, "system": "metric" } } }
+    "speed": {
+      "canonical": "mph",
+      "members": {
+        "mph": {
+          "factor": 1,
+          "system": "imperial"
+        },
+        "kph": {
+          "factor": 1.609344,
+          "system": "metric"
+        }
+      }
+    },
+    "mass": {
+      "canonical": "kg",
+      "members": {
+        "kg": {
+          "factor": 1,
+          "system": "metric"
+        },
+        "lb": {
+          "factor": 2.2046226,
+          "system": "imperial"
+        }
+      }
+    },
+    "distance": {
+      "canonical": "mi",
+      "members": {
+        "mi": {
+          "factor": 1,
+          "system": "imperial"
+        },
+        "km": {
+          "factor": 1.609344,
+          "system": "metric"
+        }
+      }
+    }
   },
   "fields": [
     {
@@ -682,6 +724,65 @@
       "max": 30000,
       "step": 1000,
       "unit": "mi"
+    },
+    {
+      "id": "fulfilment",
+      "type": "choice",
+      "default": "collect",
+      "options": [
+        {
+          "id": "collect"
+        },
+        {
+          "id": "deliver"
+        }
+      ]
+    },
+    {
+      "id": "destination",
+      "type": "choice",
+      "default": "nl",
+      "options": [
+        {
+          "id": "nl"
+        },
+        {
+          "id": "uk"
+        },
+        {
+          "id": "usa"
+        },
+        {
+          "id": "uae"
+        },
+        {
+          "id": "ch"
+        },
+        {
+          "id": "sg"
+        },
+        {
+          "id": "hk"
+        },
+        {
+          "id": "jp"
+        }
+      ]
+    },
+    {
+      "id": "serviceAddons",
+      "type": "multichoice",
+      "options": [
+        {
+          "id": "insurance"
+        },
+        {
+          "id": "vipHandover"
+        },
+        {
+          "id": "securityDetail"
+        }
+      ]
     }
   ],
   "effects": [
@@ -1020,6 +1121,19 @@
         "sport": 0.96,
         "luxury": 1,
         "offRoad": 1.05
+      }
+    },
+    "shippingRates": {
+      "kind": "1d",
+      "map": {
+        "nl": 0,
+        "uk": 2200,
+        "usa": 3800,
+        "uae": 4200,
+        "ch": 1500,
+        "sg": 5200,
+        "hk": 5400,
+        "jp": 4900
       }
     }
   },
@@ -1865,6 +1979,133 @@
         ]
       },
       "label": "Weight"
+    },
+    {
+      "id": "shippingCost",
+      "formula": {
+        "op": "if",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "fulfilment"
+                ]
+              },
+              "collect"
+            ]
+          },
+          0,
+          {
+            "op": "lookup",
+            "args": [
+              "shippingRates",
+              {
+                "op": "field",
+                "args": [
+                  "destination"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "addonsCost",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "insurance"
+                ]
+              },
+              1900,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "vipHandover"
+                ]
+              },
+              1200,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "securityDetail"
+                ]
+              },
+              3500,
+              0
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "fulfilmentTotal",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "shippingCost"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "addonsCost"
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "grandTotal",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "otr"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "fulfilmentTotal"
+            ]
+          }
+        ]
+      },
+      "currency": true
     }
   ],
   "validations": [

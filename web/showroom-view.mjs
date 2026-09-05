@@ -30,6 +30,9 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // tiles, which appear in Compare (with a best-direction), and which drives the plate gauge.
   const specIds = (model.outputs || []).filter((o) => o.spec).map((o) => o.id);
   const gaugeMeta = (model.outputs || []).find((o) => o.gaugeMax);
+  // outputs flagged breakdown:true show as their own itemised lines in the build
+  // summary (e.g. Delivery, Services), instead of being lumped into the fees residual.
+  const breakdownIds = (model.outputs || []).filter((o) => o.breakdown).map((o) => o.id);
   const primary = ir.fields.find((f) => f.type === 'choice' && f.options && f.options.length) || ir.fields[0];
   const sections = [...(model.sections || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -430,8 +433,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
         if (Math.round(delta) !== 0) items.push({ label: optLabel(pkgF, o.id), amount: delta });
       }
     }
-    const fees = veh ? total - val(state, veh.id) : 0;
-    return { primaryLabel, baseSub, items, savings, fees, total, hasSub: !!veh, totalLabel: em.label || 'Total' };
+    // explicit itemised extras (e.g. Delivery, Services) — pulled out of the fees residual
+    const extras = breakdownIds
+      .map((id) => ({ label: (ir.outputs.find((o) => o.id === id) || {}).label || id, amount: val(state, id) }))
+      .filter((x) => Math.round(x.amount) !== 0);
+    const extraSum = extras.reduce((s, x) => s + x.amount, 0);
+    const fees = veh ? total - val(state, veh.id) - extraSum : 0;
+    return { primaryLabel, baseSub, items, savings, extras, fees, total, hasSub: !!veh, totalLabel: em.label || 'Total' };
   }
 
   // normalise buildBreakdown() output into renderSummary's line shape
@@ -439,6 +447,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const lines = [{ label: b.primaryLabel + ' · Base specification', amount: b.baseSub, kind: 'base' }];
     for (const it of b.items) lines.push({ label: it.label, amount: it.amount, kind: it.amount < 0 ? 'save' : 'add' });
     for (const s of b.savings) lines.push({ label: s.label, amount: s.amount, kind: 'save' });
+    for (const x of (b.extras || [])) lines.push({ label: x.label, amount: x.amount, kind: x.amount < 0 ? 'save' : 'add' });
     if (b.hasSub && Math.round(b.fees) !== 0) lines.push({ label: b.totalLabel === 'Total' ? 'Fees' : 'Fees & taxes', amount: b.fees, kind: 'fee' });
     return lines;
   };

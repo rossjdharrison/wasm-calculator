@@ -30,6 +30,11 @@
     {
       "id": "s_finance",
       "label": "Payment",
+      "order": 6
+    },
+    {
+      "id": "s_fulfil",
+      "label": "Fulfilment",
       "order": 5
     }
   ],
@@ -400,6 +405,97 @@
           "lease"
         ]
       }
+    },
+    {
+      "id": "fulfilment",
+      "label": "How would you like it?",
+      "control": "buttons",
+      "section": "s_fulfil",
+      "options": [
+        {
+          "id": "collect",
+          "label": "Collect from Haarlem"
+        },
+        {
+          "id": "deliver",
+          "label": "Delivery"
+        }
+      ]
+    },
+    {
+      "id": "destination",
+      "label": "Destination",
+      "control": "dropdown",
+      "section": "s_fulfil",
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "fulfilment"
+            ]
+          },
+          "deliver"
+        ]
+      },
+      "options": [
+        {
+          "id": "nl",
+          "label": "Netherlands"
+        },
+        {
+          "id": "uk",
+          "label": "United Kingdom — Southampton"
+        },
+        {
+          "id": "usa",
+          "label": "United States — New York"
+        },
+        {
+          "id": "uae",
+          "label": "UAE — Jebel Ali"
+        },
+        {
+          "id": "ch",
+          "label": "Switzerland — via Genoa"
+        },
+        {
+          "id": "sg",
+          "label": "Singapore"
+        },
+        {
+          "id": "hk",
+          "label": "Hong Kong"
+        },
+        {
+          "id": "jp",
+          "label": "Japan — Yokohama"
+        }
+      ]
+    },
+    {
+      "id": "serviceAddons",
+      "label": "Services",
+      "control": "checkboxes",
+      "section": "s_fulfil",
+      "options": [
+        {
+          "id": "insurance",
+          "label": "Transit insurance",
+          "priceDelta": 1900
+        },
+        {
+          "id": "vipHandover",
+          "label": "VIP handover",
+          "priceDelta": 1200
+        },
+        {
+          "id": "securityDetail",
+          "label": "Security detail",
+          "priceDelta": 3500
+        }
+      ]
     }
   ],
   "outputs": [
@@ -419,10 +515,7 @@
         "type": "currency",
         "decimals": 2,
         "currencyCode": "EUR"
-      },
-      "emphasis": true,
-      "compare": "low",
-      "compareLabel": "From"
+      }
     },
     {
       "id": "monthlyPayment",
@@ -509,6 +602,62 @@
       "compare": "high",
       "compareLabel": "Range",
       "gaugeMax": 520
+    },
+    {
+      "id": "shippingCost",
+      "label": "Delivery",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "fulfilment"
+            ]
+          },
+          "deliver"
+        ]
+      },
+      "breakdown": true
+    },
+    {
+      "id": "addonsCost",
+      "label": "Services",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "visibleWhen": {
+        "op": "gt",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "addonsCost"
+            ]
+          },
+          0
+        ]
+      },
+      "breakdown": true
+    },
+    {
+      "id": "grandTotal",
+      "label": "Total",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "emphasis": true,
+      "compare": "low",
+      "compareLabel": "From"
     }
   ],
   "carryOverOnPrimaryChange": true

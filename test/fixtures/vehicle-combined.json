@@ -43,6 +43,11 @@
     {
       "id": "s_finance",
       "label": "Payment",
+      "order": 6
+    },
+    {
+      "id": "s_fulfil",
+      "label": "Fulfilment",
       "order": 5
     }
   ],
@@ -914,6 +919,102 @@
           "lease"
         ]
       }
+    },
+    {
+      "id": "fulfilment",
+      "type": "choice",
+      "default": "collect",
+      "options": [
+        {
+          "id": "collect",
+          "label": "Collect from Haarlem"
+        },
+        {
+          "id": "deliver",
+          "label": "Delivery"
+        }
+      ],
+      "label": "How would you like it?",
+      "control": "buttons",
+      "section": "s_fulfil"
+    },
+    {
+      "id": "destination",
+      "type": "choice",
+      "default": "nl",
+      "options": [
+        {
+          "id": "nl",
+          "label": "Netherlands"
+        },
+        {
+          "id": "uk",
+          "label": "United Kingdom — Southampton"
+        },
+        {
+          "id": "usa",
+          "label": "United States — New York"
+        },
+        {
+          "id": "uae",
+          "label": "UAE — Jebel Ali"
+        },
+        {
+          "id": "ch",
+          "label": "Switzerland — via Genoa"
+        },
+        {
+          "id": "sg",
+          "label": "Singapore"
+        },
+        {
+          "id": "hk",
+          "label": "Hong Kong"
+        },
+        {
+          "id": "jp",
+          "label": "Japan — Yokohama"
+        }
+      ],
+      "label": "Destination",
+      "control": "dropdown",
+      "section": "s_fulfil",
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "fulfilment"
+            ]
+          },
+          "deliver"
+        ]
+      }
+    },
+    {
+      "id": "serviceAddons",
+      "type": "multichoice",
+      "options": [
+        {
+          "id": "insurance",
+          "label": "Transit insurance",
+          "priceDelta": 1900
+        },
+        {
+          "id": "vipHandover",
+          "label": "VIP handover",
+          "priceDelta": 1200
+        },
+        {
+          "id": "securityDetail",
+          "label": "Security detail",
+          "priceDelta": 3500
+        }
+      ],
+      "label": "Services",
+      "control": "checkboxes",
+      "section": "s_fulfil"
     }
   ],
   "effects": [
@@ -1252,6 +1353,19 @@
         "sport": 0.96,
         "luxury": 1,
         "offRoad": 1.05
+      }
+    },
+    "shippingRates": {
+      "kind": "1d",
+      "map": {
+        "nl": 0,
+        "uk": 2200,
+        "usa": 3800,
+        "uae": 4200,
+        "ch": 1500,
+        "sg": 5200,
+        "hk": 5400,
+        "jp": 4900
       }
     }
   },
@@ -2097,6 +2211,133 @@
         ]
       },
       "label": "Weight"
+    },
+    {
+      "id": "shippingCost",
+      "formula": {
+        "op": "if",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "fulfilment"
+                ]
+              },
+              "collect"
+            ]
+          },
+          0,
+          {
+            "op": "lookup",
+            "args": [
+              "shippingRates",
+              {
+                "op": "field",
+                "args": [
+                  "destination"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "addonsCost",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "insurance"
+                ]
+              },
+              1900,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "vipHandover"
+                ]
+              },
+              1200,
+              0
+            ]
+          },
+          {
+            "op": "if",
+            "args": [
+              {
+                "op": "has",
+                "args": [
+                  "serviceAddons",
+                  "securityDetail"
+                ]
+              },
+              3500,
+              0
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "fulfilmentTotal",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "shippingCost"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "addonsCost"
+            ]
+          }
+        ]
+      },
+      "currency": true
+    },
+    {
+      "id": "grandTotal",
+      "formula": {
+        "op": "add",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "otr"
+            ]
+          },
+          {
+            "op": "field",
+            "args": [
+              "fulfilmentTotal"
+            ]
+          }
+        ]
+      },
+      "currency": true
     }
   ],
   "validations": [
@@ -2329,10 +2570,7 @@
         "type": "currency",
         "decimals": 2,
         "currencyCode": "EUR"
-      },
-      "emphasis": true,
-      "compare": "low",
-      "compareLabel": "From"
+      }
     },
     {
       "id": "monthlyPayment",
@@ -2419,6 +2657,62 @@
       "compare": "high",
       "compareLabel": "Range",
       "gaugeMax": 520
+    },
+    {
+      "id": "shippingCost",
+      "label": "Delivery",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "visibleWhen": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "fulfilment"
+            ]
+          },
+          "deliver"
+        ]
+      },
+      "breakdown": true
+    },
+    {
+      "id": "addonsCost",
+      "label": "Services",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "visibleWhen": {
+        "op": "gt",
+        "args": [
+          {
+            "op": "field",
+            "args": [
+              "addonsCost"
+            ]
+          },
+          0
+        ]
+      },
+      "breakdown": true
+    },
+    {
+      "id": "grandTotal",
+      "label": "Total",
+      "format": {
+        "type": "currency",
+        "decimals": 2,
+        "currencyCode": "EUR"
+      },
+      "emphasis": true,
+      "compare": "low",
+      "compareLabel": "From"
     }
   ]
 }
