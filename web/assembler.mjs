@@ -737,5 +737,32 @@ export async function loadEngine(source, assembled) {
     return { valueById, outputs, optionState, visible, enabled, limits, messages, forced, status };
   }
 
-  return { evaluate, exports, modelBase, ioBase };
+  // reversed slot namespace, for turning the engine's numeric graph back into ids
+  const idOfSlot = [];
+  for (const [id, slot] of ir.slotOf) idOfSlot[slot] = id;
+
+  // The value-dependency graph, straight from the engine (the authority). Returns
+  // deduped [{from, to}] id edges (from = dependency, to = dependent). scope 0 =
+  // computed owners only; scope 1 (default) = all value roots. Re-grabs views
+  // after the call (graph() may grow memory). null if the wasm lacks the export.
+  function graph(scope = 1) {
+    if (typeof exports.graph !== 'function') return null;
+    const ptr = exports.graph(scope | 0); refresh();
+    const w = ptr >> 2;
+    const count = I32[w];
+    const seen = new Set(); const edges = [];
+    for (let k = 0; k < count; k++) {
+      const dep = I32[w + 1 + k * 2], owner = I32[w + 2 + k * 2];
+      if (dep === owner) continue;
+      const from = idOfSlot[dep], to = idOfSlot[owner];
+      if (from === undefined || to === undefined) continue;
+      const key = from + ' ' + to;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ from, to });
+    }
+    return edges;
+  }
+
+  return { evaluate, graph, exports, modelBase, ioBase };
 }

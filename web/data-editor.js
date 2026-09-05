@@ -19,6 +19,7 @@ const WASM_URL = 'quote.wasm';
 
 let data = null, pres = null, wasmBytes = null, schema = null, editor = null, assembledOk = null, presDirty = false;
 let lastCov = null;   // most recent coverage result, reused by the graph overlay
+let lastEngine = null; // most recent loaded engine, for its authoritative graph()
 
 boot();
 async function boot() {
@@ -182,9 +183,10 @@ function recompute() {
   assembleLive(data, pres, wasmBytes)
     .then(({ assembled, engine }) => {
       const res = engine.evaluate(buildDefaults(assembled.ir));
-      assembledOk = assembled;
+      assembledOk = assembled; lastEngine = engine;
       setStatus('ok', `Valid — ${assembled.ir.fields.length} fields, ${assembled.ir.computedIR.length} computed, ${assembled.ir.outputs.length} outputs.`);
       renderStaticPreview($('preview'), assembled.ir, res);
+      if (!$('graph').hidden) renderGraph();   // repaint with the engine's authoritative edges
     })
     .catch((e) => {
       assembledOk = null;
@@ -221,7 +223,10 @@ function renderGraph() {
   const host = $('graph'); host.innerHTML = '';
   const nodes = [...(data.fields || []).map((f) => ({ id: f.id, kind: 'field' })), ...(data.computed || []).map((c) => ({ id: c.id, kind: 'computed' }))];
   const ids = new Set(nodes.map((n) => n.id));
-  const edges = edgesOf(data).filter((e) => ids.has(e.from) && ids.has(e.to));
+  // edges from the engine's own reflection (the authority); fall back to the JS
+  // derivation only if the engine or its graph() export isn't available.
+  const rawEdges = (lastEngine && lastEngine.graph && lastEngine.graph(1)) || edgesOf(data);
+  const edges = rawEdges.filter((e) => ids.has(e.from) && ids.has(e.to));
   const layer = new Map(nodes.map((n) => [n.id, 0]));
   for (let pass = 0, changed = true; changed && pass < 200; pass++) {
     changed = false;

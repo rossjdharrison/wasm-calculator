@@ -287,3 +287,60 @@ export function evaluate(): i32 {
   store<i32>(statusP, gStatus);
   return gStatus;
 }
+
+// ---- reflection: the value-dependency graph over the loaded image -----------
+// graph(scope) returns a pointer to [edgeCount:i32, (depSlot,ownerSlot):i32...].
+// An edge dep->owner means "owner's calculation reads dep". scope 0 = computed
+// owners only; scope != 0 = all value roots (fields' vis/enable/min/max/step/
+// computed-value + option availability, effects, validations, outputs). The
+// engine is the authority: this walks the SAME nodes evaluate() runs. Numbers
+// only — JS maps slots back to ids. Duplicates/self-edges are left for JS to
+// clean. alloc() may grow memory, so the caller must re-grab its views after.
+function collectEdges(i: i32, owner: i32, edges: usize, ec: i32, maxEdges: i32): i32 {
+  if (i < 0 || ec >= maxEdges) return ec;
+  if (nOp(i) == LOAD) {
+    store<i32>(edges + <usize>ec * 8, nAux(i));       // dep slot
+    store<i32>(edges + <usize>ec * 8 + 4, owner);     // owner slot
+    return ec + 1;
+  }
+  for (let c = 0; c < 3; c++) ec = collectEdges(nK(i, c), owner, edges, ec, maxEdges);
+  return ec;
+}
+
+export function graph(scope: i32): usize {
+  let maxEdges = nodeCount;                            // <= one edge per LOAD node
+  let base = alloc(<usize>(1 + maxEdges * 2) * 4);
+  let edges = base + 4;
+  let ec = 0;
+  for (let c = 0; c < computedCount; c++) {            // computed owners
+    let cb = computedP + <usize>c * 8;
+    ec = collectEdges(load<i32>(cb + 4), load<i32>(cb), edges, ec, maxEdges);
+  }
+  if (scope != 0) {
+    for (let f = 0; f < fieldCount; f++) {             // field structural roots + options
+      let fb = fieldsP + <usize>f * 44;
+      let slot = fI(fb, 1);
+      for (let k = 2; k <= 7; k++) ec = collectEdges(fI(fb, k), slot, edges, ec, maxEdges);
+      let optStart = fI(fb, 8); let optCount = fI(fb, 9);
+      for (let j = 0; j < optCount; j++) {
+        let an = load<i32>(optionsP + <usize>(optStart + j) * 8 + 4);
+        ec = collectEdges(an, slot, edges, ec, maxEdges);
+      }
+    }
+    for (let e = 0; e < effectCount; e++) {             // effects: owner = target
+      let eb = effectsP + <usize>e * 16; let tgt = load<i32>(eb + 4);
+      ec = collectEdges(load<i32>(eb), tgt, edges, ec, maxEdges);
+      ec = collectEdges(load<i32>(eb + 8), tgt, edges, ec, maxEdges);
+    }
+    for (let v = 0; v < validationCount; v++) {         // validations: owner = target (if any)
+      let vb = validationsP + <usize>v * 16; let tgt = load<i32>(vb + 12);
+      if (tgt >= 0) ec = collectEdges(load<i32>(vb), tgt, edges, ec, maxEdges);
+    }
+    for (let o = 0; o < outputCount; o++) {             // outputs: owner = the output's slot
+      let ob = outputsP + <usize>o * 8;
+      ec = collectEdges(load<i32>(ob + 4), load<i32>(ob), edges, ec, maxEdges);
+    }
+  }
+  store<i32>(base, ec);
+  return base;
+}
