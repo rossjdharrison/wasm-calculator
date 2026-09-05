@@ -458,7 +458,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       totalLabel: b.totalLabel, total: b.total, currency: cur(), onClose: closeBreakdown,
       cta: { label: 'Add to basket ▸', onClick: (btn) => {
         const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
-        basketAdd({ modelId, collection: brand.descriptor || (brand.rest || ''), title: b.primaryLabel, total: b.total, currency: cur(), image: opt.image || null });
+        basketAdd({ modelId, collection: brand.descriptor || (brand.rest || ''), title: b.primaryLabel, total: b.total, currency: cur(), image: opt.image || null, config: { ...state } });
         btn.disabled = true; btn.textContent = 'Added to basket ✓'; setTimeout(closeBreakdown, 1100);
       } },
     });

@@ -5,7 +5,7 @@
 // (Browser-local for now; a server-side basket would follow the KV/R2 path later.)
 // Data + a self-contained view (openBasketModal) built on the ui.mjs primitives.
 // =============================================================================
-import { el, openModal, money, placeholderSVG } from './ui.mjs';
+import { el, openModal, money, placeholderSVG, configKey } from './ui.mjs';
 
 const KEY = 'qc:basket:v1';
 const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { return []; } };
@@ -14,18 +14,29 @@ const notify = () => { const items = read(); for (const fn of subs) { try { fn(i
 const write = (items) => { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (_) { /* storage blocked */ } notify(); };
 
 export const list = () => read();
-export const count = () => read().length;
-export const total = () => read().reduce((s, it) => s + (Number(it.total) || 0), 0);
+const qtyOf = (it) => Math.max(1, Number(it.qty) || 1);
+export const count = () => read().reduce((s, it) => s + qtyOf(it), 0);         // total items (sum of quantities)
+export const total = () => read().reduce((s, it) => s + (Number(it.total) || 0) * qtyOf(it), 0);
 // subscribe to changes (this tab's writes + other tabs via the storage event)
 export const onChange = (fn) => { subs.add(fn); return () => subs.delete(fn); };
 if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key === KEY) notify(); });
 
+// add a configured build; an identical one (same model + config) increments its
+// quantity rather than adding a duplicate line.
 export function add(item) {
   const items = read();
+  const key = item.key || (item.modelId + '|' + configKey(item.config || {}));
+  const existing = items.find((it) => it.key === key);
+  if (existing) { existing.qty = qtyOf(existing) + (Number(item.qty) || 1); write(items); return existing.id; }
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  items.push({ id, at: Date.now(), ...item });   // item: {modelId, collection, title, total, currency, image}
+  items.push({ id, at: Date.now(), qty: Number(item.qty) || 1, ...item, key });
   write(items);
   return id;
+}
+export function setQty(id, qty) {
+  const items = read(); const it = items.find((x) => x.id === id); if (!it) return;
+  if (qty <= 0) { write(items.filter((x) => x.id !== id)); return; }
+  it.qty = qty; write(items);
 }
 export function remove(id) { write(read().filter((it) => it.id !== id)); }
 export function clear() { write([]); }
@@ -33,7 +44,7 @@ export function clear() { write([]); }
 // group the grand total by currency (collections could differ; today all GBP)
 const totalsByCurrency = (items) => {
   const by = {};
-  for (const it of items) { const c = it.currency || 'GBP'; by[c] = (by[c] || 0) + (Number(it.total) || 0); }
+  for (const it of items) { const c = it.currency || 'GBP'; by[c] = (by[c] || 0) + (Number(it.total) || 0) * qtyOf(it); }
   return by;
 };
 
@@ -55,14 +66,20 @@ export function openBasketModal(root, { resolveImage = async () => null, inert }
 
     const listEl = el('div', 'bk-list');
     for (const it of items) {
+      const q = qtyOf(it), cur = it.currency || 'GBP';
       const rowEl = el('div', 'bk-item');
       const media = el('div', 'bk-thumb', { html: placeholderSVG(it.title) });
       const info = el('div', 'bk-info', {
-        html: `<div class="bk-item-title">${it.title}</div><div class="bk-item-sub">${it.collection || ''}</div>`,
+        html: `<div class="bk-item-title">${it.title}</div><div class="bk-item-sub">${it.collection || ''} · <span class="num">${money(it.total, cur)}</span> each</div>`,
       });
-      const price = el('div', 'bk-item-price num', { text: money(it.total, it.currency || 'GBP') });
+      const stepper = el('div', 'bk-qty', { role: 'group', 'aria-label': `Quantity for ${it.title}` });
+      const minus = el('button', 'bk-qbtn', { type: 'button', text: '−', 'aria-label': `Decrease quantity of ${it.title}`, on: { click: () => { setQty(it.id, q - 1); render(); } } });
+      const qn = el('span', 'bk-qn num', { text: String(q), 'aria-live': 'polite' });
+      const plus = el('button', 'bk-qbtn', { type: 'button', text: '+', 'aria-label': `Increase quantity of ${it.title}`, on: { click: () => { setQty(it.id, q + 1); render(); } } });
+      stepper.append(minus, qn, plus);
+      const price = el('div', 'bk-item-price num', { text: money((Number(it.total) || 0) * q, cur) });
       const rm = el('button', 'bk-rm', { type: 'button', text: '✕', 'aria-label': `Remove ${it.title}`, on: { click: () => { remove(it.id); render(); } } });
-      rowEl.append(media, info, price, rm);
+      rowEl.append(media, info, stepper, price, rm);
       listEl.appendChild(rowEl);
       if (it.image) resolveImage(it.image).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = ''; media.appendChild(im); }; im.className = ''; im.src = u; im.alt = ''; }).catch(() => {});
     }
@@ -75,7 +92,8 @@ export function openBasketModal(root, { resolveImage = async () => null, inert }
       ? `<span>Total</span><span class="num">${money(by[cur[0]], cur[0])}</span>`
       : `<span>Total</span><span class="num">${cur.map((c) => money(by[c], c)).join(' + ')}</span>`;
     foot.appendChild(el('div', 'bk-total', { html: grand }));
-    const cta = el('button', 'bd-cta', { type: 'button', text: `Request all ${items.length} ${items.length === 1 ? 'item' : 'items'} ▸` });
+    const nItems = items.reduce((s, it) => s + qtyOf(it), 0);
+    const cta = el('button', 'bd-cta', { type: 'button', text: `Request all ${nItems} ${nItems === 1 ? 'item' : 'items'} ▸` });
     cta.addEventListener('click', () => { cta.disabled = true; cta.textContent = 'Enquiry submitted ✓'; clear(); setTimeout(() => m.close(), 1500); });
     foot.appendChild(cta);
     m.modal.appendChild(foot);

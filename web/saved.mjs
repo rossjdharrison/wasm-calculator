@@ -72,7 +72,7 @@ export function openSavedModal(root, { resolveImage = async () => null, inert } 
       info.append(name, el('div', 'sv-sub', { html: `${it.collection || ''} · <span class="num">${money(it.total, it.currency || 'GBP')}</span>` }));
       const addB = el('button', 'sv-add', { type: 'button', title: 'Add to basket', 'aria-label': `Add ${it.name} to basket`, html: BAG_ICON });
       addB.addEventListener('click', () => {
-        basketAdd({ modelId: it.modelId, collection: it.collection, title: it.title, total: it.total, currency: it.currency, image: it.image });
+        basketAdd({ modelId: it.modelId, collection: it.collection, title: it.title, total: it.total, currency: it.currency, image: it.image, config: it.config });
         addB.classList.add('is-added'); addB.innerHTML = CHECK_ICON;
         setTimeout(() => { addB.classList.remove('is-added'); addB.innerHTML = BAG_ICON; }, 1100);
       });
