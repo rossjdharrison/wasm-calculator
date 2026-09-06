@@ -454,6 +454,7 @@
   .lp-section-h { display: flex; align-items: center; gap: 10px; padding: 0 24px; margin: 8px auto 14px; max-width: var(--lp-maxw); }
   .lp-section-g { font-size: 18px; color: var(--accent); }
   .lp-section-t { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-soft); margin: 0; }
+  .lp-section-note { max-width: var(--lp-maxw); margin: -2px auto 12px; width: 100%; padding: 0 24px; font-size: 12.5px; color: var(--text-soft); line-height: 1.5; }
   .lp-section .lp-grid { padding-bottom: 3vh; }
   .hd-studio { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; text-decoration: none; }
   .hd-studio:hover { border-color: var(--accent); color: var(--accent); }
