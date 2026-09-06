@@ -14,6 +14,18 @@
       "descriptor": "Art & Antiques",
       "blurb": "Fine art and rare objects, with provenance and white-glove care.",
       "hero": "antiques/ming-vase.png"
+    },
+    {
+      "id": "solar-array",
+      "title": "Solar array",
+      "descriptor": "Solar",
+      "blurb": "Size a rooftop solar array — its output is energy (annual kWh), not a price."
+    },
+    {
+      "id": "solar-battery",
+      "title": "Battery storage",
+      "descriptor": "Storage",
+      "blurb": "Home battery storage to pair with a solar array."
     }
   ]
 }

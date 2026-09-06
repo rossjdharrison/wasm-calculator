@@ -1,0 +1,30 @@
+{
+  "$schema": "../../data.schema.json",
+  "id": "solar-array-configurator",
+  "version": "1.0.0",
+  "currency": "EUR",
+  "configures": "SolarArrayClass",
+  "types": {
+    "SolarArrayClass": { "specializes": ["class_of_physical_object"] },
+    "SystemSize": { "specializes": ["physical_quantity"] },
+    "AnnualGeneration": { "specializes": ["physical_quantity"] },
+    "InstallCost": { "specializes": ["amount_of_money"] }
+  },
+  "fields": [
+    { "id": "roofArea", "type": "number", "default": 30, "min": 6, "max": 200, "step": 1 },
+    { "id": "panelType", "type": "choice", "default": "standard", "options": [{ "id": "standard" }, { "id": "premium" }, { "id": "allBlack" }] },
+    { "id": "orientation", "type": "choice", "default": "south", "options": [{ "id": "south" }, { "id": "eastWest" }, { "id": "flat" }] }
+  ],
+  "tables": {
+    "panelWatts": { "kind": "1d", "map": { "standard": 400, "premium": 440, "allBlack": 415 } },
+    "panelCost": { "kind": "1d", "map": { "standard": 190, "premium": 260, "allBlack": 230 } },
+    "orientationPct": { "kind": "1d", "map": { "south": 100, "eastWest": 85, "flat": 90 } }
+  },
+  "computed": [
+    { "id": "panels", "label": "Panels", "formula": { "op": "div", "args": [{ "op": "field", "args": ["roofArea"] }, 1.7] } },
+    { "id": "systemKwp", "label": "System size", "category": "SystemSize", "formula": { "op": "div", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["panels"] }, { "op": "lookup", "args": ["panelWatts", { "op": "field", "args": ["panelType"] }] }] }, 1000] } },
+    { "id": "annualKwh", "label": "Annual generation", "category": "AnnualGeneration", "formula": { "op": "div", "args": [{ "op": "mul", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["systemKwp"] }, 950] }, { "op": "lookup", "args": ["orientationPct", { "op": "field", "args": ["orientation"] }] }] }, 100] } },
+    { "id": "co2Avoided", "label": "CO2 avoided", "category": "AnnualGeneration", "formula": { "op": "div", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["annualKwh"] }, 4] }, 10] } },
+    { "id": "systemCost", "label": "System cost", "category": "InstallCost", "formula": { "op": "add", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["panels"] }, { "op": "lookup", "args": ["panelCost", { "op": "field", "args": ["panelType"] }] }] }, 1800] } }
+  ]
+}

@@ -6,7 +6,7 @@
 // journeys are reachable, and the Journey Studio is linked. Swap domain.json (+ its
 // model dirs) and this becomes an admissions / case-file portal with no code change.
 // =============================================================================
-import { loadDomain, loadCatalogue, mergedModelCatalog, mergedJourneyCatalog, getLocalModelCatalog, saveDataFor, savePresFor, saveLocalModelEntry, loadModelFiles, CAT_ID } from './store.mjs';
+import { loadDomain, loadCatalogue, mergedModelCatalog, mergedJourneyCatalog, getLocalModelCatalog, saveDataFor, savePresFor, saveLocalModelEntry, loadModelFiles, loadJourney, CAT_ID } from './store.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 import { el, placeholderSVG, ICONS } from './ui.mjs';
 import { modelsUnder, childrenOf, glyphOf, pathTo, nodeOf } from './catalogue.mjs';
@@ -277,11 +277,13 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     return cw;
   };
   // a section header; when the sub-tree has real depth, its title links deeper (?c=).
-  const sectionOf = (title, glyph, browseHref) => {
+  // An optional descriptor line teaches what this KIND is (configurator vs journey).
+  const sectionOf = (title, glyph, browseHref, descriptor) => {
     const s = el('section', 'lp-section');
     const h = el('div', 'lp-section-h', { html: `${glyph ? `<span class="lp-section-g">${glyph}</span>` : ''}<h2 class="lp-section-t">${title}</h2>` });
     if (browseHref) h.appendChild(el('a', 'lp-browse', { href: browseHref, html: `Browse all <span aria-hidden="true">→</span>` }));
     s.appendChild(h);
+    if (descriptor) s.appendChild(el('p', 'lp-section-note', { text: descriptor }));
     const g = el('div', 'lp-grid'); s.appendChild(g);
     return { section: s, grid: g };
   };
@@ -310,6 +312,19 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
       const grid = el('div', 'lp-grid');
       for (const m of catModels) if (matchText(m, q)) grid.appendChild(modelCard({ model: m.id, title: m.title }));
       catHost.appendChild(grid.childElementCount ? grid : emptyState(q));
+      return;
+    }
+    // BUILDER control panel: one flat, PACKED grid of the whole fleet (a chip narrows to a
+    // category subtree; search filters) so many machines use the space well, rather than a
+    // stack of single-card category sections. The buyer storefront keeps its collections.
+    if (controlPanel) {
+      const { section, grid } = sectionOf(L('machinesTitle', 'Quote machines'), '◈', null, L('machineDescriptor', ''));
+      let n = 0;
+      for (const r of modelsUnder(reg, chip || here)) {
+        if (!matchText(modelById[r.model] || { id: r.model, title: r.title }, q)) continue;
+        grid.appendChild(modelCard(r)); n++;
+      }
+      catHost.appendChild(n ? section : emptyState(q));
       return;
     }
     const sections = childrenOf(reg, here).filter((secId) => !chip || secId === chip);   // a chip narrows to one group
@@ -373,10 +388,16 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     try {
       const journeys = journeysAll;   // fetched once up front (also feeds the fleet roster)
       if (journeys.length) {
-        const { section, grid } = sectionOf(L('journeysTitle', 'Journeys'), '⇄');
+        const { section, grid } = sectionOf(L('journeysTitle', 'Journeys'), '⇄', null, L('journeyDescriptor', ''));
         for (const j of journeys) {
           const a = el('a', 'lp-card lp-card--journey'); a.href = `configure.html?j=${encodeURIComponent(j.id)}`;
           a.appendChild(el('div', 'lp-cardbody', { html: `<div class="lp-cardtitle">${j.title || j.id}</div><div class="lp-blurb">${j.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Begin')} <span aria-hidden="true">→</span></div>` }));
+          // the telltale that a journey is a COMPOSITE: how many machines it threads + its phases.
+          const jbody = a.querySelector('.lp-cardbody');
+          if (controlPanel && jbody) {
+            const vit = el('div', 'lp-vitals'); jbody.insertBefore(vit, jbody.querySelector('.lp-enter'));
+            loadJourney(j.id).then((doc) => { if (!doc) return; const nm = (doc.models || []).length, np = (doc.phases || []).length; vit.textContent = `${L('threadsLabel', 'threads')} ${nm} ${L('machinesUnit', 'machines')} · ${np} ${L('phasesUnit', 'phases')}`; }).catch(() => {});
+          }
           if (!features.studio) { grid.appendChild(a); continue; }
           // a journey is a composed machine — the card runs it; the bar opens its canvases.
           const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);

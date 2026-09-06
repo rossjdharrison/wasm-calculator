@@ -117,13 +117,23 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // for choosing it, versus the price you're on now — derived by re-evaluating the
   // model, never a hand-authored number that can drift from the pricing tables.
   const emId = emOutput() ? emOutput().id : null;
+  // the emphasis output's OWN presentation format — so a non-money headline (e.g. energy in
+  // kWh) formats as its unit, not forced to currency. Money outputs stay byte-identical (money0).
+  const emFmt = () => ((model.outputs || []).find((o) => o.id === emId) || {}).format || {};
+  const emFmtVal = (v) => {
+    const f = emFmt();
+    if (!f.type || f.type === 'currency') return money0(v);
+    const d = f.decimals ?? 0;
+    const n = Number(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    return f.type === 'percent' ? `${n}%` : (f.unit ? `${n} ${f.unit}` : n);
+  };
   const emOutIdx = Math.max(0, ir.outputs.findIndex((o) => emphasis.has(o.id)));
   const priceIf = (overrides) => {
     const ei = {}; for (const f of ir.fields) { const v = (overrides && f.id in overrides) ? overrides[f.id] : state[f.id]; ei[f.id] = f.type === 'number' ? (v ?? 0) : v; }
     const r = engine.evaluate(ei); const o = r.outputs[emOutIdx];
     return o ? o.value : null;
   };
-  const signed = (d) => ({ text: (d > 0 ? '+' : '−') + money0(Math.abs(d)), cls: d > 0 ? 'up' : 'down' });
+  const signed = (d) => ({ text: (d > 0 ? '+' : '−') + emFmtVal(Math.abs(d)), cls: d > 0 ? 'up' : 'down' });
   // delta of switching a single-choice field to optId; null for the current option,
   // for unavailable options, and for a zero change.
   const relDelta = (fieldId, optId, cur, av) => {
@@ -206,7 +216,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // is face-up & centred, neighbours fan away in 3D, and it loops when >=7 items.
   const primaryField = modelFieldById[primary.id];
   const deckCard = (o) => `<div class="dc-img">${carVisual(o.id)}</div>`
-    + `<div class="dc-cap"><div class="dc-name">${o.label || o.id}</div><div class="dc-from">from <b>${money0(fromPrice(o.id))}</b></div></div>`;
+    + `<div class="dc-cap"><div class="dc-name">${o.label || o.id}</div><div class="dc-from">from <b>${emFmtVal(fromPrice(o.id))}</b></div></div>`;
   const refreshDeckCard = (o, card) => { if (imgUrl[o.id] && !card.querySelector('img')) { const dci = card.querySelector('.dc-img'); if (dci) dci.innerHTML = `<img class="carimg" src="${imgUrl[o.id]}" alt="">`; } };
   const carousel = mountCarousel(dock, {
     items: primaryOpts(), getCurrent: () => state[primary.id], onSelect: (id) => setField(primary.id, id),

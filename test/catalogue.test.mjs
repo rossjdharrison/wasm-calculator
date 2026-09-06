@@ -46,8 +46,8 @@ test('isA is a catalogue lookup: transitive up the derived nodes INTO the frozen
 });
 
 test('childrenOf(root) are the leaf classes; modelsUnder surfaces the configurators', () => {
-  assert.deepEqual(childrenOf(reg, reg.root).sort(), ['ArtworkClass', 'VehicleClass']);
-  assert.deepEqual(modelsUnder(reg, reg.root).map((r) => r.model).sort(), ['antiques', 'vehicles']);
+  assert.deepEqual(childrenOf(reg, reg.root).sort(), ['ArtworkClass', 'BatteryClass', 'SolarArrayClass', 'VehicleClass']);
+  assert.deepEqual(modelsUnder(reg, reg.root).map((r) => r.model).sort(), ['antiques', 'solar-array', 'solar-battery', 'vehicles']);
   assert.deepEqual(modelsUnder(reg, 'VehicleClass').map((r) => r.model), ['vehicles']);
 });
 
