@@ -26,9 +26,25 @@
     "loomLabel": "Loom",
     "forkLabel": "Fork",
     "canvasLabel": "Canvas",
-    "composeLabel": "Compose"
+    "composeLabel": "Compose",
+    "builderEyebrow": "Quote-machine control panel",
+    "builderHeroTitle": "A quote machine for every business line.",
+    "builderHeroLede": "Each card is a live configurator you own — open it, shape it on the canvases, publish it to the edge. Stand up a new one in minutes, no code.",
+    "machineNoun": "quote machine",
+    "machinePlural": "quote machines",
+    "journeyNoun": "journey",
+    "journeyPlural": "journeys",
+    "fieldsUnit": "fields",
+    "computedUnit": "computed",
+    "emptyCreateTitle": "Create your first quote machine",
+    "emptyCreateNote": "Pick what it is, name it, and start shaping it — no code."
   },
-  "features": { "basket": true, "saved": true, "studio": true, "journeys": true },
+  "features": { "basket": true, "saved": true, "studio": true, "journeys": true, "controlPanel": true },
+  "howItWorks": [
+    { "glyph": "◈", "title": "Author the model", "note": "Say what it is and what it holds — inputs, options, prices." },
+    { "glyph": "✎", "title": "Shape it on the canvases", "note": "Data, presentation, and the live Loom — see it update as you edit." },
+    { "glyph": "⇪", "title": "Publish to the edge", "note": "One click ships it worldwide — served from the edge, no redeploy." }
+  ],
   "phases": [
     { "id": "configure", "label": "Configure", "order": 1, "tint": "#7f9bb0" },
     { "id": "agree_sign", "label": "Agree & Sign", "order": 2, "tint": "#d8a24a" },
