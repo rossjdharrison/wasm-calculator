@@ -4,8 +4,10 @@
 // end-to-end and lets KV edits override the shipped docs without a redeploy.
 //
 //   node scripts/seed-kv.mjs
-//   wrangler kv bulk put kv-seed.json --binding DOCS            # remote (needs the namespace)
-//   wrangler kv bulk put kv-seed.json --binding DOCS --local    # local `pages dev` store
+//   wrangler kv bulk put kv-seed.json --binding DOCS --remote   # PRODUCTION namespace (what the deployed site reads)
+//   wrangler kv bulk put kv-seed.json --binding DOCS            # LOCAL store (default) — for `wrangler pages dev`
+// NB (wrangler 4.x) `kv bulk put` defaults to LOCAL; add --remote to seed the deployed namespace.
+// The DOCS binding must appear ONCE in wrangler.jsonc (duplicate bindings are rejected).
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
