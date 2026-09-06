@@ -79,7 +79,7 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
       if (!t) { err.className = 'vmsg bad'; err.textContent = 'A name is required.'; return; }
       const existingIds = new Set([...(existing || []).map((m) => m.id), ...getLocalModelCatalog().models.map((m) => m.id)]);
       const id = uniqueModelId(t, existingIds);
-      saveDataFor(id, newModelData(id, {}));
+      saveDataFor(id, newModelData(id, { title: t }));   // born typed: a unique own leaf under the default category
       savePresFor(id, newModelPres(id, { title: t }));
       saveLocalModelEntry({ id, title: t, blurb: '', hero: '' });
       location.href = `data-editor.html?m=${encodeURIComponent(id)}`;
@@ -108,6 +108,24 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     wrap.append(hd, bc, hero);
   } else { wrap.append(hd, hero); }
 
+  // a plain-language, GENERIC label for a taxonomy node (no domain/ontology words in
+  // code): a domain-authored node title if present, else the id de-slugged.
+  const humanize = (id) => String(id || '').replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  const nodeLabel = (id) => (nodeOf(reg, id) || {}).title || humanize(id);
+  // a card's TYPE badge: the neutral glyph (climbed to a render hint) + the category the
+  // model sits under (its leaf's parent), with the full ancestry as a tooltip. Makes
+  // "what is this?" visible at browse time — the catalogue already derives it.
+  const typeBadge = (leafId) => {
+    if (!reg || !leafId || !nodeOf(reg, leafId)) return null;
+    const crumbs = pathTo(reg, leafId);                             // [...registry-node ancestors, leaf]
+    // show the nearest NAMED category (a real intermediate node) if one exists, else the
+    // model's own class — the author's word for what it is, never the raw ontology id.
+    const catId = crumbs.length >= 2 ? crumbs[crumbs.length - 2] : leafId;
+    const b = el('span', 'lp-typebadge', { title: crumbs.map(nodeLabel).join(' › ') });
+    b.innerHTML = `<span class="lp-typebadge-g" aria-hidden="true">${glyphOf(reg, leafId) || '◈'}</span><span>${nodeLabel(catId)}</span>`;
+    return b;
+  };
+
   // ---- a card for a leaf model (hero image resolves async → neutral placeholder) ----
   const modelCard = (row) => {
     const m = modelById[row.model] || { id: row.model, title: row.title };
@@ -115,6 +133,8 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     const media = el('div', 'lp-media'); media.innerHTML = placeholderSVG(m.title || m.id);
     const body = el('div', 'lp-cardbody');
     body.innerHTML = `<div class="lp-cardtitle">${m.title || m.id}</div><div class="lp-blurb">${m.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Enter')} <span aria-hidden="true">→</span></div>`;
+    const badge = typeBadge(row.id);   // row.id = the leaf class id (registry path); absent in the degraded flat grid
+    if (badge) body.insertBefore(badge, body.firstChild);
     a.append(media, body);
     if (m.hero) resolveImage(m.hero).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = `<img src="${u}" alt="">`; }; im.src = u; }).catch(() => {});
     return a;
@@ -129,32 +149,78 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     return { section: s, grid: g };
   };
 
-  // ---- registry-driven catalogue: grouped one-click sections, drillable to any depth ----
-  if (reg) {
-    const sections = childrenOf(reg, here);           // each direct child of `here` = one group
+  // ---- registry-driven catalogue: grouped sections, filterable by search + type ----
+  // Rendered into its own host so the toolbar below can re-run it live. The grouping
+  // logic is unchanged from the shipped landing; it just runs through a filter.
+  const catHost = el('div', 'lp-cat');
+  const filterState = { q: '', chip: null };
+  const matchText = (m, q) => !q || `${m.title || ''} ${m.blurb || ''} ${m.id || ''}`.toLowerCase().includes(q.toLowerCase());
+
+  function renderCatalogue() {
+    catHost.innerHTML = '';
+    const { q, chip } = filterState;
+    if (!reg) {
+      // no registry → degrade to a flat grid of every catalogued model (nothing lost)
+      const grid = el('div', 'lp-grid');
+      for (const m of catModels) if (matchText(m, q)) grid.appendChild(modelCard({ model: m.id, title: m.title }));
+      catHost.appendChild(grid.childElementCount ? grid : el('p', 'lp-empty', { text: q ? `No configurators match “${q}”.` : 'No configurators yet.' }));
+      return;
+    }
+    const sections = childrenOf(reg, here).filter((secId) => !chip || secId === chip);   // a chip narrows to one group
     const placed = new Set();
+    let shown = 0;
     if (sections.length) {
       for (const secId of sections) {
-        const models = modelsUnder(reg, secId).filter((r) => !placed.has(r.model));   // leaves, flattened
+        const models = modelsUnder(reg, secId)
+          .filter((r) => !placed.has(r.model))
+          .filter((r) => matchText(modelById[r.model] || { id: r.model, title: r.title }, q));
         if (!models.length) continue;
-        // offer a drill link only where the group actually has intermediate sub-catalogues
+        // offer a drill link only where the group actually has intermediate sub-catalogues (and not while filtering to a chip)
         const hasDepth = childrenOf(reg, secId).some((k) => !((nodeOf(reg, k) || {}).model) && childrenOf(reg, k).length);
-        const { section, grid } = sectionOf((nodeOf(reg, secId) || {}).title || secId, glyphOf(reg, secId), hasDepth ? `index.html?c=${encodeURIComponent(secId)}` : null);
-        for (const r of models) { placed.add(r.model); grid.appendChild(modelCard(r)); }
-        wrap.appendChild(section);
+        const { section, grid } = sectionOf(nodeLabel(secId), glyphOf(reg, secId), (!chip && hasDepth) ? `index.html?c=${encodeURIComponent(secId)}` : null);
+        for (const r of models) { placed.add(r.model); grid.appendChild(modelCard(r)); shown++; }
+        catHost.appendChild(section);
       }
     } else {
       // `here` is itself a leaf-bearing catalogue → one flat grid of its models
       const grid = el('div', 'lp-grid');
-      for (const r of modelsUnder(reg, here)) grid.appendChild(modelCard(r));
-      wrap.appendChild(grid);
+      for (const r of modelsUnder(reg, here)) {
+        if (!matchText(modelById[r.model] || { id: r.model, title: r.title }, q)) continue;
+        grid.appendChild(modelCard(r)); shown++;
+      }
+      catHost.appendChild(grid);
     }
-  } else {
-    // no registry → degrade to a flat grid of every catalogued model (nothing lost)
-    const grid = el('div', 'lp-grid');
-    for (const m of catModels) grid.appendChild(modelCard({ model: m.id, title: m.title }));
-    wrap.appendChild(grid);
+    if (!shown) catHost.appendChild(el('p', 'lp-empty', { text: q ? `No configurators match “${q}”.` : 'No configurators yet.' }));
   }
+
+  // the library toolbar: a search box, plus type-filter chips when there is more than
+  // one top-level category. Both drive renderCatalogue over the already-derived registry.
+  const anyModels = reg ? modelsUnder(reg, here).length > 0 : catModels.length > 0;
+  if (anyModels) {
+    const toolbar = el('div', 'lp-toolbar');
+    const search = el('input', 'lp-search', { type: 'search', placeholder: L('searchPlaceholder', 'Search configurators…'), 'aria-label': 'Search configurators' });
+    let searchTimer;
+    search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.q = search.value.trim(); renderCatalogue(); }, 120); });
+    toolbar.appendChild(search);
+    if (reg) {
+      const chipEls = [];
+      const setActiveChip = (active) => chipEls.forEach((c) => c.classList.toggle('is-active', c === active));
+      const chips = el('div', 'lp-chips');
+      const allChip = el('button', 'lp-chip is-active', { type: 'button', text: L('allLabel', 'All') });
+      allChip.addEventListener('click', () => { filterState.chip = null; setActiveChip(allChip); renderCatalogue(); });
+      chipEls.push(allChip); chips.appendChild(allChip);
+      for (const secId of childrenOf(reg, here)) {
+        if (!modelsUnder(reg, secId).length) continue;
+        const c = el('button', 'lp-chip', { type: 'button', html: `${glyphOf(reg, secId) ? `<span aria-hidden="true">${glyphOf(reg, secId)}</span> ` : ''}${nodeLabel(secId)}` });
+        c.addEventListener('click', () => { filterState.chip = secId; setActiveChip(c); renderCatalogue(); });
+        chipEls.push(c); chips.appendChild(c);
+      }
+      if (chipEls.length > 2) toolbar.appendChild(chips);   // chips only earn their place with ≥2 categories
+    }
+    wrap.appendChild(toolbar);
+  }
+  wrap.appendChild(catHost);
+  renderCatalogue();
 
   // ---- composed journeys (reachable + feature-gated) ----
   if (features.journeys) {

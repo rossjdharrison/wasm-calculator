@@ -25,7 +25,7 @@ let lastEngine = null; // most recent loaded engine, for its authoritative graph
 
 boot();
 async function boot() {
-  mountStudioShell($('studio-head'), { active: 'data', title: 'Data model', blurb: 'How the quote is calculated and how fields depend on each other. Edit fields, options &amp; availability, computed formulas, tables, validations and effects. <strong>Save</strong> applies it (this browser) and reopens the Configurator. Presentation (labels, layout, controls) lives on its own page.' });
+  mountStudioShell($('studio-head'), { active: 'data', modelId: MODEL_ID, title: 'Data model', blurb: 'How the quote is calculated and how fields depend on each other. Edit fields, options &amp; availability, computed formulas, tables, validations and effects. <strong>Save</strong> applies it (this browser) and reopens the Configurator. Presentation (labels, layout, controls) lives on its own page.' });
   try {
     [data, pres, wasmBytes, schema] = await Promise.all([
       currentData().then(clone),
@@ -281,7 +281,7 @@ function save() {
   if (!assembledOk) { setStatus('error', 'Fix the errors before saving.'); return; }
   if (!saveData(data)) { setStatus('error', 'Could not save (storage blocked).'); return; }
   if (presDirty) savePres(pres); // labels added via the coverage advisor live in the presentation model
-  location.href = './';
+  location.href = `configure.html?m=${encodeURIComponent(MODEL_ID)}`; // reopen THIS model's configurator, not the catalogue
 }
 
 // publish the current model to the edge (KV) — validated server-side by the real

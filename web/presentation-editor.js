@@ -8,7 +8,7 @@
 // Right: a LIVE WYSIWYG — the real Configurator (render-form.mjs), rebuilt on
 // every edit, with two-way click-to-edit selection between form and editor.
 // =============================================================================
-import { currentData, currentPres, savePres, loadDefaultPres } from './store.mjs';
+import { currentData, currentPres, savePres, loadDefaultPres, MODEL_ID } from './store.mjs';
 import { validateBinding } from './binding.mjs';
 import { mountConfigurator } from './render-form.mjs';
 import { pickImage } from './asset-picker.mjs';
@@ -27,7 +27,7 @@ let editor = null, assembledOk = null, preview = null, previewToken = 0;
 
 boot();
 async function boot() {
-  mountStudioShell($('studio-head'), { active: 'pres', title: 'Presentation', blurb: 'How the data is shown: bind each field to a control, place it in a section, set labels &amp; option text, choose outputs and formats. The logic lives on the Data page; this only changes the look and layout.' });
+  mountStudioShell($('studio-head'), { active: 'pres', modelId: MODEL_ID, title: 'Presentation', blurb: 'How the data is shown: bind each field to a control, place it in a section, set labels &amp; option text, choose outputs and formats. The logic lives on the Data page; this only changes the look and layout.' });
   try {
     [data, pres, wasm, schema] = await Promise.all([
       currentData(), currentPres().then(clone),
@@ -118,5 +118,5 @@ function save() {
   if (errors.length) { setStatus('error', `Fix ${errors.length} binding error(s) first.`); return; }
   if (!assembledOk) { setStatus('error', 'Fix the model errors first.'); return; }
   if (!savePres(pres)) { setStatus('error', 'Could not save (storage blocked).'); return; }
-  location.href = './';
+  location.href = `configure.html?m=${encodeURIComponent(MODEL_ID)}`; // reopen THIS model's configurator
 }

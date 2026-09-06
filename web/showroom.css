@@ -479,6 +479,18 @@
   .lp-crumb:hover { color: var(--accent); }
   .lp-crumb.cur { color: var(--text-soft); }
   .lp-crumb-sep { color: var(--text-dim); opacity: .6; }
+  /* library toolbar: search + type-filter chips (find existing objects) */
+  .lp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; max-width: 1000px; margin: 0 auto 6px; width: 100%; padding: 6px 24px; }
+  .lp-search { flex: 1 1 240px; min-width: 200px; background: var(--ground, var(--surface)); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 9px 12px; font: inherit; font-size: 13.5px; }
+  .lp-search:focus { outline: none; border-color: var(--accent); }
+  .lp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lp-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text-soft); padding: 6px 13px; font: inherit; font-size: 12px; letter-spacing: .02em; cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .lp-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .lp-chip.is-active { background: var(--accent); border-color: var(--accent); color: #12130f; }
+  /* per-card TYPE badge — the neutral glyph + the category the model sits under */
+  .lp-typebadge { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+  .lp-typebadge-g { color: var(--accent); font-size: 13px; letter-spacing: 0; }
+  .lp-empty { max-width: 1000px; margin: 0 auto; width: 100%; padding: 4vh 24px; text-align: center; color: var(--text-dim); font-size: 14px; }
 
 /* =========================================================================
    Journey shell (opt-in via ?j=) — the phased sale runner. Self-contained;
