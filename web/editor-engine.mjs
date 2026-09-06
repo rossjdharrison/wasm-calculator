@@ -273,6 +273,12 @@ const WIDGETS = {
       a.onChange();
     });
   },
+  // typePick — the in-studio TYPE SPINE. A GENERIC widget that delegates to ctx:
+  // ctx.typeSpine() supplies { category, choices:[{id,glyph,label,hint}], ancestry }
+  // and ctx.setType(id) performs the model-specific write (keep/mint a unique own leaf
+  // specialising the chosen category, repoint configures). The engine holds no model
+  // knowledge; the page (data-editor) provides the hooks. Absent hooks → a hint.
+  typePick: (a) => typePickWidget(a),
   optionList: (a) => optionListWidget(a),
   optionRows: (a) => optionRowsWidget(a),
   note: (a) => hint(a.spec.text || ''),
@@ -304,12 +310,36 @@ export const WIDGET_CONTRACTS = {
   rule: { needsProp: true, needsFields: true },
   select: { needsProp: true, oneOf: ['options', 'source'], boolFlags: ['allowNone'] },
   parents: { needsProp: true, oneOf: ['options', 'source'] },
+  typePick: { needsProp: false },   // writes via ctx.setType, not a single spec.prop
   default: { needsProp: true, item: 'fieldType' },
   optionList: { needsProp: false, needsFields: true, item: 'optionList' },
   optionRows: { needsProp: false, needsAssets: true },
   note: { needsProp: false },
   grid: { needsProp: false, item: 'table' },
 };
+
+function typePickWidget(a) {
+  const spine = a.ctx.typeSpine ? a.ctx.typeSpine() : null;
+  if (!spine) return hint('Type picker unavailable on this page.');
+  const wrap = el('div', 'de-typepick');
+  const sel = el('select', 'qc-input');
+  sel.setAttribute('aria-label', a.label || 'Type');
+  for (const c of spine.choices || []) {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = `${c.glyph || '◈'}  ${c.label}`; o.title = c.hint || '';
+    if (c.id === spine.category) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => { if (a.ctx.setType) a.ctx.setType(sel.value); });
+  wrap.appendChild(row(a.label || 'This model is a…', sel));
+  if (spine.ancestry && spine.ancestry.length) {
+    const bc = el('div', 'de-typespine');
+    bc.style.cssText = 'font-size:12px;color:var(--text-dim);margin-top:6px;';
+    bc.textContent = spine.ancestry.map((x) => `${x.glyph ? x.glyph + ' ' : ''}${x.label}`).join('  ›  ');
+    wrap.appendChild(bc);
+  }
+  return wrap;
+}
 
 function defaultWidget(a) {
   const f = a.item;

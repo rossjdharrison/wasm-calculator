@@ -10,7 +10,7 @@
 // =============================================================================
 import { assemble, mergeModel } from './assembler.mjs';
 import { JOURNEY_ID, currentJourney, saveJourney, resetJourney, getStoredJourney,
-  loadCatalog, loadJourneyCatalog, loadModelFiles, mergedJourneyCatalog, loadDomain,
+  mergedModelCatalog, loadJourneyCatalog, loadModelFiles, mergedJourneyCatalog, loadDomain,
   getLocalJourneyCatalog, saveLocalJourneyEntry, removeLocalJourneyEntry } from './store.mjs';
 import * as jedit from './journey-edit.mjs';
 import { analyzeJourney, validateSeam } from './journey-validate.mjs';
@@ -34,7 +34,9 @@ const resolvePhases = () => { const p = phasesOf(jrn); return p.length ? p : pha
 (async function boot() {
   try {
     domainDoc = await loadDomain();
-    allModels = ((await loadCatalog().catch(() => ({ models: [] }))).models) || [];
+    // the MERGED catalogue (shipped ∪ edge/KV ∪ this browser's created models) so a model
+    // just created in the studio is composable into a journey, not invisible.
+    allModels = ((await mergedModelCatalog().catch(() => ({ models: [] }))).models) || [];
     if (JID) { jrn = await currentJourney(JID); await loadModels(); }
   } catch (e) { $('#jc-boot').textContent = 'Load failed: ' + e.message; return; }
   $('#jc-undo').onclick = () => { if (undo.length) { jrn = undo.pop(); persist(); render(); } };

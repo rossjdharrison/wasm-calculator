@@ -10,7 +10,8 @@ import { currentData, currentPres, saveData, savePres, loadDefaultData, MODEL_ID
 import { publishModel } from './publish.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
-import { authorCategories } from './hqdm.mjs';
+import { authorCategories, authorCategoryChoices, renderOf, supertypesOf } from './hqdm.mjs';
+import { ensureOwnLeaf, DEFAULT_CATEGORY } from './model-create-core.mjs';
 import { analyzeCoverage, applyFix, edgesOf } from './coverage.mjs';
 import { el, hint } from './editor-ui.mjs';
 import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
@@ -51,6 +52,41 @@ const SOURCE_FNS = {
   typeIds: () => Object.keys(data.types || {}),   // the model's OWN declared classes (for `configures`)
 };
 
+const humanizeType = (id) => String(id || '').replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const glyphOfType = (id) => (renderOf(id, data.types) || {}).glyph || '◈';
+const labelOfType = (id) => (data.types && data.types[id] && data.types[id].title) || (renderOf(id, data.types) || {}).label || humanizeType(id);
+
+// the TYPE SPINE the typePick widget renders: the model's current category, the
+// plain-language choices it may pick (neutral authorable leaves ∪ this model's OWN
+// classes — never other models' classes, which would create a cross-model dependency),
+// and the ancestry breadcrumb (hint-bearing supertypes + own categories, root-last).
+function typeSpine() {
+  const leaf = data.configures;
+  const def = (data.types && leaf && data.types[leaf]) || {};
+  const category = (def.specializes && def.specializes[0]) || DEFAULT_CATEGORY;
+  const neutral = authorCategoryChoices();                                  // [{id,glyph,label,hint}]
+  const seen = new Set(neutral.map((c) => c.id));
+  const own = Object.keys(data.types || {})
+    .filter((id) => id !== leaf && !seen.has(id))                           // same-model categories, not the leaf itself
+    .map((id) => ({ id, glyph: glyphOfType(id), label: labelOfType(id), hint: 'This model’s own class' }));
+  const choices = [...neutral, ...own];
+  if (category && !choices.some((c) => c.id === category)) choices.unshift({ id: category, glyph: glyphOfType(category), label: labelOfType(category), hint: '' });
+  const ancestry = supertypesOf(leaf, data.types)
+    .filter((id) => (data.types && data.types[id]) || renderOf(id, data.types))   // meaningful nodes only (skip bare structural types)
+    .map((id) => ({ id, glyph: glyphOfType(id), label: labelOfType(id) }));
+  return { category, choices, ancestry };
+}
+
+// change the model's type: re-point its existing configured leaf to the chosen category
+// (preserving that leaf's id + title), or mint the born-typed own leaf if there is none.
+function setType(categoryId) {
+  const leaf = data.configures;
+  if (leaf && data.types && data.types[leaf]) data.types[leaf] = { ...data.types[leaf], specializes: [categoryId] };
+  else ensureOwnLeaf(data, categoryId);
+  editor.commit();   // re-render outline + detail so the spine + Classes reflect the change
+  refresh();
+}
+
 function mountEditor() {
   editor = createEditor({
     schema, doc: data, outline: $('outline'), detail: $('detail'),
@@ -59,6 +95,9 @@ function mountEditor() {
       // Built from DATA_SOURCES (shared with the schema validator) so a schema
       // can never reference a source name the page forgets to wire.
       sources: Object.fromEntries(DATA_SOURCES.map((name) => [name, SOURCE_FNS[name]])),
+      // the typePick type-spine hooks (the model-specific read + write the generic
+      // widget delegates to — keeps editor-engine free of model knowledge).
+      typeSpine, setType,
     },
     onChange: refresh,
   });

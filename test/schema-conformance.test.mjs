@@ -52,6 +52,7 @@ const schemaCase = (name, needle, mutate) => test(`rejects schema: ${name}`, () 
 
 const fields = (s) => s.collections.find((c) => c.key === 'fields');
 const coll = (s, k) => s.collections.find((c) => c.key === k);
+const whenSpec = (s) => fields(s).form.find((f) => f.when);   // the first form spec carrying a `when` clause
 
 schemaCase('no collections', 'collections must be an array', (s) => { delete s.collections; });
 schemaCase('empty collections', 'must not be empty', (s) => { s.collections = []; });
@@ -63,8 +64,8 @@ schemaCase('form not an array', '"form" must be an array', (s) => { fields(s).fo
 schemaCase('unknown widget', 'unknown widget', (s) => { fields(s).form[0].widget = 'textbox'; });
 schemaCase('value widget missing prop', 'requires a non-empty string "prop"', (s) => { delete fields(s).form[0].prop; });
 schemaCase('duplicate form prop', 'same prop', (s) => { fields(s).form.push({ prop: 'unit', widget: 'text', label: 'Dup' }); });
-schemaCase('when missing eq', 'when requires an "eq"', (s) => { delete fields(s).form[0].when.eq; });
-schemaCase('when missing prop', 'requires a non-empty "prop"', (s) => { delete fields(s).form[0].when.prop; });
+schemaCase('when missing eq', 'when requires an "eq"', (s) => { delete whenSpec(s).when.eq; });
+schemaCase('when missing prop', 'requires a non-empty "prop"', (s) => { delete whenSpec(s).when.prop; });
 schemaCase('select without options or source', 'requires one of', (s) => {
   const sev = coll(s, 'validations').form.find((f) => f.prop === 'severity'); delete sev.options;
 });
