@@ -60,7 +60,8 @@
   "defaultModel": "vehicles",
   "catalog": {
     "journeys": [
-      { "id": "vehicle-sale" }
+      { "id": "vehicle-sale" },
+      { "id": "go-solar" }
     ]
   }
 }

@@ -1,0 +1,27 @@
+{
+  "name": "Solar array",
+  "brand": { "mark": "ROWBLAA", "rest": "ENERGY", "descriptor": "Solar", "tagline": "Haarlem" },
+  "sections": [
+    { "id": "roof", "label": "Roof & panels", "order": 1 },
+    { "id": "aspect", "label": "Orientation", "order": 2 }
+  ],
+  "fields": [
+    { "id": "roofArea", "label": "Usable roof area (m²)", "control": "stepper", "section": "roof", "width": "half", "decimals": 0 },
+    { "id": "panelType", "label": "Panel", "control": "buttons", "section": "roof", "width": "full", "options": [
+      { "id": "standard", "label": "Standard · 400 W" },
+      { "id": "premium", "label": "Premium · 440 W" },
+      { "id": "allBlack", "label": "All-black · 415 W" }
+    ] },
+    { "id": "orientation", "label": "Roof orientation", "control": "buttons", "section": "aspect", "width": "full", "options": [
+      { "id": "south", "label": "South" },
+      { "id": "eastWest", "label": "East–West" },
+      { "id": "flat", "label": "Flat" }
+    ] }
+  ],
+  "outputs": [
+    { "id": "annualKwh", "label": "Annual generation", "emphasis": true, "format": { "type": "unit", "unit": "kWh/yr", "decimals": 0 } },
+    { "id": "systemKwp", "label": "System size", "spec": true, "format": { "type": "unit", "unit": "kWp", "decimals": 1 } },
+    { "id": "co2Avoided", "label": "CO₂ avoided", "spec": true, "format": { "type": "unit", "unit": "kg/yr", "decimals": 0 } },
+    { "id": "systemCost", "label": "System cost", "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+  ]
+}

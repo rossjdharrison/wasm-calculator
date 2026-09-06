@@ -1,5 +1,6 @@
 {
   "journeys": [
-    { "id": "vehicle-sale", "title": "Vehicle sale", "blurb": "Configure a vehicle, then finance it — one composed order." }
+    { "id": "vehicle-sale", "title": "Vehicle sale", "blurb": "Configure a vehicle, then finance it — one composed order." },
+    { "id": "go-solar", "title": "Go solar", "blurb": "Design a solar array, add storage, finance, install and commission — one composed project across six phases." }
   ]
 }
