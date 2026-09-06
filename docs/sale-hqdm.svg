@@ -1,0 +1,228 @@
+<svg viewBox="0 0 1690 1070" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+  <defs>
+    <marker id="ah" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#3f3a33"/>
+    </marker>
+    <marker id="ahg" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#8a8478"/>
+    </marker>
+    <marker id="ahm" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#7a5a86"/>
+    </marker>
+    <filter id="sh" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.4" flood-color="#3a352b" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .b{stroke-width:1.6;filter:url(#sh)}
+      .b-agent{fill:#e6efee;stroke:#2f6d6a}
+      .b-act{fill:#f5edde;stroke:#a37f39}
+      .b-state{fill:#e9edf6;stroke:#4a5b86}
+      .b-thing{fill:#e9f1e6;stroke:#5a7d4f}
+      .b-money{fill:#f6eeda;stroke:#b08a3e}
+      .b-abstract{fill:#efe8f2;stroke:#7a5a86}
+      .ty{font-style:italic;font-size:11px}
+      .ty.sm{font-size:9.5px}
+      .t-agent{fill:#2f6d6a}.t-act{fill:#8a6d2f}.t-state{fill:#42527a}
+      .t-thing{fill:#4c6b41}.t-money{fill:#8a6a2a}.t-abstract{fill:#6f4f7c}
+      .nm{fill:#211f1b;font-weight:700;font-size:14.5px}
+      .dt{fill:#6b665d;font-size:10.5px}
+      .e-core{stroke:#3f3a33;stroke-width:2;fill:none;marker-end:url(#ah)}
+      .e-party{stroke:#8a8478;stroke-width:1.6;fill:none;marker-end:url(#ahg)}
+      .e-mem{stroke:#7a5a86;stroke-width:1.6;fill:none;stroke-dasharray:6 5;marker-end:url(#ahm)}
+      .el{fill:#37322b;font-size:12px;font-weight:500;paint-order:stroke;stroke:#f6f3ee;stroke-width:4px}
+      .el-p{fill:#726c60;font-size:12px;font-style:italic;paint-order:stroke;stroke:#f6f3ee;stroke-width:4px}
+      .ph{fill:#a99f8d;font-size:13px;font-weight:700;letter-spacing:2.5px}
+      .ti{fill:#211f1b}
+      .sub{fill:#6b665d}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1690" height="1070" fill="#f6f3ee"/>
+
+  <!-- phase bands -->
+  <g>
+    <rect x="40"  y="78" width="370" height="958" fill="#e7ddc9" fill-opacity="0.34"/>
+    <rect x="410" y="78" width="290" height="958" fill="#dde3ee" fill-opacity="0.34"/>
+    <rect x="700" y="78" width="700" height="958" fill="#e7ddc9" fill-opacity="0.28"/>
+    <rect x="1400" y="78" width="265" height="958" fill="#dde3ee" fill-opacity="0.34"/>
+    <text class="ph" x="330"  y="102" text-anchor="middle">CONFIGURE</text>
+    <text class="ph" x="555"  y="102" text-anchor="middle">AGREE &amp; SIGN</text>
+    <text class="ph" x="805"  y="102" text-anchor="middle">EXCHANGE &amp; SETTLEMENT</text>
+    <text class="ph" x="1532" y="102" text-anchor="middle">FULFILMENT</text>
+  </g>
+
+  <!-- title -->
+  <text class="ti" x="40" y="46" font-size="25" font-weight="700" font-family="Georgia,'Times New Roman',serif">The Sale of an Object <tspan class="sub" font-size="18" font-style="italic" font-weight="400">— an HQDM-style instance model</tspan></text>
+  <text class="sub" x="1650" y="42" text-anchor="end" font-size="12.5">Boxes = a domain individual bound to its «hqdm type»</text>
+  <text class="sub" x="1650" y="60" text-anchor="end" font-size="12.5">Arrows read: subject &#8594; <tspan font-style="italic">verb</tspan> &#8594; object</text>
+
+  <!-- ================= EDGES (drawn over boxes' faint band, under labels) ================= -->
+  <g>
+    <!-- configure -->
+    <line class="e-core" x1="255" y1="490" x2="300" y2="343"/>
+    <path class="e-mem" d="M795,980 C520,880 300,620 300,343"/>
+    <!-- sign -->
+    <line class="e-core" x1="470" y1="450" x2="558" y2="343"/>
+    <line class="e-core" x1="665" y1="300" x2="693" y2="300"/>
+    <line class="e-core" x1="800" y1="340" x2="898" y2="450"/>
+    <!-- exchange core -->
+    <line class="e-core" x1="900" y1="530" x2="900" y2="640"/>
+    <line class="e-core" x1="1005" y1="490" x2="1123" y2="490"/>
+    <path  class="e-core" d="M1005,490 C1130,405 1330,405 1435,490"/>
+    <line class="e-core" x1="900" y1="720" x2="742" y2="812"/>
+    <line class="e-core" x1="900" y1="720" x2="1058" y2="812"/>
+    <line class="e-core" x1="740" y1="890" x2="797" y2="980"/>
+    <line class="e-core" x1="1060" y1="890" x2="1003" y2="980"/>
+    <!-- payment core -->
+    <line class="e-core" x1="1230" y1="530" x2="1230" y2="640"/>
+    <line class="e-core" x1="1230" y1="720" x2="1230" y2="940"/>
+    <!-- fulfilment core -->
+    <line class="e-core" x1="1540" y1="530" x2="1540" y2="640"/>
+    <line class="e-core" x1="1433" y1="682" x2="1005" y2="978"/>
+    <!-- participation / party edges -->
+    <line class="e-party" x1="150" y1="150" x2="150" y2="450"/>
+    <line class="e-party" x1="255" y1="112" x2="466" y2="450"/>
+    <line class="e-party" x1="895" y1="112" x2="474" y2="450"/>
+    <line class="e-party" x1="1000" y1="150" x2="902" y2="450"/>
+    <line class="e-party" x1="1105" y1="112" x2="1536" y2="450"/>
+    <line class="e-party" x1="1230" y1="450" x2="1107" y2="114"/>
+    <path  class="e-party" d="M1230,450 C900,180 500,120 257,110"/>
+  </g>
+
+  <!-- ================= BOXES ================= -->
+  <!-- 1 Buyer -->
+  <g><rect class="b b-agent" x="45" y="70" width="210" height="80" rx="12"/>
+    <text class="ty t-agent" x="150" y="97" text-anchor="middle">&#171;party&#187;</text>
+    <text class="nm" x="150" y="118" text-anchor="middle">Buyer</text>
+    <text class="dt" x="150" y="137" text-anchor="middle">A. Khan &#183; acquirer</text></g>
+  <!-- 2 Seller -->
+  <g><rect class="b b-agent" x="895" y="70" width="210" height="80" rx="12"/>
+    <text class="ty t-agent" x="1000" y="97" text-anchor="middle">&#171;organization&#187;</text>
+    <text class="nm" x="1000" y="118" text-anchor="middle">Seller</text>
+    <text class="dt" x="1000" y="137" text-anchor="middle">ROWBLAA Luxury</text></g>
+  <!-- 3 Configured Specification -->
+  <g><rect class="b b-abstract" x="195" y="260" width="210" height="80" rx="12"/>
+    <text class="ty sm t-abstract" x="300" y="286" text-anchor="middle">&#171;class_of_ordinary_physical_object&#187;</text>
+    <text class="nm" x="300" y="308" text-anchor="middle">Configured Specification</text>
+    <text class="dt" x="300" y="327" text-anchor="middle">GT Coup&#233; &#183; build C-118</text></g>
+  <!-- 4 Signature -->
+  <g><rect class="b b-abstract" x="455" y="260" width="210" height="80" rx="12"/>
+    <text class="ty t-abstract" x="560" y="287" text-anchor="middle">&#171;sign&#187;</text>
+    <text class="nm" x="560" y="308" text-anchor="middle">Signature</text>
+    <text class="dt" x="560" y="327" text-anchor="middle">assent of the parties</text></g>
+  <!-- 5 Sale Contract -->
+  <g><rect class="b b-abstract" x="695" y="260" width="210" height="80" rx="12"/>
+    <text class="ty t-abstract" x="800" y="287" text-anchor="middle">&#171;agreement&#187;</text>
+    <text class="nm" x="800" y="308" text-anchor="middle">Sale Contract</text>
+    <text class="dt" x="800" y="327" text-anchor="middle">ref SC-2026-0187</text></g>
+  <!-- 6 Product Configuration -->
+  <g><rect class="b b-act" x="45" y="450" width="210" height="80" rx="12"/>
+    <text class="ty t-act" x="150" y="477" text-anchor="middle">&#171;activity&#187;</text>
+    <text class="nm" x="150" y="498" text-anchor="middle">Product Configuration</text>
+    <text class="dt" x="150" y="517" text-anchor="middle">options &#8594; specification</text></g>
+  <!-- 7 Signing -->
+  <g><rect class="b b-act" x="365" y="450" width="210" height="80" rx="12"/>
+    <text class="ty t-act" x="470" y="477" text-anchor="middle">&#171;activity&#187;</text>
+    <text class="nm" x="470" y="498" text-anchor="middle">Signing</text>
+    <text class="dt" x="470" y="517" text-anchor="middle">execution ceremony</text></g>
+  <!-- 8 Exchange -->
+  <g><rect class="b b-act" x="795" y="450" width="210" height="80" rx="12"/>
+    <text class="ty t-act" x="900" y="477" text-anchor="middle">&#171;activity&#187;</text>
+    <text class="nm" x="900" y="498" text-anchor="middle">Exchange of Goods &amp; Money</text>
+    <text class="dt" x="900" y="517" text-anchor="middle">the sale proper</text></g>
+  <!-- 9 Payment -->
+  <g><rect class="b b-act" x="1125" y="450" width="210" height="80" rx="12"/>
+    <text class="ty sm t-act" x="1230" y="476" text-anchor="middle">&#171;transfer_of_ownership_of_money&#187;</text>
+    <text class="nm" x="1230" y="498" text-anchor="middle">Payment</text>
+    <text class="dt" x="1230" y="517" text-anchor="middle">funds settled</text></g>
+  <!-- 10 Delivery -->
+  <g><rect class="b b-act" x="1435" y="450" width="210" height="80" rx="12"/>
+    <text class="ty sm t-act" x="1540" y="476" text-anchor="middle">&#171;transfer_of_possession&#187;</text>
+    <text class="nm" x="1540" y="498" text-anchor="middle">Delivery</text>
+    <text class="dt" x="1540" y="517" text-anchor="middle">white-glove hand-over</text></g>
+  <!-- 11 Title Transfer -->
+  <g><rect class="b b-act" x="795" y="640" width="210" height="80" rx="12"/>
+    <text class="ty sm t-act" x="900" y="666" text-anchor="middle">&#171;transfer_of_ownership&#187;</text>
+    <text class="nm" x="900" y="688" text-anchor="middle">Title Transfer</text>
+    <text class="dt" x="900" y="707" text-anchor="middle">vests at completion</text></g>
+  <!-- 12 Currency Conversion -->
+  <g><rect class="b b-act" x="1125" y="640" width="210" height="80" rx="12"/>
+    <text class="ty t-act" x="1230" y="667" text-anchor="middle">&#171;activity&#187;</text>
+    <text class="nm" x="1230" y="688" text-anchor="middle">Currency Conversion</text>
+    <text class="dt" x="1230" y="707" text-anchor="middle">EUR &#8594; GBP</text></g>
+  <!-- 13 Possession -->
+  <g><rect class="b b-state" x="1435" y="640" width="210" height="80" rx="12"/>
+    <text class="ty t-state" x="1540" y="667" text-anchor="middle">&#171;possession&#187;</text>
+    <text class="nm" x="1540" y="688" text-anchor="middle">Possession &#8212; Buyer</text>
+    <text class="dt" x="1540" y="707" text-anchor="middle">physical custody</text></g>
+  <!-- 14 Ownership Seller -->
+  <g><rect class="b b-state" x="635" y="810" width="210" height="80" rx="12"/>
+    <text class="ty t-state" x="740" y="837" text-anchor="middle">&#171;ownership&#187;</text>
+    <text class="nm" x="740" y="858" text-anchor="middle">Ownership &#8212; Seller</text>
+    <text class="dt" x="740" y="877" text-anchor="middle">until completion</text></g>
+  <!-- 15 Ownership Buyer -->
+  <g><rect class="b b-state" x="955" y="810" width="210" height="80" rx="12"/>
+    <text class="ty t-state" x="1060" y="837" text-anchor="middle">&#171;ownership&#187;</text>
+    <text class="nm" x="1060" y="858" text-anchor="middle">Ownership &#8212; Buyer</text>
+    <text class="dt" x="1060" y="877" text-anchor="middle">from completion</text></g>
+  <!-- 16 Vehicle -->
+  <g><rect class="b b-thing" x="795" y="940" width="210" height="80" rx="12"/>
+    <text class="ty sm t-thing" x="900" y="966" text-anchor="middle">&#171;ordinary_physical_object&#187;</text>
+    <text class="nm" x="900" y="988" text-anchor="middle">Vehicle</text>
+    <text class="dt" x="900" y="1007" text-anchor="middle">VIN &#8230;0037</text></g>
+  <!-- 17 Purchase Price -->
+  <g><rect class="b b-money" x="1125" y="940" width="210" height="80" rx="12"/>
+    <text class="ty t-money" x="1230" y="966" text-anchor="middle">&#171;amount_of_money&#187;</text>
+    <text class="nm" x="1230" y="988" text-anchor="middle">Purchase Price</text>
+    <text class="dt" x="1230" y="1007" text-anchor="middle">&#163;172,500</text></g>
+
+  <!-- ================= EDGE LABELS ================= -->
+  <g>
+    <text class="el"  x="312" y="415" text-anchor="middle">produces</text>
+    <text class="el-p" x="300" y="548" text-anchor="middle">conforms to</text>
+    <text class="el"  x="527" y="392" text-anchor="middle">produces</text>
+    <text class="el"  x="679" y="288" text-anchor="middle">executes</text>
+    <text class="el"  x="866" y="402" text-anchor="middle">governs</text>
+    <text class="el"  x="944" y="590" text-anchor="middle">consists of</text>
+    <text class="el"  x="1064" y="478" text-anchor="middle">consists of</text>
+    <text class="el"  x="1220" y="404" text-anchor="middle">triggers</text>
+    <text class="el"  x="792" y="774" text-anchor="middle">ends</text>
+    <text class="el"  x="1008" y="774" text-anchor="middle">begins</text>
+    <text class="el"  x="688" y="946" text-anchor="middle">has as asset</text>
+    <text class="el"  x="1112" y="946" text-anchor="middle">has as asset</text>
+    <text class="el"  x="1291" y="590" text-anchor="middle">settled via</text>
+    <text class="el"  x="1289" y="838" text-anchor="middle">converts</text>
+    <text class="el"  x="1597" y="590" text-anchor="middle">begins</text>
+    <text class="el"  x="1252" y="864" text-anchor="middle">is of</text>
+    <!-- party -->
+    <text class="el-p" x="182" y="304" text-anchor="middle">performs</text>
+    <text class="el-p" x="352" y="214" text-anchor="middle">performs</text>
+    <text class="el-p" x="648" y="206" text-anchor="middle">counter-signs</text>
+    <text class="el-p" x="918" y="300" text-anchor="middle">sells in</text>
+    <text class="el-p" x="1352" y="212" text-anchor="middle">performs</text>
+    <text class="el-p" x="1205" y="272" text-anchor="middle">credits</text>
+    <text class="el-p" x="716" y="150" text-anchor="middle">debits</text>
+  </g>
+
+  <!-- ================= LEGEND ================= -->
+  <g>
+    <rect x="1320" y="772" width="345" height="262" rx="12" fill="#fffdf9" stroke="#d8d1c4" stroke-width="1.4"/>
+    <text x="1340" y="800" font-size="13" font-weight="700" fill="#211f1b" letter-spacing="1">LEGEND &#8212; HQDM CATEGORIES</text>
+    <g font-size="12" fill="#3a352d">
+      <rect x="1340" y="812" width="20" height="15" rx="4" class="b-agent" stroke-width="1.4"/><text x="1368" y="824">Party / agent</text>
+      <rect x="1340" y="834" width="20" height="15" rx="4" class="b-act" stroke-width="1.4"/><text x="1368" y="846">Activity / event (a process)</text>
+      <rect x="1340" y="856" width="20" height="15" rx="4" class="b-state" stroke-width="1.4"/><text x="1368" y="868">Association / state (holds over time)</text>
+      <rect x="1340" y="878" width="20" height="15" rx="4" class="b-thing" stroke-width="1.4"/><text x="1368" y="890">Physical individual</text>
+      <rect x="1340" y="900" width="20" height="15" rx="4" class="b-money" stroke-width="1.4"/><text x="1368" y="912">Money</text>
+      <rect x="1340" y="922" width="20" height="15" rx="4" class="b-abstract" stroke-width="1.4"/><text x="1368" y="934">Abstract object (class &#183; sign &#183; agreement)</text>
+    </g>
+    <line x1="1340" y1="948" x2="1645" y2="948" stroke="#e2dccf"/>
+    <g font-size="12" fill="#3a352d">
+      <line x1="1342" y1="964" x2="1378" y2="964" class="e-core"/><text x="1388" y="968">structural relation</text>
+      <line x1="1342" y1="986" x2="1378" y2="986" class="e-party"/><text x="1388" y="990">participation (party &#8594; act / state)</text>
+      <line x1="1342" y1="1008" x2="1378" y2="1008" class="e-mem"/><text x="1388" y="1012">class membership (member_of)</text>
+    </g>
+  </g>
+
+  <text class="sub" x="45" y="1055" font-size="11.5">HQDM = High Quality Data Model (Matthew West) &#8212; a 4-dimensionalist upper ontology in which every object is extended in time, so ownership, possession and the sale itself are things with a beginning and an end.</text>
+</svg>

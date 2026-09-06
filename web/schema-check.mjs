@@ -22,7 +22,7 @@ import { WIDGET_TYPES, WIDGET_CONTRACTS } from './editor-engine.mjs';
 // data-editor.js builds its ctx.sources from this list, and the validator checks
 // every `select.source` against it — so a schema can't reference a source the
 // page never provides (which would silently render an empty dropdown).
-export const DATA_SOURCES = ['fields'];
+export const DATA_SOURCES = ['fields', 'categories', 'typeIds'];
 
 // Source names the Presentation page wires into ctx.sources (presentation.schema.json
 // references these). controls = the controls valid for a field's type; sections =

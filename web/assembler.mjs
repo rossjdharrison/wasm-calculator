@@ -47,13 +47,17 @@ const pickDefined = (obj, keys) => {
 };
 
 // Which keys are owned by which file. Split by ownership (see docs/editor-architecture.md §3).
-const DATA_TOP = ['$schema', 'id', 'version', 'currency', 'fxSurcharge', 'currencies'];
+// `types` = a model's own HQDM type declarations ({id:{specializes:[...]}}); `category`
+// = the L0 tag on a field/computed/option (DATA-owned semantics). These + the
+// presentation `render`/`swatch`/`badge` affordances ride the merge/split round-trip
+// but are DELIBERATELY not in serialize() — they never enter the binary VM image.
+const DATA_TOP = ['$schema', 'id', 'version', 'currency', 'fxSurcharge', 'currencies', 'types', 'configures'];
 const DATA_BLOCKS = ['effects', 'tables', 'computed', 'validations', 'bundles', 'units', 'rates'];
-const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'canonicalUnit', 'formula'];
-const DATA_OPTION = ['id', 'availableWhen'];
+const DATA_FIELD = ['id', 'type', 'default', 'min', 'max', 'step', 'unit', 'canonicalUnit', 'formula', 'category'];
+const DATA_OPTION = ['id', 'availableWhen', 'category'];
 const PRES_TOP = ['name', 'brand', 'carryOverOnPrimaryChange'];
-const PRES_FIELD = ['id', 'label', 'control', 'section', 'width', 'help', 'decimals', 'visibleWhen', 'enabledWhen'];
-const PRES_OPTION = ['id', 'label', 'priceDelta', 'image'];
+const PRES_FIELD = ['id', 'label', 'control', 'section', 'width', 'help', 'decimals', 'visibleWhen', 'enabledWhen', 'render'];
+const PRES_OPTION = ['id', 'label', 'priceDelta', 'image', 'swatch', 'badge'];
 
 export function splitModel(m) {
   const data = {
@@ -143,7 +147,9 @@ export function buildIR(model) {
 
   // ---- 3. Node pool + expression parser ------------------------------------
   const nodes = []; // {op, aux, imm, kids:[nodeIdx]}
-  const MAX_DEPTH = 64;
+  const MAX_DEPTH = 64;        // bounds JSON nesting of an expression (parser recursion)
+  const MAX_NODE_DEPTH = 256;  // bounds the EMITTED node-tree depth (fan-out folds a wide
+                               // variadic into a deep spine); guards the WASM evaluator's stack
   const addNode = (op, { aux = 0, imm = 0, kids = [] } = {}) => {
     nodes.push({ op, aux, imm, kids });
     return nodes.length - 1;
@@ -310,6 +316,11 @@ export function buildIR(model) {
       formatType: fmt.type || 'number', unit: fmt.unit || null,
       currencyCode: fmt.currencyCode || model.currency || 'USD', decimals: fmt.decimals ?? 2,
       canonicalUnit: fmt.canonicalUnit || null, baseCurrency: fmt.baseCurrency || model.currency || null,
+      // presentation role (subtotal | recurring | total | line) — IR metadata only.
+      // It is NOT serialized (serialize() writes only slot + visibleWhenNode) and NOT
+      // added to the per-evaluate result outputs, so the VM image + evaluate()/graph()
+      // shapes stay byte-identical; consumed by the view + composition tiers.
+      role: o.role || null,
       visibleWhenNode: parseOpt(o.visibleWhen),
     };
   });
@@ -320,6 +331,7 @@ export function buildIR(model) {
     if (def.kind === '1d') {
       const kf = m.keyFields[0];
       if (!kf || !fieldOptions.has(kf)) fail(`table "${m.name}" 1D key field unknown/not enumerable`);
+      if (!def.map || typeof def.map !== 'object') fail(`table "${m.name}" 1D is missing its "map"`);
       const opts = fieldOptions.get(kf);
       const data = new Array(opts.length).fill(0);
       for (const [k, v] of Object.entries(def.map)) data[codeOf(kf, k)] = v;
@@ -328,11 +340,14 @@ export function buildIR(model) {
     if (def.kind === '2d') {
       const rf = m.keyFields[0], cf = m.keyFields[1];
       if (!rf || !cf) fail(`table "${m.name}" 2D key fields unknown`);
+      if (!def.rows || typeof def.rows !== 'object') fail(`table "${m.name}" 2D is missing its "rows"`);
       const rOpts = fieldOptions.get(rf), cOpts = fieldOptions.get(cf);
       const data = new Array(rOpts.length * cOpts.length).fill(0);
-      for (const [rk, row] of Object.entries(def.rows))
+      for (const [rk, row] of Object.entries(def.rows)) {
+        if (!row || typeof row !== 'object') fail(`table "${m.name}" 2D row "${rk}" is malformed`);
         for (const [ck, val] of Object.entries(row))
           data[codeOf(rf, rk) * cOpts.length + codeOf(cf, ck)] = val;
+      }
       return { name: m.name, kind: 2, rows: rOpts.length, cols: cOpts.length, data };
     }
     fail(`table "${m.name}" has unknown kind`);
@@ -344,6 +359,23 @@ export function buildIR(model) {
   for (const c of computedIR) computedBySlot.set(c.slot, c);
   // order computed IR by evalOrder (list of ids) -> slots
   const orderedComputedSlots = evalOrder.map((id) => slotOf.get(id));
+
+  // Guard the EMITTED node-tree depth. MAX_DEPTH bounds JSON nesting, but a wide
+  // variadic (e.g. add of N args) is folded into an (N-1)-deep node spine the JSON
+  // counter never sees; an over-deep tree would overflow the recursive WASM
+  // evalNode at runtime. Bound it here so a model that would trap the VM cannot be
+  // assembled. Kids always have smaller indices than their parent, so one forward
+  // pass suffices.
+  {
+    const depthOf = new Int32Array(nodes.length);
+    let maxNodeDepth = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      let d = 1;
+      for (const k of nodes[i].kids) if (depthOf[k] + 1 > d) d = depthOf[k] + 1;
+      depthOf[i] = d; if (d > maxNodeDepth) maxNodeDepth = d;
+    }
+    if (maxNodeDepth > MAX_NODE_DEPTH) fail(`expression tree too deep (${maxNodeDepth} > ${MAX_NODE_DEPTH}); split it into computed values or reduce fan-out`);
+  }
 
   return {
     slotCount, slotOf, fields, computedIR, computedBySlot, orderedComputedSlots,
@@ -450,6 +482,17 @@ export function encodeInput(field, raw) {
   // number
   const n = raw ?? field.defaultRaw;
   return typeof n === 'number' ? n : 0;
+}
+
+// Inverse of encodeInput: a wire value (the slot number the engine returns) back
+// to a raw input (option id / id array / boolean / number). Shared verbatim by
+// every renderer so a view can never drift from the wire format. Pinned by the
+// decode(encode(x)) === x round-trip test.
+export function decodeValue(field, num) {
+  if (field.type === 'choice') return (field.options.find((o) => o.code === num) || field.options[0]).id;
+  if (field.type === 'multichoice') { const m = num | 0; return field.options.filter((o) => (m >> o.code) & 1).map((o) => o.id); }
+  if (field.type === 'boolean') return num !== 0;
+  return num;
 }
 
 export function referenceEvaluate(ir, rawInputs) {

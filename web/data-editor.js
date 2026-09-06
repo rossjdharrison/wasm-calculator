@@ -9,6 +9,7 @@
 import { currentData, currentPres, saveData, savePres, loadDefaultData } from './store.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
+import { authorCategories } from './hqdm.mjs';
 import { analyzeCoverage, applyFix, edgesOf } from './coverage.mjs';
 import { el, hint } from './editor-ui.mjs';
 import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
@@ -40,7 +41,13 @@ async function boot() {
 }
 
 // Each DATA_SOURCES name maps to a live reader over the current doc.
-const SOURCE_FNS = { fields: () => (data.fields || []).map((f) => f.id) };
+// `categories` = the neutral HQDM leaves + this model's own declared data.types,
+// plus the row's current value so a category whose type was removed stays visible.
+const SOURCE_FNS = {
+  fields: () => (data.fields || []).map((f) => f.id),
+  categories: (item) => [...new Set([...authorCategories(data.types), ...(item && item.category ? [item.category] : [])])],
+  typeIds: () => Object.keys(data.types || {}),   // the model's OWN declared classes (for `configures`)
+};
 
 function mountEditor() {
   editor = createEditor({

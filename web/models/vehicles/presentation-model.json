@@ -209,7 +209,8 @@
           "label": "20-inch",
           "priceDelta": 1800
         }
-      ]
+      ],
+      "render": "glyph"
     },
     {
       "id": "colour",
@@ -221,24 +222,41 @@
         {
           "id": "solid",
           "label": "Solid",
-          "priceDelta": 0
+          "priceDelta": 0,
+          "swatch": [
+            "#8a9099",
+            "#6d737c"
+          ]
         },
         {
           "id": "metallic",
           "label": "Metallic",
-          "priceDelta": 650
+          "priceDelta": 650,
+          "swatch": [
+            "#aeb7c4",
+            "#7c8794"
+          ]
         },
         {
           "id": "premium",
           "label": "Premium",
-          "priceDelta": 900
+          "priceDelta": 900,
+          "swatch": [
+            "#3a4c6b",
+            "#243149"
+          ]
         },
         {
           "id": "matte",
           "label": "Matte",
-          "priceDelta": 1200
+          "priceDelta": 1200,
+          "swatch": [
+            "#4a4d52",
+            "#3a3d42"
+          ]
         }
-      ]
+      ],
+      "render": "swatch"
     },
     {
       "id": "packages",
@@ -270,17 +288,20 @@
         {
           "id": "performance",
           "label": "Performance",
-          "priceDelta": 3200
+          "priceDelta": 3200,
+          "badge": true
         },
         {
           "id": "towing",
           "label": "Towing",
-          "priceDelta": 1300
+          "priceDelta": 1300,
+          "badge": true
         },
         {
           "id": "panoramicRoof",
           "label": "Panoramic Roof",
-          "priceDelta": 1600
+          "priceDelta": 1600,
+          "badge": true
         }
       ]
     },
@@ -384,7 +405,8 @@
           },
           "finance"
         ]
-      }
+      },
+      "render": "track"
     },
     {
       "id": "annualMileage",
@@ -502,6 +524,7 @@
     {
       "id": "vehiclePrice",
       "label": "Vehicle price",
+      "role": "subtotal",
       "format": {
         "type": "currency",
         "decimals": 2,
@@ -520,6 +543,7 @@
     {
       "id": "monthlyPayment",
       "label": "Monthly payment",
+      "role": "recurring",
       "format": {
         "type": "currency",
         "decimals": 2,
@@ -650,6 +674,7 @@
     {
       "id": "grandTotal",
       "label": "Total",
+      "role": "total",
       "format": {
         "type": "currency",
         "decimals": 2,

@@ -1,97 +1,109 @@
-// Build gate: validate web/model.json before anything is deployed.
-// Runs the real assembler (schema-shaped parse + semantic checks: unknown
-// field/option/table refs, dependency cycles, bad enums, expression depth,
-// multi-select bit cap). Any failure prints a message and exits non-zero, which
-// stops the Cloudflare Pages build — a broken model never reaches production.
+// Build gate: validate EVERY shipped model before anything is deployed.
+// build-site ships every models/<id>/* listed in catalog.json, so the gate must
+// cover them all — a broken antiques model must fail the build, not assemble in
+// the user's browser while the deploy goes green. Runs the real assembler + the
+// pure validators (schema conformance, coverage, cross-file binding) per model.
+// Any failure prints a message and exits non-zero, stopping the Pages build.
 
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { assemble, mergeModel } from '../web/assembler.mjs';
 import { validateBinding } from '../web/binding.mjs';
 import { validateEditorSchema, validateDocAgainstSchema, PRES_SOURCES } from '../web/schema-check.mjs';
 import { analyzeCoverage } from '../web/coverage.mjs';
+import { analyzeJourney } from '../web/journey-validate.mjs';
+import { validateJourneyShape } from '../web/journey-schema.mjs';
 
-let data, pres, model;
+const readJson = (p) => readFile(p, 'utf8').then(JSON.parse);
+const die = (msg) => { console.error(`✖ ${msg}`); process.exit(1); };
+
+// ---- shared editor schemas (validated once — they drive every model's editor) ----
+let editorSchema, presSchema, catalog;
 try {
-  [data, pres] = await Promise.all([
-    readFile('web/models/vehicles/data-model.json', 'utf8').then(JSON.parse),
-    readFile('web/models/vehicles/presentation-model.json', 'utf8').then(JSON.parse),
+  [editorSchema, presSchema, catalog] = await Promise.all([
+    readJson('web/data.schema.json'),
+    readJson('web/presentation.schema.json'),
+    readJson('web/models/catalog.json'),
   ]);
-  model = mergeModel(data, pres);
-} catch (e) {
-  console.error(`✖ could not read/merge the model files: ${e.message}`);
-  process.exit(1);
-}
+} catch (e) { die(`could not read editor schemas / catalog: ${e.message}`); }
 
-// editor-schema conformance (L2): the data.schema.json that drives the generic
-// editor must be well-formed, and the data model must render cleanly through it.
-// A broken schema edit fails the build here instead of silently breaking the UI.
-let editorSchema;
-try {
-  editorSchema = JSON.parse(await readFile('web/data.schema.json', 'utf8'));
-} catch (e) {
-  console.error(`✖ could not read/parse web/data.schema.json: ${e.message}`);
-  process.exit(1);
-}
 {
-  const s1 = validateEditorSchema(editorSchema);
-  const s2 = validateDocAgainstSchema(editorSchema, data);
-  for (const w of [...s1.warnings, ...s2.warnings]) console.warn(`  ⚠ schema: ${w}`);
-  if (s1.errors.length || s2.errors.length) {
-    for (const e of [...s1.errors, ...s2.errors]) console.error(`✖ schema: ${e}`);
+  const s = validateEditorSchema(editorSchema);
+  const p = validateEditorSchema(presSchema, { sources: PRES_SOURCES });
+  for (const w of [...s.warnings, ...p.warnings]) console.warn(`  ⚠ schema: ${w}`);
+  if (s.errors.length || p.errors.length) {
+    for (const e of [...s.errors, ...p.errors]) console.error(`✖ schema: ${e}`);
     process.exit(1);
   }
-  console.log(`✓ editor schema "${editorSchema.title || 'data'}": ${editorSchema.collections.length} collections conform.`);
+  console.log(`✓ editor schemas well-formed (data: ${editorSchema.collections.length} collections, pres: ${presSchema.collections.length}).`);
 }
 
-// presentation-editor schema conformance: the presentation.schema.json that will
-// drive the presentation editor must be well-formed (with the presentation source
-// names it references) and the presentation model must render cleanly through it.
-{
-  let presSchema;
+const ids = (catalog.models || []).map((m) => m.id);
+if (!ids.length) die('catalog.json lists no models to validate.');
+
+// ---- validate each shipped model; collect every model's problems, fail if any ----
+let failed = 0;
+for (const id of ids) {
+  const base = `web/models/${id}`;
+  let data, pres, model;
   try {
-    presSchema = JSON.parse(await readFile('web/presentation.schema.json', 'utf8'));
-  } catch (e) {
-    console.error(`✖ could not read/parse web/presentation.schema.json: ${e.message}`);
-    process.exit(1);
-  }
-  const s1 = validateEditorSchema(presSchema, { sources: PRES_SOURCES });
-  const s2 = validateDocAgainstSchema(presSchema, pres);
-  for (const w of [...s1.warnings, ...s2.warnings]) console.warn(`  ⚠ pres-schema: ${w}`);
-  if (s1.errors.length || s2.errors.length) {
-    for (const e of [...s1.errors, ...s2.errors]) console.error(`✖ pres-schema: ${e}`);
-    process.exit(1);
-  }
-  console.log(`✓ presentation schema: ${presSchema.collections.length} collections conform.`);
-}
+    [data, pres] = await Promise.all([readJson(`${base}/data-model.json`), readJson(`${base}/presentation-model.json`)]);
+    model = mergeModel(data, pres);
+  } catch (e) { console.error(`✖ [${id}] could not read/merge model: ${e.message}`); failed++; continue; }
 
-// model coverage (Area 1): a shipped model must be COMPLETE — every option an
-// expression indexes must have its table value, or pricing is silently wrong.
-// Errors block the build; warnings/info (labels, dead options, orphans) advise.
-{
+  const problems = [];
+  const ds = validateDocAgainstSchema(editorSchema, data);
+  const ps = validateDocAgainstSchema(presSchema, pres);
+  for (const w of [...ds.warnings, ...ps.warnings]) console.warn(`  ⚠ [${id}] schema: ${w}`);
+  problems.push(...ds.errors.map((e) => `schema: ${e}`), ...ps.errors.map((e) => `pres-schema: ${e}`));
+
   const cov = analyzeCoverage(data, pres);
-  for (const f of cov.findings) if (f.severity !== 'error') console.warn(`  ⚠ coverage: ${f.message}`);
-  const covErrors = cov.findings.filter((f) => f.severity === 'error');
-  if (covErrors.length) {
-    for (const f of covErrors) console.error(`✖ coverage: ${f.message}`);
-    process.exit(1);
+  for (const f of cov.findings) if (f.severity !== 'error') console.warn(`  ⚠ [${id}] coverage: ${f.message}`);
+  problems.push(...cov.findings.filter((f) => f.severity === 'error').map((f) => `coverage: ${f.message}`));
+
+  const { errors, warnings } = validateBinding(data, pres);
+  for (const w of warnings) console.warn(`  ⚠ [${id}] ${w}`);
+  problems.push(...errors.map((e) => `binding: ${e}`));
+
+  let a;
+  try { a = assemble(model); } catch (e) { problems.push(`model invalid: ${e.message}`); }
+
+  if (problems.length) {
+    for (const p of problems) console.error(`✖ [${id}] ${p}`);
+    failed++;
+  } else {
+    console.log(`✓ [${id}] "${model.id}" v${model.version}: ${a.ir.fields.length} fields, ` +
+      `${a.ir.computedIR.length} computed, ${a.ir.slotCount} slots, ${a.modelBytes.length}-byte image, ` +
+      `${a.ioLayout.totalBytes}-byte IO.`);
   }
-  console.log(`✓ model coverage: every option is connected (${Object.keys(cov.indexing).length} indexed tables).`);
 }
 
-// cross-file binding integrity (errors block the build; warnings are advisory)
-const { errors, warnings } = validateBinding(data, pres);
-for (const w of warnings) console.warn(`  ⚠ ${w}`);
-if (errors.length) {
-  for (const e of errors) console.error(`✖ binding: ${e}`);
-  process.exit(1);
+// ---- validate journeys (the composition tier) + the models they reference ----
+// phases are a domain lifecycle held in the top-level domain model; a journey may
+// carry them inline or inherit them — resolve the domain default for the shape gate.
+let domainPhaseIds = null;
+try { const dom = await readJson('web/domain.json'); domainPhaseIds = (dom.phases || []).map((p) => p.id); } catch { /* no domain */ }
+let jfiles = [];
+try { jfiles = (await readdir('web/journeys')).filter((f) => f.endsWith('.json') && f !== 'catalog.json'); } catch { /* no journeys */ }
+for (const jf of jfiles) {
+  let journey;
+  try { journey = await readJson(`web/journeys/${jf}`); } catch (e) { console.error(`✖ [journey ${jf}] unreadable: ${e.message}`); failed++; continue; }
+  // shape gate first: a malformed journey fails fast, before models load and
+  // before the (now-pointless) semantic pass. A journey without inline phases
+  // validates against the domain's phases.
+  const shapeOpts = (journey.phases && journey.phases.length) ? {} : (domainPhaseIds ? { phases: domainPhaseIds } : {});
+  const sh = validateJourneyShape(journey, shapeOpts);
+  for (const w of sh.warnings) console.warn(`  ⚠ [journey ${journey.id || jf}] shape: ${w}`);
+  if (sh.errors.length) { for (const e of sh.errors) console.error(`✖ [journey ${journey.id || jf}] shape: ${e}`); failed++; continue; }
+  const models = {}; let ok = true;
+  for (const m of journey.models || []) {
+    try { const merged = mergeModel(await readJson(`web/models/${m.ref}/data-model.json`), await readJson(`web/models/${m.ref}/presentation-model.json`)); assemble(merged); models[m.as] = { merged, assembled: assemble(merged) }; }
+    catch (e) { console.error(`✖ [journey ${journey.id}] referenced model "${m.ref}" invalid: ${e.message}`); ok = false; }
+  }
+  const a = analyzeJourney(journey, models);
+  for (const f of a.findings) { const line = `[journey ${journey.id}] ${f.kind}: ${f.message}`; if (f.severity === 'error') { console.error(`✖ ${line}`); ok = false; } else console.warn(`  ⚠ ${line}`); }
+  if (ok) console.log(`✓ [journey ${journey.id}] ${(journey.models || []).length} models, ${(journey.bindings || []).length} bindings — composes.`);
+  else failed++;
 }
 
-try {
-  const a = assemble(model);
-  console.log(`✓ model "${model.id}" v${model.version}: ${a.ir.fields.length} fields, ` +
-    `${a.ir.computedIR.length} computed, ${a.ir.slotCount} slots, ` +
-    `${a.modelBytes.length}-byte image, ${a.ioLayout.totalBytes}-byte IO.`);
-} catch (e) {
-  console.error(`✖ model invalid: ${e.message}`);
-  process.exit(1);
-}
+if (failed) die(`${failed} validation failure(s) across models + journeys.`);
+console.log(`✓ all ${ids.length} shipped models + ${jfiles.length} journey(s) valid.`);

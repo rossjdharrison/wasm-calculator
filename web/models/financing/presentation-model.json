@@ -1,0 +1,14 @@
+{
+  "name": "Financing",
+  "brand": { "mark": "ROWBLAA", "rest": "FINANCE" },
+  "sections": [{ "id": "terms", "label": "Terms", "order": 1 }],
+  "fields": [
+    { "id": "price", "label": "Price", "section": "terms" },
+    { "id": "deposit", "label": "Deposit", "section": "terms", "render": "track" },
+    { "id": "termMonths", "label": "Term (months)", "section": "terms" }
+  ],
+  "outputs": [
+    { "id": "monthly", "label": "Monthly payment", "role": "recurring", "format": { "type": "currency", "decimals": 2, "currencyCode": "EUR" } },
+    { "id": "totalPayable", "label": "Total payable", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+  ]
+}

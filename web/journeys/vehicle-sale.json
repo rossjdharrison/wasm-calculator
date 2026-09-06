@@ -1,0 +1,46 @@
+{
+  "id": "vehicle-sale",
+  "version": "1.0.0",
+  "title": "Vehicle sale",
+  "correlationPrefix": "VS",
+  "phases": [
+    { "id": "configure", "label": "Configure", "order": 1, "tint": "#7f9bb0" },
+    { "id": "agree_sign", "label": "Agree & Sign", "order": 2, "tint": "#d8a24a" },
+    { "id": "exchange_settlement", "label": "Exchange & Settlement", "order": 3, "tint": "#74c2a2" },
+    { "id": "fulfilment", "label": "Fulfilment", "order": 4, "tint": "#b98cc9" }
+  ],
+  "labels": {
+    "record": "order", "recordPlural": "orders", "recordTotal": "Order total",
+    "emptyPrompt": "Configure a build to begin your order.",
+    "lifecycleLabel": "Order lifecycle", "captureNoun": "build"
+  },
+  "types": {
+    "Owned": { "specializes": ["state"] },
+    "Possessed": { "specializes": ["state"] }
+  },
+  "models": [
+    { "ref": "vehicles", "as": "shopping", "phase": "configure", "role": "product" },
+    { "ref": "financing", "as": "financing", "phase": "exchange_settlement", "role": "finance" }
+  ],
+  "bindings": [
+    {
+      "id": "price-to-financing",
+      "from": "shopping",
+      "to": "financing",
+      "contract": {
+        "provides": [{ "as": "grandTotal", "l0": "amount_of_money", "source": "output:grandTotal" }],
+        "requires": [{ "name": "price", "l0": "amount_of_money", "target": "field:price" }]
+      },
+      "mapping": [{ "to": "price", "from": { "op": "field", "args": ["grandTotal"] } }]
+    }
+  ],
+  "triggers": [],
+  "process": {
+    "steps": [
+      { "id": "build", "phase": "configure", "kind": "capture", "model": "shopping", "produces": "class_of_physical_object", "commitLabel": "Request this build ▸" },
+      { "id": "sign", "phase": "agree_sign", "kind": "ceremony", "activity": "agreement", "outcome": "sign", "prompt": "Type your name to assent to this build and the sale contract", "actionLabel": "Sign & agree ▸" },
+      { "id": "settle", "phase": "exchange_settlement", "kind": "capture-downstream", "model": "financing", "activity": "transfer_of_ownership", "outcome": "transfer_of_ownership", "label": "Settlement", "actionLabel": "Confirm financing & settle ▸", "enters": [{ "individual": "shopping#spec", "category": "Owned", "role": "owner", "label": "Ownership" }] },
+      { "id": "deliver", "phase": "fulfilment", "kind": "ceremony", "activity": "transfer_of_possession", "outcome": "transfer_of_possession", "label": "Handover", "prompt": "Name the person receiving the vehicle", "actionLabel": "Confirm handover ▸", "enters": [{ "individual": "shopping#spec", "category": "Possessed", "role": "keeper", "label": "Possession" }] }
+    ]
+  }
+}

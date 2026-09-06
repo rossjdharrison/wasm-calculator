@@ -14,11 +14,16 @@
 // =============================================================================
 
 import { el, placeholderSVG as placeholder, money, formatOutput, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
+import { decodeValue } from './assembler.mjs';
+import { projectIndividuals } from './individuals.mjs';
 import { loadRates } from './fx.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 import { save as savedSave, remove as savedRemove, findByConfig as savedFindByConfig, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
-export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig }) {
+export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig, onConfigChange, onRequest, lockedFields, ctaLabel }) {
+  // fields written by an upstream binding (single-authority): shown read-only and
+  // never writable — the injected value stays authoritative. Domain-agnostic.
+  const lockedFieldSet = lockedFields instanceof Set ? lockedFields : new Set(lockedFields || []);
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
   resolveImage = resolveImage || (async () => null);
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -37,12 +42,6 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const sections = [...(model.sections || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   // ---------- engine bridge: engine.evaluate(state) -> view shape ----------
-  const decode = (f, num) => {
-    if (f.type === 'choice') return (f.options.find((o) => o.code === num) || f.options[0]).id;
-    if (f.type === 'multichoice') { const m = num | 0; return f.options.filter((o) => (m >> o.code) & 1).map((o) => o.id); }
-    if (f.type === 'boolean') return num !== 0;
-    return num;
-  };
   function compute(input) {
     const ei = {}; for (const f of ir.fields) ei[f.id] = f.type === 'number' ? (input[f.id] ?? 0) : input[f.id];
     let res = engine.evaluate(ei);
@@ -51,7 +50,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     for (const f of ir.fields) if (f.type === 'number' && input[f.id] == null && res.limits[f.id] && res.limits[f.id].min != null) { input[f.id] = res.limits[f.id].min; ei[f.id] = input[f.id]; reseed = true; }
     if (reseed) res = engine.evaluate(ei);
     const st = {};
-    for (const f of ir.fields) st[f.id] = f.type === 'number' ? ei[f.id] : decode(f, res.valueById[f.id]);
+    for (const f of ir.fields) st[f.id] = f.type === 'number' ? ei[f.id] : decodeValue(f, res.valueById[f.id]);
     const forced = {}; for (const f of ir.fields) if (res.forced.includes(f.slot)) forced[f.id] = true;
     const avail = {}; for (const f of ir.fields) if (f.options) { avail[f.id] = {}; const os = res.optionState[f.id]; for (const o of f.options) avail[f.id][o.id] = os ? os[o.id] !== false : true; }
     const vis = {}; for (const f of ir.fields) vis[f.id] = res.visible[f.id] !== false;
@@ -76,8 +75,8 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const money0 = (v) => money(v, baseCurrency);
 
   // ---------- item visuals (image asset, else a neutral placeholder) ----------
-  // Colour swatch palette (used only by a field flagged render:"swatch", e.g. paint).
-  const PAINT = { solid: ['#8a9099', '#6d737c'], metallic: ['#aeb7c4', '#7c8794'], premium: ['#3a4c6b', '#243149'], matte: ['#4a4d52', '#3a3d42'] };
+  // A field flagged render:"swatch" shows each option's own declared gradient
+  // (o.swatch, presentation data) — no domain-specific colour map lives in code.
   // shared neutral placeholder (ui.placeholderSVG), keyed to the primary option's label
   const placeholderSVG = (optId) => { const o = (modelFieldById[primary.id].options || []).find((x) => x.id === optId); return placeholder((o && o.label) || optId); };
   const imgUrl = {}; // primary optionId -> resolved image URL
@@ -91,6 +90,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   for (const f of ir.fields) state[f.id] = f.type === 'multichoice' ? (f.defaultRaw ? f.defaultRaw.slice() : []) : f.type === 'boolean' ? !!f.defaultRaw : f.type === 'number' ? (f.defaultRaw ?? null) : (f.defaultRaw ?? f.options[0].id);
   // restore a saved build opened from the saved list (only known fields; VM re-validates)
   if (initialConfig) for (const f of ir.fields) if (Object.prototype.hasOwnProperty.call(initialConfig, f.id)) state[f.id] = initialConfig[f.id];
+  // the typed HQDM seam payload for the current build — the individuals (Configured
+  // Specification + Purchase Price) a downstream context would receive. Attached to
+  // basket/saved items so the handoff exists as data before any downstream model does.
+  const seamIndividuals = () => {
+    const ei = {}; for (const f of ir.fields) ei[f.id] = f.type === 'number' ? (state[f.id] ?? 0) : state[f.id];
+    return projectIndividuals(model, engine.evaluate(ei).valueById, state);
+  };
   const primaryOpts = () => modelFieldById[primary.id].options || [];
   const emOutput = () => ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
   // a config built from field DEFAULTS (not the live selection) — the base every
@@ -103,7 +109,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // "from" = the price of the model's DEFAULT build for this option (all other fields
   // at their declared defaults). Domain-agnostic — no per-field ("cheapest engine")
   // special-casing — so it equals the landing headline and the breakdown's base line.
-  const baseConfigFor = (id) => Object.assign(defaultsConfig(), { [primary.id]: id, packages: [], financing: 'cash' });
+  const baseConfigFor = (id) => Object.assign(defaultsConfig(), { [primary.id]: id });
   const fromPrice = (id) => compute(baseConfigFor(id)).out[emOutput().id].value;
 
   // ---------- model-driven price deltas (relative to the CURRENT selection) ----------
@@ -233,6 +239,16 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const wrap = el('div', 'field');
     const lab = el('div', 'flabel'); lab.innerHTML = `<span>${f.label || f.id}</span>` + (res.forced[f.id] ? '<span class="auto">Auto</span>' : '');
     wrap.appendChild(lab);
+    if (lockedFieldSet.has(f.id)) {
+      // authoritative-from-upstream: a read-only display, never an editable control.
+      const cur = state[f.id];
+      let shown = cur;
+      if (f.type === 'choice') { const o = (mf.options || []).find((x) => x.id === cur); shown = o ? (o.label || o.id) : cur; }
+      else if (f.type === 'number') { const CURSYM = { GBP: '£', EUR: '€', USD: '$' }; shown = (CURSYM[f.unit] || '') + (typeof cur === 'number' ? cur.toLocaleString() : (cur ?? '')) + (CURSYM[f.unit] ? '' : (f.unit ? ' ' + f.unit : '')); }
+      wrap.classList.add('locked');
+      wrap.appendChild(el('div', 'locked-val num', { html: `<span>${shown}</span><span class="auto">from upstream</span>` }));
+      return wrap;
+    }
     const av = res.avail[f.id] || {};
     const curP = emId != null ? res.out[emId].value : 0;   // current headline price, for relative deltas
     if (f.type === 'choice' && f.control === 'radio') {
@@ -248,8 +264,9 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     } else if (f.type === 'choice') {
       const box = el('div', 'chips');
       for (const o of f.options) {
-        const swatch = f.id === 'colour' ? `<span class="dot" style="background:linear-gradient(135deg,${(PAINT[o.id] || PAINT.solid).join(',')})"></span>` : '';
-        const glyph = f.id === 'wheels' ? `<span class="glyph" style="width:${10 + f.options.indexOf(o) * 2}px;height:${10 + f.options.indexOf(o) * 2}px"></span>` : '';
+        const mo = (mf.options || []).find((x) => x.id === o.id) || {};
+        const swatch = mf.render === 'swatch' && mo.swatch ? `<span class="dot" style="background:linear-gradient(135deg,${mo.swatch.join(',')})"></span>` : '';
+        const glyph = mf.render === 'glyph' ? `<span class="glyph" style="width:${10 + f.options.indexOf(o) * 2}px;height:${10 + f.options.indexOf(o) * 2}px"></span>` : '';
         box.appendChild(chip(o.label || o.id, relDelta(f.id, o.id, curP, av), state[f.id] === o.id, av[o.id] === false, () => setField(f.id, o.id), swatch + glyph));
       }
       wrap.appendChild(box);
@@ -265,12 +282,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       const st = el('div', 'step'); const lim = res.limits[f.id] || {}; const step = mf.step || 1;
       const dec = el('button'); dec.type = 'button'; dec.textContent = '−'; dec.setAttribute('aria-label', 'decrease');
       const val = el('span', 'val num'); const inc = el('button'); inc.type = 'button'; inc.textContent = '+'; inc.setAttribute('aria-label', 'increase');
-      const affix = el('span', 'affix'); affix.textContent = f.unit === 'GBP' ? '£' : (f.unit || '');
+      const CURSYM = { GBP: '£', EUR: '€', USD: '$' };
+      const affix = el('span', 'affix'); affix.textContent = CURSYM[f.unit] || f.unit || '';
       const cur = state[f.id] ?? lim.min ?? 0; val.textContent = new Intl.NumberFormat('en-GB').format(cur);
       const clamp = (v) => Math.max(lim.min ?? -1e9, Math.min(lim.max ?? 1e9, v));
       dec.addEventListener('click', () => setField(f.id, clamp(cur - step))); inc.addEventListener('click', () => setField(f.id, clamp(cur + step)));
       st.append(dec, val, affix, inc); wrap.appendChild(st);
-      if (f.id === 'deposit' && lim.max) { const t = el('div', 'hinttrack'); t.innerHTML = `<i style="width:${Math.min(100, (cur / lim.max) * 100)}%"></i>`; wrap.appendChild(t); }
+      if (mf.render === 'track' && lim.max) { const t = el('div', 'hinttrack'); t.innerHTML = `<i style="width:${Math.min(100, (cur / lim.max) * 100)}%"></i>`; wrap.appendChild(t); }
     }
     for (const m of res.msgs) if (m.field === f.id) { const d = el('div', 'msg ' + m.severity); d.textContent = m.message; wrap.appendChild(d); }
     return wrap;
@@ -292,12 +310,20 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // Bundles: x+y+z packages -> a discount. Shows each bundle's state; clicking a
   // locked one adds its packages. The discount itself is applied by the engine
   // (the compiled bundlesDiscount computed folded into vehiclePrice).
-  const pkgLabel = () => Object.fromEntries((modelFieldById.packages?.options || []).map((o) => [o.id, o.label || o.id]));
+  // the multichoice field that carries the bundle options, resolved FROM the model
+  // (the field whose options include the bundle requirements) — never a hardcoded id.
+  const bundleFieldId = (() => {
+    const bs = model.bundles || []; if (!bs.length) return null;
+    const need = new Set(bs.flatMap((b) => b.requires || []));
+    const f = ir.fields.find((x) => x.type === 'multichoice' && (modelFieldById[x.id].options || []).some((o) => need.has(o.id)));
+    return f ? f.id : null;
+  })();
+  const pkgLabel = () => Object.fromEntries(((bundleFieldId && modelFieldById[bundleFieldId].options) || []).map((o) => [o.id, o.label || o.id]));
   function renderBundles(host) {
     const bundles = model.bundles || [];
-    if (!bundles.length) return;
+    if (!bundles.length || !bundleFieldId) return;
     const labels = pkgLabel();
-    const selected = new Set(state.packages || []);
+    const selected = new Set(state[bundleFieldId] || []);
     const sec = el('section', 'sec');
     sec.innerHTML = '<div class="eyebrow">Bundles &amp; savings</div>';
     for (const b of bundles) {
@@ -307,12 +333,12 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       row.setAttribute('aria-pressed', String(active));
       row.innerHTML = `<div class="bundle-h"><span class="bundle-name">${b.label}</span><span class="bundle-save num">−${money0(b.discount)}</span></div>`
         + `<div class="bundle-req">${active ? 'Applied · ' + b.requires.map((r) => labels[r]).join(' + ') : 'Add ' + missing.map((r) => labels[r]).join(' + ')}</div>`;
-      row.addEventListener('click', () => { const set = new Set(state.packages || []); b.requires.forEach((r) => set.add(r)); setField('packages', [...set]); });
+      row.addEventListener('click', () => { const set = new Set(state[bundleFieldId] || []); b.requires.forEach((r) => set.add(r)); setField(bundleFieldId, [...set]); });
       sec.appendChild(row);
     }
     host.appendChild(sec);
   }
-  const activeSavings = () => (model.bundles || []).reduce((s, b) => s + (b.requires.every((r) => (state.packages || []).includes(r)) ? b.discount : 0), 0);
+  const activeSavings = () => (bundleFieldId ? (model.bundles || []) : []).reduce((s, b) => s + (b.requires.every((r) => (state[bundleFieldId] || []).includes(r)) ? b.discount : 0), 0);
 
   // ---------- comparison (premium, flexible: 2–4 cars, swappable, best-in-row) ----------
   const COMPARE_ROWS = (model.outputs || []).filter((o) => o.compare)
@@ -401,7 +427,10 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   const optLabel = (f, id) => { const o = (f && f.options || []).find((x) => x.id === id); return (o && o.label) || id; };
   function buildBreakdown() {
     const em = emOutput();
-    const veh = ir.outputs.find((o) => /price/i.test(o.id) && o.id !== em.id) || null;   // subtotal (pre-fees)
+    // subtotal (pre-fees): the presentation role is the authority; the /price/i name
+    // heuristic is only a fallback for models not yet tagged with a role.
+    const veh = ir.outputs.find((o) => o.role === 'subtotal' && o.id !== em.id)
+      || ir.outputs.find((o) => /price/i.test(o.id) && o.id !== em.id) || null;
     const priceId = veh ? veh.id : em.id;
     const val = (cfg, oid) => { const r = compute(cfg); const o = r.out[oid]; return o ? o.value : 0; };
     const pkgF = ir.fields.find((f) => f.type === 'multichoice');
@@ -451,7 +480,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     if (b.hasSub && Math.round(b.fees) !== 0) lines.push({ label: b.totalLabel === 'Total' ? 'Fees' : 'Fees & taxes', amount: b.fees, kind: 'fee' });
     return lines;
   };
-  const cur = () => model.currency || 'GBP';
+  const cur = () => baseCurrency;   // basket/saved amounts stay in the model's base currency
   // a snapshot of the compare-relevant outputs at the current config (for compare-saved)
   const buildSpecs = (res) => COMPARE_ROWS.map((r) => ({ label: r.label, dir: r.dir, value: res.out[r.id] ? res.out[r.id].value : null, fmt: res.out[r.id] ? fmt(res.out[r.id]) : '—' })).filter((s) => s.value != null);
   // save is a TOGGLE: if this exact build (model + config) is already saved,
@@ -466,7 +495,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     savedSave({
       name: [title, ...bits].join(' · '), modelId, collection: brand.descriptor || (brand.rest || ''), title,
       total: res.out[emOutput().id].value, currency: cur(), image: opt.image || null,
-      config: { ...state }, specs: buildSpecs(res),
+      config: { ...state }, specs: buildSpecs(res), individuals: seamIndividuals(),
     });
     return true;
   }
@@ -488,7 +517,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
       totalLabel: b.totalLabel, total: b.total, currency: cur(), onClose: closeBreakdown,
       cta: { label: 'Add to basket ▸', onClick: (btn) => {
         const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
-        basketAdd({ modelId, collection: brand.descriptor || (brand.rest || ''), title: b.primaryLabel, total: b.total, currency: cur(), image: opt.image || null, config: { ...state } });
+        basketAdd({ modelId, collection: brand.descriptor || (brand.rest || ''), title: b.primaryLabel, total: b.total, currency: cur(), image: opt.image || null, config: { ...state }, individuals: seamIndividuals() });
         btn.disabled = true; btn.textContent = 'Added to basket ✓'; setTimeout(closeBreakdown, 1100);
       } },
     });
@@ -497,10 +526,12 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   function buildPodium() {
     const p = el('div', 'podium');
     const disc = el('div', 'disc');
-    const carwrap = el('div', 'carwrap'); carwrap.innerHTML = carVisual(state[primary.id], { colour: state.colour, wheels: state.wheels });
-    const refl = el('div', 'reflection'); refl.innerHTML = carVisual(state[primary.id], { colour: state.colour, wheels: state.wheels }); carwrap.appendChild(refl);
+    const carwrap = el('div', 'carwrap'); carwrap.innerHTML = carVisual(state[primary.id]);
+    const refl = el('div', 'reflection'); refl.innerHTML = carVisual(state[primary.id]); carwrap.appendChild(refl);
     const badges = el('div', 'badges');
-    for (const [id, label] of [['performance', 'Performance'], ['panoramicRoof', 'Panoramic roof'], ['towing', 'Tow package']]) if ((state.packages || []).includes(id)) { const s = el('span', 'badge'); s.textContent = label; badges.appendChild(s); }
+    // badges come from options flagged badge:true (presentation data), across any
+    // multichoice field — never a hardcoded option list.
+    for (const f of ir.fields) if (f.type === 'multichoice') for (const o of (modelFieldById[f.id].options || [])) if (o.badge && (state[f.id] || []).includes(o.id)) { const s = el('span', 'badge'); s.textContent = o.label || o.id; badges.appendChild(s); }
     p.append(disc, carwrap, badges); return p;
   }
   let stageModel = null;
@@ -527,7 +558,8 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const bits = ir.fields.filter((f) => f.type === 'choice' && f.id !== primary.id).slice(0, 2).map((f) => { const o = f.options.find((x) => x.id === state[f.id]); return o ? (o.label || o.id) : null; }).filter(Boolean);
     $('sh-sub').textContent = bits.join(' · ');
     const emOut = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
-    const veh = ir.outputs.find((o) => /price/i.test(o.id) && o.id !== emOut.id);
+    const veh = ir.outputs.find((o) => o.role === 'subtotal' && o.id !== emOut.id)
+      || ir.outputs.find((o) => /price/i.test(o.id) && o.id !== emOut.id);
     $('sh-veh').textContent = veh ? (res.out[veh.id].label + ' ' + fmt(res.out[veh.id])) : '';
     // the plate gauge shows only for a model that declares one (gaugeMax); its bar
     // scales to that declared maximum — no domain-specific constant.
@@ -539,8 +571,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const otrStr = fmt(res.out[emOut.id]); const otrEl = $('sh-otr');
     if (!RM && prevOtr !== null && prevOtr !== otrStr) otrEl.animate([{ transform: 'translateY(-6px)', opacity: .3 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
     otrEl.textContent = otrStr; prevOtr = otrStr;
-    const mo = ir.outputs.find((o) => /month/i.test(o.id)); const rec = mo && res.out[mo.id];
-    $('sh-monthly').innerHTML = rec && rec.visible ? `from <b>${fmt(rec)}</b> / mo` : '';
+    // recurring charge: the presentation role is the authority; the /month/i name
+    // heuristic is only a fallback for untagged models. The "/ mo" suffix is shown
+    // only when the output is genuinely monthly (else just the amount).
+    const mo = ir.outputs.find((o) => o.role === 'recurring') || ir.outputs.find((o) => /month/i.test(o.id));
+    const rec = mo && res.out[mo.id];
+    const perMonth = mo && /month/i.test(mo.id + ' ' + (res.out[mo.id].label || ''));
+    $('sh-monthly').innerHTML = rec && rec.visible ? `from <b>${fmt(rec)}</b>${perMonth ? ' / mo' : ''}` : '';
     // spec sheet: the model's declared headline figures (read-only)
     const shownSpecs = specIds.filter((id) => res.out[id] && res.out[id].visible);
     $('sh-specsheet').style.gridTemplateColumns = `repeat(${Math.max(1, shownSpecs.length)}, 1fr)`;
@@ -555,6 +592,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // presentation `carryOverOnPrimaryChange: false`, which resets the rest to their
   // defaults on each primary change (better when options aren't cross-comparable).
   function setField(id, v) {
+    if (lockedFieldSet.has(id)) return;   // authoritative-from-upstream — never writable
     state[id] = v;
     if (id === primary.id && model.carryOverOnPrimaryChange === false) {
       const d = defaultsConfig();
@@ -565,11 +603,13 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   function render() {
     const res = compute(state); Object.assign(state, res.st);
     carousel.update(); renderStage(); renderRail(res); renderSpecs(res); syncSaveBtn();
+    if (onConfigChange) onConfigChange({ ...state });   // journey shell observes the live config
   }
 
-  $('sh-cta').textContent = brand.cta || 'Request this build ▸';
-  $('sh-cta').setAttribute('aria-haspopup', 'dialog');
-  $('sh-cta').addEventListener('click', openBreakdown);
+  $('sh-cta').textContent = ctaLabel || brand.cta || 'Request this build ▸';
+  if (!onRequest) $('sh-cta').setAttribute('aria-haspopup', 'dialog');
+  // In a journey the CTA advances the sale (freeze + next phase); standalone it opens the basket breakdown.
+  $('sh-cta').addEventListener('click', () => (onRequest ? onRequest({ ...state }) : openBreakdown()));
   $('sh-save').addEventListener('click', () => { toggleSaveBuild(); syncSaveBtn(); });
   savedOnChange(syncSaveBtn);   // keep in sync if a build is removed from the saved dialog
 

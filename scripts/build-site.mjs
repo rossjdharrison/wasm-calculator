@@ -53,6 +53,33 @@ const FILES = [
   [join(ROOT, 'web', 'schema-check.mjs'), 'schema-check.mjs'],
   [join(ROOT, 'web', 'coverage.mjs'), 'coverage.mjs'],
   [join(ROOT, 'web', 'binding.mjs'), 'binding.mjs'],
+  [join(ROOT, 'web', 'hqdm.mjs'), 'hqdm.mjs'],
+  [join(ROOT, 'web', 'hqdm-core.json'), 'hqdm-core.json'],
+  [join(ROOT, 'web', 'domain.json'), 'domain.json'],
+  [join(ROOT, 'web', 'catalogue.mjs'), 'catalogue.mjs'],
+  [join(ROOT, 'web', 'catalogue-build.mjs'), 'catalogue-build.mjs'],
+  [join(ROOT, 'web', 'individuals.mjs'), 'individuals.mjs'],
+  [join(ROOT, 'web', 'compose.mjs'), 'compose.mjs'],
+  [join(ROOT, 'web', 'journey-validate.mjs'), 'journey-validate.mjs'],
+  [join(ROOT, 'web', 'journey-schema.mjs'), 'journey-schema.mjs'],
+  [join(ROOT, 'web', 'journey.schema.json'), 'journey.schema.json'],
+  [join(ROOT, 'web', 'order.mjs'), 'order.mjs'],
+  [join(ROOT, 'web', 'order-store.mjs'), 'order-store.mjs'],
+  [join(ROOT, 'web', 'category-render.mjs'), 'category-render.mjs'],
+  [join(ROOT, 'web', 'phase-stepper.mjs'), 'phase-stepper.mjs'],
+  [join(ROOT, 'web', 'order-picker.mjs'), 'order-picker.mjs'],
+  [join(ROOT, 'web', 'journey-view.mjs'), 'journey-view.mjs'],
+  [join(ROOT, 'web', 'journey-edit.mjs'), 'journey-edit.mjs'],
+  [join(ROOT, 'web', 'journey.html'), 'journey.html'],
+  [join(ROOT, 'web', 'journey-loom.mjs'), 'journey-loom.mjs'],
+  [join(ROOT, 'web', 'journey-create.html'), 'journey-create.html'],
+  [join(ROOT, 'web', 'journey-create.mjs'), 'journey-create.mjs'],
+  [join(ROOT, 'web', 'journey-create-core.mjs'), 'journey-create-core.mjs'],
+  [join(ROOT, 'web', 'model-create-core.mjs'), 'model-create-core.mjs'],
+  [join(ROOT, 'web', 'loom.html'), 'loom.html'],
+  [join(ROOT, 'web', 'loom.mjs'), 'loom.mjs'],
+  [join(ROOT, 'web', 'model-validate.mjs'), 'model-validate.mjs'],
+  [join(ROOT, 'web', 'model-edit.mjs'), 'model-edit.mjs'],
   [join(ROOT, 'web', 'data.schema.json'), 'data.schema.json'],
   [join(ROOT, 'web', 'presentation.schema.json'), 'presentation.schema.json'],
   [join(ROOT, 'web', 'model.schema.json'), 'model.schema.json'],
@@ -90,6 +117,16 @@ async function main() {
   if (await exists(modelsSrc)) {
     await cp(modelsSrc, join(DIST, 'models'), { recursive: true });
     console.log('  + dist/models/** (all models + catalog)');
+  }
+
+  // (The taxonomy registry is no longer a shipped file — it is DERIVED at runtime
+  //  from the models' data.types + `configures` by catalogue-build.mjs.)
+
+  // Copy the journeys (the composition/context-map docs) + their catalogue.
+  const journeysSrc = join(ROOT, 'web', 'journeys');
+  if (await exists(journeysSrc)) {
+    await cp(journeysSrc, join(DIST, 'journeys'), { recursive: true });
+    console.log('  + dist/journeys/** (all journeys + catalog)');
   }
 
   // Copy per-model image folders (web/<dir>/*) — each model references its images

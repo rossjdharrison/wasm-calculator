@@ -260,6 +260,19 @@ const WIDGETS = {
     return selectRow(a.label, list, cur, (v) => a.set(v === '(none)' ? undefined : v));
   },
   default: (a) => defaultWidget(a),
+  // parents — a class's `specializes` edge. v1 single parent (a chain), stored as a
+  // one-element array so the DAG shape is preserved for later multi-inheritance. Picks
+  // from a source (neutral leaves ∪ the model's own classes).
+  parents: (a) => {
+    const opts = a.spec.options || (a.spec.source ? (a.ctx.sources?.[a.spec.source]?.(a.item, a.source) || []) : []);
+    const list = ['(none)', ...opts];
+    const arr = a.base[a.spec.prop];
+    const cur = (Array.isArray(arr) && arr[0]) || '(none)';
+    return selectRow(a.label, list, cur, (v) => {
+      if (v === '(none)') delete a.base[a.spec.prop]; else a.base[a.spec.prop] = [v];
+      a.onChange();
+    });
+  },
   optionList: (a) => optionListWidget(a),
   optionRows: (a) => optionRowsWidget(a),
   note: (a) => hint(a.spec.text || ''),
@@ -290,6 +303,7 @@ export const WIDGET_CONTRACTS = {
   formula: { needsProp: true, boolFlags: ['multiline', 'required'] },
   rule: { needsProp: true, needsFields: true },
   select: { needsProp: true, oneOf: ['options', 'source'], boolFlags: ['allowNone'] },
+  parents: { needsProp: true, oneOf: ['options', 'source'] },
   default: { needsProp: true, item: 'fieldType' },
   optionList: { needsProp: false, needsFields: true, item: 'optionList' },
   optionRows: { needsProp: false, needsAssets: true },
@@ -407,6 +421,20 @@ function optionRowsWidget(a) {
     pd.value = po.priceDelta ?? '';
     pd.addEventListener('input', () => { if (pd.value === '') delete po.priceDelta; else po.priceDelta = Number(pd.value); a.onChange(); });
     r.appendChild(pd);
+    // swatch (comma-separated CSS colours → array) + badge (boolean) — the
+    // presentation affordances the showroom reads when a field renders as swatch.
+    const sw = el('input', 'qc-input de-opt-swatch', { placeholder: 'swatch #a,#b', 'aria-label': `${o.id} swatch colours`, value: Array.isArray(po.swatch) ? po.swatch.join(',') : (po.swatch || '') });
+    sw.addEventListener('input', () => { const parts = sw.value.split(',').map((s) => s.trim()).filter(Boolean); if (parts.length) po.swatch = parts; else delete po.swatch; a.onChange(); });
+    r.appendChild(sw);
+    // a badge only renders in the showroom for multichoice options (the podium),
+    // so only offer the control there — it would be silently dead on choice fields.
+    if (f.type === 'multichoice') {
+      const bw = el('label', 'de-opt-badge', { title: `Feature "${o.id}" with a badge` });
+      const bc = el('input', null, { type: 'checkbox', 'aria-label': `${o.id} badge` }); bc.checked = !!po.badge;
+      bc.addEventListener('change', () => { if (bc.checked) po.badge = true; else delete po.badge; a.onChange(); });
+      bw.append(bc, document.createTextNode(' badge'));
+      r.appendChild(bw);
+    }
     r.appendChild(assetImageCell(po, a));
     box.appendChild(r);
   }
