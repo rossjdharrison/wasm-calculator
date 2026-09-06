@@ -312,6 +312,19 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
       catHost.appendChild(grid.childElementCount ? grid : emptyState(q));
       return;
     }
+    // BUILDER control panel: one flat, PACKED grid of the whole fleet (a chip narrows to a
+    // category subtree; search filters) so many machines use the space well, rather than a
+    // stack of single-card category sections. The buyer storefront keeps its collections.
+    if (controlPanel) {
+      const grid = el('div', 'lp-grid');
+      let n = 0;
+      for (const r of modelsUnder(reg, chip || here)) {
+        if (!matchText(modelById[r.model] || { id: r.model, title: r.title }, q)) continue;
+        grid.appendChild(modelCard(r)); n++;
+      }
+      catHost.appendChild(n ? grid : emptyState(q));
+      return;
+    }
     const sections = childrenOf(reg, here).filter((secId) => !chip || secId === chip);   // a chip narrows to one group
     const placed = new Set();
     let shown = 0;
