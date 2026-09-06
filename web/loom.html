@@ -171,11 +171,16 @@
   .createcard .cbtns button{font-size:12px;padding:5px 11px;border-radius:7px;border:1px solid var(--line2);color:var(--dim)}
   .createcard .cbtns button.go{background:var(--gold);color:#12130f;border-color:var(--gold);font-weight:600}
   .boot{position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font-family:var(--disp);font-size:15px}
+  a.brand{text-decoration:none;color:inherit}
+  .loomnav{display:flex;gap:6px;margin-left:14px}
+  .loomnav a{font-size:12px;color:var(--dim);text-decoration:none;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px}
+  .loomnav a:hover{color:var(--gold);border-color:var(--gold)}
 </style>
 </head>
 <body>
 <div class="top">
-  <div class="brand"><b>ROWBLAA</b> <i>LUXURY</i> <em>· Relationship Loom</em></div>
+  <a class="brand" href="index.html" title="Home"><b>ROWBLAA</b> <i>LUXURY</i> <em>· Live model canvas</em></a>
+  <nav class="loomnav" id="loomnav" aria-label="Canvases"></nav>
   <div class="spacer"></div>
   <div class="tbsel">Currency <select id="cur"></select></div>
   <div class="tbsel">Units <select id="units"><option value="metric">metric</option><option value="imperial">imperial</option></select></div>

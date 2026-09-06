@@ -102,7 +102,11 @@ export const loadCatalogue = async () => {
     const [domain, cat] = await Promise.all([loadDomain(), mergedModelCatalog()]);
     const datas = {};
     await Promise.all((cat.models || []).map(async (m) => { datas[m.id] = await loadModelData(m.id); }));
-    return registryFromModels(domain || {}, cat, datas);
+    const reg = registryFromModels(domain || {}, cat, datas);
+    // surface the per-model data already loaded here (fields/computed) so the landing can
+    // show each machine's vitals with no extra fetch; catalogue.mjs reads only root/nodes.
+    reg.datas = datas;
+    return reg;
   } catch (_) { return null; }
 };
 // SEAM (KV/R2, deferred): lazy per-model data load with ancestor-closure so the

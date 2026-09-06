@@ -13,7 +13,7 @@
 // the Configurator and the other editors read.
 // =============================================================================
 import { loadEngine, mergeModel, splitModel } from './assembler.mjs';
-import { currentData, currentPres, saveData, savePres, resetModel, MODEL_ID } from './store.mjs';
+import { currentData, currentPres, saveData, savePres, resetModel, MODEL_ID, loadDomain } from './store.mjs';
 import { validateFormula, tryAssemble } from './model-validate.mjs';
 import * as edit from './model-edit.mjs';
 import { formatOutput } from './ui.mjs';
@@ -21,8 +21,17 @@ import { parseExpr, formatExpr } from './expr.mjs';
 import { edgesOf, findCycles } from './coverage.mjs';
 import { buildDefaults } from './preview.mjs';
 import { loadRates } from './fx.mjs';
+import { studioRoutes } from './studio-shell.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
+
+// sibling-canvas nav: the Loom is no longer an island — link every OTHER canvas of THIS
+// model into the top bar (from the shared studioRoutes, so it can't drift from the shell
+// or the Configurator's Studio menu). The brand lockup links Home.
+(() => { const nav = $('#loomnav'); if (!nav) return; for (const r of studioRoutes(MODEL_ID)) { if (r.key === 'loom') continue; const a = document.createElement('a'); a.href = r.href; a.textContent = r.label; nav.appendChild(a); } })();
+
+// re-skin the brand from the domain (so a swapped domain re-skins the Loom too).
+loadDomain().then((d) => { const b = d && d.brand; if (!b) return; const el = $('a.brand'); if (el) el.innerHTML = `<b>${b.mark || ''}</b> <i>${b.rest || ''}</i> <em>· Live model canvas</em>`; const name = [b.mark, b.rest].filter(Boolean).join(' '); if (name) document.title = `${name} · Live model canvas`; }).catch(() => {});
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const mk = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
 const clone = (x) => JSON.parse(JSON.stringify(x));

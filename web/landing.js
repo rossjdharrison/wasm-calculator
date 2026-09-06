@@ -26,6 +26,18 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
   const features = domain.features || { basket: true, saved: true, studio: true, journeys: true };
   const catModels = cat.models || [];
   const modelById = Object.fromEntries(catModels.map((m) => [m.id, m]));
+  // control-panel (builder) framing vs the buyer storefront — a dedicated flag so the two
+  // audiences are a real switch, not overloaded onto features.studio.
+  const controlPanel = features.controlPanel === true;
+  // the journeys once, up front, so the fleet roster can count them (reused by the section).
+  let journeysAll = [];
+  if (features.journeys) {
+    try {
+      const jc = await mergedJourneyCatalog();
+      const wanted = domain.catalog && domain.catalog.journeys ? new Set(domain.catalog.journeys.map((j) => j.id)) : null;
+      journeysAll = (jc.journeys || []).filter((j) => !wanted || wanted.has(j.id));
+    } catch (_) { /* no journeys */ }
+  }
 
   document.title = domain.title || `${brand.mark} ${brand.rest || ''}`.trim();
 
@@ -160,11 +172,35 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     else title.focus();
   }
 
-  // ---- hero ----
-  const hero = el('div', 'lp-hero');
-  hero.innerHTML = `<div class="lp-eyebrow">${L('eyebrow', 'The Collections')}</div>
-    <h1 class="lp-title">${L('heroTitle', 'Choose to begin.')}</h1>
-    <p class="lp-lede">${L('heroLede', 'Choose one to begin.')}</p>`;
+  // ---- hero: builder control-panel framing (features.controlPanel) or buyer storefront ----
+  const hero = el('div', 'lp-hero' + (controlPanel ? ' lp-hero--builder' : ''));
+  if (controlPanel) {
+    const nM = catModels.length, nJ = journeysAll.length;
+    const machineWord = nM === 1 ? L('machineNoun', 'quote machine') : L('machinePlural', 'quote machines');
+    const journeyWord = nJ === 1 ? L('journeyNoun', 'journey') : L('journeyPlural', 'journeys');
+    const roster = `${nM} ${machineWord}${nJ ? ` · ${nJ} ${journeyWord}` : ''}`;
+    hero.innerHTML = `<div class="lp-eyebrow">${L('builderEyebrow', 'Control panel')}</div>
+      <h1 class="lp-title">${L('builderHeroTitle', L('heroTitle', 'Build a configurator.'))}</h1>
+      <p class="lp-lede">${L('builderHeroLede', L('heroLede', ''))}</p>
+      <div class="lp-roster">${roster}</div>`;
+  } else {
+    hero.innerHTML = `<div class="lp-eyebrow">${L('eyebrow', 'The Collections')}</div>
+      <h1 class="lp-title">${L('heroTitle', 'Choose to begin.')}</h1>
+      <p class="lp-lede">${L('heroLede', 'Choose one to begin.')}</p>`;
+  }
+
+  // ---- "how it works" band (builder mode) — the mechanism, legible in ten seconds ----
+  const howBand = () => {
+    const steps = Array.isArray(domain.howItWorks) ? domain.howItWorks : [];
+    if (!controlPanel || !steps.length) return null;
+    const band = el('div', 'lp-how');
+    steps.forEach((step, i) => {
+      const s = el('div', 'lp-how-step');
+      s.innerHTML = `<span class="lp-how-n" aria-hidden="true">${i + 1}</span><span class="lp-how-g" aria-hidden="true">${step.glyph || '◆'}</span><b class="lp-how-t">${step.title || ''}</b><span class="lp-how-note">${step.note || ''}</span>`;
+      band.appendChild(s);
+    });
+    return band;
+  };
 
   // ---- breadcrumb when browsing INTO a sub-catalogue (?c=) ----
   const here = reg && (CAT_ID || (domain.rootCatalogue) || reg.root);
@@ -180,6 +216,7 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     });
     wrap.append(hd, bc, hero);
   } else { wrap.append(hd, hero); }
+  const hb = howBand(); if (hb) wrap.appendChild(hb);
 
   // a plain-language, GENERIC label for a taxonomy node (no domain/ontology words in
   // code): a domain-authored node title if present, else the id de-slugged.
@@ -208,15 +245,35 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     body.innerHTML = `<div class="lp-cardtitle">${m.title || m.id}</div><div class="lp-blurb">${m.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Enter')} <span aria-hidden="true">→</span></div>`;
     const badge = typeBadge(row.id);   // row.id = the leaf class id (registry path); absent in the degraded flat grid
     if (badge) body.insertBefore(badge, body.firstChild);
+    // vitals (builder mode): each machine's shape at a glance, from data already loaded.
+    if (controlPanel && reg && reg.datas && reg.datas[row.model]) {
+      const dd = reg.datas[row.model];
+      const vit = el('div', 'lp-vitals', { text: `${(dd.fields || []).length} ${L('fieldsUnit', 'fields')} · ${(dd.computed || []).length} ${L('computedUnit', 'computed')}` });
+      body.insertBefore(vit, body.querySelector('.lp-enter'));
+    }
     a.append(media, body);
     if (m.hero) resolveImage(m.hero).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = `<img src="${u}" alt="">`; }; im.src = u; }).catch(() => {});
     if (!features.studio) return a;
-    // a "Fork" affordance sits OVER the card (a button can't live inside the <a>): one
-    // click opens the create modal straight into the fork path with this model selected.
+    // In builder mode the card becomes a machine you OPERATE: the card <a> stays Open
+    // (run the configurator), and an always-visible action bar puts every CANVAS one
+    // click away. A button/link can't nest inside the card <a>, so the bar is a sibling
+    // in .lp-cardwrap. Every href is row.model + a static filename; every label is a
+    // generic L() fallback — no domain token enters this neutral module.
     const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
-    const fork = el('button', 'lp-forkbtn', { type: 'button', text: 'Fork', title: `Duplicate ${m.title || m.id}`, 'aria-label': `Duplicate ${m.title || m.id}` });
+    const name = m.title || m.id;
+    const mid = encodeURIComponent(row.model);
+    const actions = el('div', 'lp-actions'); actions.setAttribute('role', 'group'); actions.setAttribute('aria-label', `Canvases for ${name}`);
+    const mkLink = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${name}`); return x; };
+    actions.append(
+      mkLink(L('editLabel', 'Edit'), `data-editor.html?m=${mid}`, `${L('editLabel', 'Edit')} data model`),
+      mkLink(L('designLabel', 'Design'), `presentation-editor.html?m=${mid}`, L('designLabel', 'Design')),
+      mkLink(L('loomLabel', 'Loom'), `loom.html?m=${mid}`, `${L('loomLabel', 'Loom')} — live canvas`),
+    );
+    const fork = el('button', 'lp-action lp-action--fork', { type: 'button', text: L('forkLabel', 'Fork') });
+    fork.setAttribute('aria-label', `${L('forkLabel', 'Fork')} — ${name}`);
     fork.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openCreateModel(catModels, m.id); });
-    cw.appendChild(fork);
+    actions.appendChild(fork);
+    cw.appendChild(actions);
     return cw;
   };
   // a section header; when the sub-tree has real depth, its title links deeper (?c=).
@@ -235,6 +292,15 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
   const catHost = el('div', 'lp-cat');
   const filterState = { q: '', chip: null };
   const matchText = (m, q) => !q || `${m.title || ''} ${m.blurb || ''} ${m.id || ''}`.toLowerCase().includes(q.toLowerCase());
+  // empty state — in builder mode the first screen becomes an onboarding create card (the
+  // whole point of the pitch); otherwise (or while filtering) a plain message.
+  const emptyState = (q) => {
+    if (q || !controlPanel) return el('p', 'lp-empty', { text: q ? `No matches for “${q}”.` : 'Nothing here yet.' });
+    const card = el('button', 'lp-empty-create', { type: 'button' });
+    card.innerHTML = `<span class="lp-empty-g" aria-hidden="true">＋</span><b class="lp-empty-t">${L('emptyCreateTitle', 'Create your first quote machine')}</b><span class="lp-empty-n">${L('emptyCreateNote', 'Pick what it is, name it, and start — no code.')}</span>`;
+    card.addEventListener('click', () => openCreateModel(catModels));
+    return card;
+  };
 
   function renderCatalogue() {
     catHost.innerHTML = '';
@@ -243,7 +309,7 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
       // no registry → degrade to a flat grid of every catalogued model (nothing lost)
       const grid = el('div', 'lp-grid');
       for (const m of catModels) if (matchText(m, q)) grid.appendChild(modelCard({ model: m.id, title: m.title }));
-      catHost.appendChild(grid.childElementCount ? grid : el('p', 'lp-empty', { text: q ? `No configurators match “${q}”.` : 'No configurators yet.' }));
+      catHost.appendChild(grid.childElementCount ? grid : emptyState(q));
       return;
     }
     const sections = childrenOf(reg, here).filter((secId) => !chip || secId === chip);   // a chip narrows to one group
@@ -270,7 +336,7 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
       }
       catHost.appendChild(grid);
     }
-    if (!shown) catHost.appendChild(el('p', 'lp-empty', { text: q ? `No configurators match “${q}”.` : 'No configurators yet.' }));
+    if (!shown) catHost.appendChild(emptyState(q));
   }
 
   // the library toolbar: a search box, plus type-filter chips when there is more than
@@ -305,15 +371,23 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
   // ---- composed journeys (reachable + feature-gated) ----
   if (features.journeys) {
     try {
-      const jc = await mergedJourneyCatalog();
-      const wanted = domain.catalog && domain.catalog.journeys ? new Set(domain.catalog.journeys.map((j) => j.id)) : null;
-      const journeys = (jc.journeys || []).filter((j) => !wanted || wanted.has(j.id));
+      const journeys = journeysAll;   // fetched once up front (also feeds the fleet roster)
       if (journeys.length) {
         const { section, grid } = sectionOf(L('journeysTitle', 'Journeys'), '⇄');
         for (const j of journeys) {
           const a = el('a', 'lp-card lp-card--journey'); a.href = `configure.html?j=${encodeURIComponent(j.id)}`;
           a.appendChild(el('div', 'lp-cardbody', { html: `<div class="lp-cardtitle">${j.title || j.id}</div><div class="lp-blurb">${j.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Begin')} <span aria-hidden="true">→</span></div>` }));
-          grid.appendChild(a);
+          if (!features.studio) { grid.appendChild(a); continue; }
+          // a journey is a composed machine — the card runs it; the bar opens its canvases.
+          const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
+          const jname = j.title || j.id; const jid = encodeURIComponent(j.id);
+          const acts = el('div', 'lp-actions'); acts.setAttribute('role', 'group'); acts.setAttribute('aria-label', `Canvases for ${jname}`);
+          const mk = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${jname}`); return x; };
+          acts.append(
+            mk(L('canvasLabel', 'Canvas'), `journey.html?j=${jid}`, `${L('canvasLabel', 'Canvas')} — journey loom`),
+            mk(L('composeLabel', 'Compose'), `journey-create.html?j=${jid}`, L('composeLabel', 'Compose')),
+          );
+          cw.appendChild(acts); grid.appendChild(cw);
         }
         wrap.appendChild(section);
       }
