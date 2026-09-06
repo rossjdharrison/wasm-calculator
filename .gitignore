@@ -29,6 +29,11 @@ web/antiques/*.jpg
 web/antiques/*.jpeg
 web/antiques/*.webp
 web/antiques/*.avif
+web/solar/*.png
+web/solar/*.jpg
+web/solar/*.jpeg
+web/solar/*.webp
+web/solar/*.avif
 
 # generated KV seed (npm run seed:kv)
 kv-seed.json

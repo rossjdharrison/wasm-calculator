@@ -132,7 +132,7 @@ async function main() {
 
   // Copy per-model image folders (web/<dir>/*) — each model references its images
   // by a relative path (option.image = "cars/<x>.png", "antiques/<x>.png", …).
-  for (const dir of ['cars', 'antiques']) {
+  for (const dir of ['cars', 'antiques', 'solar']) {
     const src = join(ROOT, 'web', dir);
     if (!(await exists(src))) continue;
     const imgs = (await readdir(src)).filter((n) => /\.(jpe?g|png|webp|avif|svg)$/i.test(n));
