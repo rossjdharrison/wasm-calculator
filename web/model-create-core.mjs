@@ -54,6 +54,28 @@ export function newModelData(id, { currency = 'EUR', configures, category, title
   return d;
 }
 
+// FORK a whole model: deep-clone both files, re-id, and give the fork its OWN unique
+// leaf class — a SIBLING of the source's configured class (same parent), never the same
+// leaf (or the derived catalogue would collapse the two models onto one node). So a fork
+// is typed from birth and stays grouped beside its source. Pure + deterministic.
+export function forkModelData(srcData, newId, { title } = {}) {
+  const d = structuredClone(srcData);
+  d.id = newId;
+  const srcLeaf = srcData.configures;
+  const srcDef = (srcData.types && srcLeaf && srcData.types[srcLeaf]) || {};
+  const parents = (srcDef.specializes && srcDef.specializes.length) ? srcDef.specializes : [DEFAULT_CATEGORY];
+  if (d.types && srcLeaf) delete d.types[srcLeaf];                 // drop the source's own leaf — the fork mints its own
+  ensureOwnLeaf(d, parents[0], title || srcDef.title || newId);   // a sibling under the same parent (v1: single parent)
+  return d;
+}
+
+// the matching presentation for a fork: same layout/controls/outputs, retitled.
+export function forkModelPres(srcPres, { title } = {}) {
+  const p = structuredClone(srcPres);
+  if (title) { p.name = title; p.brand = { ...(p.brand || {}), mark: title }; }
+  return p;
+}
+
 // the matching presentation: a titled configurator surfacing the price as its total.
 export function newModelPres(id, { title = 'Untitled', currency = 'EUR' } = {}) {
   return {

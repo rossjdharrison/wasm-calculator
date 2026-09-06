@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { supertypesOf, isA, leafCategoryOf, renderOf, NEUTRAL_CATEGORIES, phasesOf, STEP_KINDS, authorCategories } from '../web/hqdm.mjs';
+import { supertypesOf, isA, leafCategoryOf, renderOf, NEUTRAL_CATEGORIES, phasesOf, STEP_KINDS, authorCategories, authorCategoryChoices } from '../web/hqdm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const readJson = (p) => readFile(join(here, '..', 'web', p), 'utf8').then(JSON.parse);
@@ -79,4 +79,19 @@ test('authorCategories = neutral leaves ∪ a model’s own types, deduped & det
   assert.ok(withTypes.includes('amount_of_money'), 'keeps the neutral leaves');
   assert.equal(new Set(withTypes).size, withTypes.length, 'de-duped');
   assert.deepEqual(authorCategories({ X: {} }), authorCategories({ X: {} }), 'deterministic');
+});
+
+test('authorCategoryChoices surfaces the authorable render-hint leaves, ranked, with plain-language labels', () => {
+  const choices = authorCategoryChoices();
+  assert.ok(choices.length >= 5, 'several authorable categories');
+  assert.equal(choices[0].id, 'class_of_physical_object', 'a physical thing ranks first (authorable: 1)');
+  for (const c of choices) {
+    assert.ok(c.id && c.glyph && c.label, 'each choice carries id + glyph + label');
+    assert.ok('hint' in c, 'each choice carries a hint field');
+  }
+  const ids = choices.map((c) => c.id);
+  assert.ok(!ids.includes('person') && !ids.includes('sign') && !ids.includes('state'), 'non-authorable hints are excluded');
+  // ranked by the data-driven `authorable` order (physical thing → money → … → activity)
+  assert.ok(ids.indexOf('class_of_physical_object') < ids.indexOf('amount_of_money'), 'physical thing before money');
+  assert.ok(ids.indexOf('amount_of_money') < ids.indexOf('activity'), 'money before activity');
 });

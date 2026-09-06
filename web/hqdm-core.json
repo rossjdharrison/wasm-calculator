@@ -39,20 +39,21 @@
     "period_of_time": { "specializes": ["spatio_temporal_extent"] },
     "point_in_time": { "specializes": ["spatio_temporal_extent"] }
   },
+  "note_renderHints": "Presentational annotation on the neutral types (NOT the pure lattice): glyph + render family, plus author-facing plain-language `label`/`hint` and an `authorable` RANK. `authorable` (a sort number; absent = not offered) marks the categories a NEW configurator can be created as — surfaced by hqdm.authorCategoryChoices for the studio's 'What is it?' picker, so the type vocabulary stays DATA here, never hardcoded in the UI. Labels are generic ontological English, not domain words.",
   "renderHints": {
-    "amount_of_money": { "glyph": "¤", "render": "money" },
-    "physical_quantity": { "glyph": "#", "render": "quantity" },
-    "class_of_physical_object": { "glyph": "◈", "render": "hero" },
-    "physical_object": { "glyph": "◈", "render": "hero" },
-    "ordinary_physical_object": { "glyph": "◈", "render": "hero" },
-    "party": { "glyph": "☺", "render": "party" },
-    "organization": { "glyph": "⌂", "render": "party" },
-    "person": { "glyph": "☺", "render": "party" },
-    "activity": { "glyph": "▷", "render": "step" },
-    "agreement": { "glyph": "§", "render": "contract" },
-    "sign": { "glyph": "✎", "render": "signature" },
-    "state": { "glyph": "◔", "render": "statechip" },
-    "transfer_of_ownership": { "glyph": "⇄", "render": "transfer" },
-    "transfer_of_possession": { "glyph": "⇄", "render": "transfer" }
+    "amount_of_money": { "glyph": "¤", "render": "money", "label": "Amount of money", "hint": "A monetary sum — a price, fee or deposit", "authorable": 2 },
+    "physical_quantity": { "glyph": "#", "render": "quantity", "label": "Quantity or measure", "hint": "A number with a unit — length, weight, a count", "authorable": 3 },
+    "class_of_physical_object": { "glyph": "◈", "render": "hero", "label": "Physical thing", "hint": "A tangible item someone configures and takes ownership of", "authorable": 1 },
+    "physical_object": { "glyph": "◈", "render": "hero", "label": "Physical thing" },
+    "ordinary_physical_object": { "glyph": "◈", "render": "hero", "label": "Physical thing" },
+    "party": { "glyph": "☺", "render": "party", "label": "Party", "hint": "An individual or organisation taking part", "authorable": 6 },
+    "organization": { "glyph": "⌂", "render": "party", "label": "Organisation", "hint": "A company or body", "authorable": 7 },
+    "person": { "glyph": "☺", "render": "party", "label": "Person" },
+    "activity": { "glyph": "▷", "render": "step", "label": "Activity or service", "hint": "Something performed or delivered", "authorable": 4 },
+    "agreement": { "glyph": "§", "render": "contract", "label": "Agreement", "hint": "A contract between parties", "authorable": 5 },
+    "sign": { "glyph": "✎", "render": "signature", "label": "Signature or mark" },
+    "state": { "glyph": "◔", "render": "statechip", "label": "State" },
+    "transfer_of_ownership": { "glyph": "⇄", "render": "transfer", "label": "Transfer of ownership" },
+    "transfer_of_possession": { "glyph": "⇄", "render": "transfer", "label": "Transfer of possession" }
   }
 }
