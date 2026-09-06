@@ -48,6 +48,7 @@ export function delPath(base, path) {
 export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange, onSelect }) {
   const rules = makeRuleUI(ctx.fields || (() => []));
   let sel = { c: 0, i: 0 };
+  let adding = null;   // { ci } while an inline "add" input is open for a collection
   const notify = (info) => { if (onChange) onChange(info); };
   const emitSelect = () => { if (onSelect) onSelect(col().key, selectedId()); };
 
@@ -98,14 +99,55 @@ export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange,
   function renderOutline() {
     outline.innerHTML = '';
     cols().forEach((c, ci) => {
-      outline.appendChild(outlineGroup({
+      const group = outlineGroup({
         title: c.title,
         items: itemsOf(c).map((_, i) => labelOf(c, i)),
         activeIndex: sel.c === ci ? sel.i : -1,
         onPick: (i) => { sel = { c: ci, i }; renderOutline(); renderDetail(); notify({ reason: 'select' }); emitSelect(); },
         onAdd: (c.add && c.kind !== 'singleton' && !c.docSource) ? () => addItem(ci) : null,
-      }));
+      });
+      if (adding && adding.ci === ci) group.appendChild(inlineAddRow(c, ci));
+      outline.appendChild(group);
     });
+  }
+
+  // a collection whose "add" must capture an id (a map key, or an array item's
+  // itemLabel via add.into) — these get the inline validated input below instead of a
+  // native prompt. Seeded/plain-template adds (validations/effects) capture no id.
+  const needsIdInput = (c) => !!(c.add && !c.add.seed && (c.kind === 'map' || (c.kind === 'array' && typeof c.add.into === 'string' && c.add.into)));
+
+  // the inline id input rendered under a group while adding — validates syntax +
+  // uniqueness live (mirrors the option-list add), then creates + selects the item.
+  // Replaces window.prompt, which is unsupported in some embedded browsers.
+  function inlineAddRow(c, ci) {
+    const wrap = el('div', 'de-inlineadd');
+    const line = el('div', 'de-optadd');
+    const input = el('input', 'qc-input de-optadd__in', { placeholder: c.add.prompt || 'new id…', 'aria-label': c.add.prompt || 'New id' });
+    const btn = el('button', 'de-optadd__btn', { type: 'button', text: 'Add' }); btn.disabled = true;
+    const err = el('div', 'de-optadd__err', { 'aria-live': 'polite' }); err.hidden = true;
+    const existing = () => (c.kind === 'map' ? Object.keys(doc[c.key] || {}) : (doc[c.key] || []).map((it) => it && it[c.add.into]));
+    const check = () => {
+      const v = input.value.trim(); let msg = '';
+      if (v && !/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) msg = 'Letters, numbers & underscore — start with a letter.';
+      else if (v && existing().includes(v)) msg = `"${v}" already exists.`;
+      err.textContent = msg; err.hidden = !msg; input.classList.toggle('is-invalid', !!msg);
+      btn.disabled = !v || !!msg; return !btn.disabled;
+    };
+    const commit = () => {
+      if (!check()) return;
+      const id = input.value.trim();
+      if (c.kind === 'map') { doc[c.key] = doc[c.key] || {}; doc[c.key][id] = clone(c.add.template || {}); }
+      else { const tpl = clone(c.add.template || {}); tpl[c.add.into] = id; doc[c.key] = doc[c.key] || []; doc[c.key].push(tpl); }
+      adding = null;
+      sel = { c: ci, i: (c.kind === 'map' ? Object.keys(doc[c.key]).length : doc[c.key].length) - 1 };
+      renderOutline(); renderDetail(); notify({ reason: 'edit' }); emitSelect();
+    };
+    const cancel = () => { adding = null; renderOutline(); };
+    input.addEventListener('input', check);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { e.preventDefault(); cancel(); } });
+    btn.addEventListener('click', commit);
+    line.append(input, btn); wrap.append(line, err);
+    return wrap;
   }
 
   // ---- detail ----
@@ -173,14 +215,13 @@ export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange,
       if (!tpl) return;
       doc[c.key] = doc[c.key] || []; doc[c.key].push(tpl);
       sel = { c: ci, i: doc[c.key].length - 1 };
-    } else if (c.kind === 'map') {
-      const name = prompt(c.add.prompt || 'Name:'); if (!name) return;
-      doc[c.key] = doc[c.key] || {}; doc[c.key][name] = clone(c.add.template || {});
-      sel = { c: ci, i: Object.keys(doc[c.key]).length - 1 };
-    } else {
-      const tpl = clone(c.add.template || {});
-      if (c.add.prompt) { const v = prompt(c.add.prompt); if (!v) return; if (c.add.into) tpl[c.add.into] = v; }
-      doc[c.key] = doc[c.key] || []; doc[c.key].push(tpl);
+    } else if (needsIdInput(c)) {                            // capture the id via the inline validated input (no prompt)
+      adding = { ci };
+      renderOutline();
+      const inp = outline.querySelector('.de-inlineadd .de-optadd__in'); if (inp) inp.focus();
+      return;
+    } else {                                                 // a plain template add (id-less: validations/effects)
+      doc[c.key] = doc[c.key] || []; doc[c.key].push(clone(c.add.template || {}));
       sel = { c: ci, i: doc[c.key].length - 1 };
     }
     renderOutline(); renderDetail(); notify({ reason: 'edit' }); emitSelect();
