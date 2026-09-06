@@ -426,19 +426,21 @@
 
   /* ---- landing (collections catalogue) ---- */
   body:has(.lp) { overflow: auto; height: auto; }
-  .lp { min-height: 100dvh; display: flex; flex-direction: column;
+  .lp { min-height: 100dvh; display: flex; flex-direction: column; --lp-maxw: 1280px;
     background: radial-gradient(120% 80% at 50% -8%, #2c2621 0%, #16130f 42%, var(--bg) 100%); }
   .lp-hd { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); }
-  .lp-hero { text-align: center; padding: 9vh 24px 5vh; max-width: 820px; margin: 0 auto; }
-  .lp-eyebrow { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
-  .lp-title { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; text-wrap: balance; margin: 0 0 16px; }
-  .lp-lede { font-size: 15px; color: var(--text-soft); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
-  .lp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; max-width: 1000px; margin: 0 auto; padding: 0 24px 7vh; width: 100%; }
+  .lp-hero { text-align: center; padding: 5vh 24px 3vh; max-width: 760px; margin: 0 auto; }
+  .lp-eyebrow { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .lp-title { font-family: var(--display); font-weight: 600; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.08; text-wrap: balance; margin: 0 0 12px; }
+  .lp-lede { font-size: 14px; color: var(--text-soft); max-width: 58ch; margin: 0 auto; line-height: 1.55; }
+  /* auto-FILL + a capped track (not 1fr) so a section with one model shows a card-sized
+     card, never a full-width one; more machines pack the row and use a huge screen well. */
+  .lp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 300px)); justify-content: start; gap: 18px; max-width: var(--lp-maxw); margin: 0 auto; padding: 0 24px 6vh; width: 100%; }
   .lp-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; border-radius: 16px; overflow: hidden;
     background: linear-gradient(180deg, var(--surface), var(--surface-2)); border: 1px solid var(--border);
     transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
   .lp-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 24px 60px -30px rgba(216,162,74,.5); }
-  .lp-media { aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface); }
+  .lp-media { aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface); }
   .lp-media img, .lp-media svg { width: 100%; height: 100%; object-fit: cover; display: block; }
   .lp-cardbody { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
   .lp-cardtitle { font-family: var(--display); font-weight: 600; font-size: 22px; }
@@ -448,10 +450,11 @@
   .lp-foot { margin-top: auto; display: flex; justify-content: space-between; padding: 20px 32px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-dim); }
   @media (max-width: 640px) { .lp-hd, .lp-foot { padding-left: 20px; padding-right: 20px; } }
   /* grouped catalogue sections + studio link + journey cards (data-driven landing) */
-  .lp-section { max-width: 1000px; margin: 0 auto; width: 100%; }
-  .lp-section-h { display: flex; align-items: center; gap: 10px; padding: 0 24px; margin: 8px auto 14px; max-width: 1000px; }
+  .lp-section { max-width: var(--lp-maxw); margin: 0 auto; width: 100%; }
+  .lp-section-h { display: flex; align-items: center; gap: 10px; padding: 0 24px; margin: 8px auto 14px; max-width: var(--lp-maxw); }
   .lp-section-g { font-size: 18px; color: var(--accent); }
   .lp-section-t { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-soft); margin: 0; }
+  .lp-section-note { max-width: var(--lp-maxw); margin: -2px auto 12px; width: 100%; padding: 0 24px; font-size: 12.5px; color: var(--text-soft); line-height: 1.5; }
   .lp-section .lp-grid { padding-bottom: 3vh; }
   .hd-studio { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; text-decoration: none; }
   .hd-studio:hover { border-color: var(--accent); color: var(--accent); }
@@ -474,14 +477,14 @@
   .lp-modal .jbtn { border: 1px solid var(--border); border-radius: 9px; padding: 8px 14px; color: var(--text-soft); background: none; cursor: pointer; font: inherit; font-size: 13px; }
   .lp-modal .jbtn:hover { border-color: var(--accent); color: var(--accent); }
   .lp-modal .jbtn.primary { background: var(--accent); color: #12130f; border-color: var(--accent); }
-  .lp-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 1000px; margin: 0 auto; width: 100%; padding: 8px 24px 0; font-size: 12px; }
+  .lp-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: var(--lp-maxw); margin: 0 auto; width: 100%; padding: 8px 24px 0; font-size: 12px; }
   .lp-crumb { color: var(--text-dim); text-decoration: none; letter-spacing: .04em; }
   .lp-crumb:hover { color: var(--accent); }
   .lp-crumb.cur { color: var(--text-soft); }
   .lp-crumb-sep { color: var(--text-dim); opacity: .6; }
   /* library toolbar: search + type-filter chips (find existing objects) */
-  .lp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; max-width: 1000px; margin: 0 auto 6px; width: 100%; padding: 6px 24px; }
-  .lp-search { flex: 1 1 240px; min-width: 200px; background: var(--ground, var(--surface)); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 9px 12px; font: inherit; font-size: 13.5px; }
+  .lp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; max-width: var(--lp-maxw); margin: 0 auto 6px; width: 100%; padding: 6px 24px; }
+  .lp-search { flex: 1 1 240px; min-width: 200px; max-width: 380px; background: var(--ground, var(--surface)); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 8px 12px; font: inherit; font-size: 13px; }
   .lp-search:focus { outline: none; border-color: var(--accent); }
   .lp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .lp-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text-soft); padding: 6px 13px; font: inherit; font-size: 12px; letter-spacing: .02em; cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease); }
@@ -490,7 +493,7 @@
   /* per-card TYPE badge — the neutral glyph + the category the model sits under */
   .lp-typebadge { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
   .lp-typebadge-g { color: var(--accent); font-size: 13px; letter-spacing: 0; }
-  .lp-empty { max-width: 1000px; margin: 0 auto; width: 100%; padding: 4vh 24px; text-align: center; color: var(--text-dim); font-size: 14px; }
+  .lp-empty { max-width: var(--lp-maxw); margin: 0 auto; width: 100%; padding: 4vh 24px; text-align: center; color: var(--text-dim); font-size: 14px; }
   /* create/fork modal: two paths (start new with a plain-language type picker, or fork) */
   .lp-modal--create { width: min(560px, 94vw); max-height: 88vh; overflow: auto; }
   .lp-tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
@@ -532,7 +535,7 @@
   .lp-action--fork { color: var(--text-dim); }
   /* builder control-panel: fleet roster line, how-it-works band, card vitals, empty-state */
   .lp-roster { margin-top: 18px; display: inline-block; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--text-soft); border: 1px solid var(--border); border-radius: 999px; padding: 7px 16px; }
-  .lp-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; max-width: 1000px; margin: 8px auto 2vh; width: 100%; padding: 0 24px; }
+  .lp-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; max-width: var(--lp-maxw); margin: 8px auto 2vh; width: 100%; padding: 0 24px; }
   .lp-how-step { position: relative; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px 16px 46px; background: linear-gradient(180deg, var(--surface), var(--surface-2)); }
   .lp-how-n { position: absolute; left: 14px; top: 16px; font-size: 12px; font-weight: 600; color: #12130f; background: var(--accent); width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
   .lp-how-g { font-size: 17px; color: var(--accent); margin-right: 8px; }

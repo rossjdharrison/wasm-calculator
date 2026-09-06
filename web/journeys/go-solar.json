@@ -1,0 +1,50 @@
+{
+  "id": "go-solar",
+  "version": "1.0.0",
+  "title": "Go solar",
+  "correlationPrefix": "GS",
+  "phases": [
+    { "id": "survey", "label": "Site survey", "order": 1, "tint": "#7f9bb0" },
+    { "id": "design", "label": "Design", "order": 2, "tint": "#d8a24a" },
+    { "id": "storage", "label": "Storage", "order": 3, "tint": "#8fb08a" },
+    { "id": "finance", "label": "Finance", "order": 4, "tint": "#74c2a2" },
+    { "id": "install", "label": "Install", "order": 5, "tint": "#b98cc9" },
+    { "id": "commission", "label": "Commission", "order": 6, "tint": "#c9a24a" }
+  ],
+  "labels": {
+    "record": "project", "recordPlural": "projects", "recordTotal": "Project total",
+    "emptyPrompt": "Design your array to begin the project.",
+    "lifecycleLabel": "Project lifecycle", "captureNoun": "design"
+  },
+  "types": {
+    "Owned": { "specializes": ["state"] },
+    "Live": { "specializes": ["state"] }
+  },
+  "models": [
+    { "ref": "solar-array", "as": "array", "phase": "design", "role": "product" },
+    { "ref": "solar-battery", "as": "battery", "phase": "storage", "role": "addon" },
+    { "ref": "financing", "as": "financing", "phase": "finance", "role": "finance" }
+  ],
+  "bindings": [
+    {
+      "id": "cost-to-financing",
+      "from": "array",
+      "to": "financing",
+      "contract": {
+        "provides": [{ "as": "systemCost", "l0": "amount_of_money", "source": "output:systemCost" }],
+        "requires": [{ "name": "price", "l0": "amount_of_money", "target": "field:price" }]
+      },
+      "mapping": [{ "to": "price", "from": { "op": "field", "args": ["systemCost"] } }]
+    }
+  ],
+  "process": {
+    "steps": [
+      { "id": "survey", "phase": "survey", "kind": "ceremony", "activity": "activity", "label": "Site survey", "prompt": "Type your name to confirm the site survey", "actionLabel": "Confirm survey ▸" },
+      { "id": "design", "phase": "design", "kind": "capture", "model": "array", "produces": "class_of_physical_object", "commitLabel": "Confirm this design ▸" },
+      { "id": "storage", "phase": "storage", "kind": "capture-downstream", "model": "battery", "label": "Battery storage", "actionLabel": "Add storage ▸" },
+      { "id": "finance", "phase": "finance", "kind": "capture-downstream", "model": "financing", "activity": "transfer_of_ownership", "outcome": "transfer_of_ownership", "label": "Financing", "actionLabel": "Confirm financing ▸", "enters": [{ "individual": "array#spec", "category": "Owned", "role": "owner", "label": "Ownership" }] },
+      { "id": "install", "phase": "install", "kind": "ceremony", "activity": "activity", "label": "Installation", "prompt": "Name the installer signing off", "actionLabel": "Confirm install ▸" },
+      { "id": "commission", "phase": "commission", "kind": "ceremony", "activity": "activity", "label": "Grid connection", "prompt": "Confirm commissioning & grid connection", "actionLabel": "Commission ▸", "enters": [{ "individual": "array#spec", "category": "Live", "role": "generating", "label": "Generating" }] }
+    ]
+  }
+}

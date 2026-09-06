@@ -1,0 +1,17 @@
+{
+  "name": "Battery storage",
+  "brand": { "mark": "ROWBLAA", "rest": "ENERGY", "descriptor": "Storage" },
+  "sections": [{ "id": "storage", "label": "Storage", "order": 1 }],
+  "fields": [
+    { "id": "capacity", "label": "Battery", "control": "buttons", "section": "storage", "width": "full", "options": [
+      { "id": "none", "label": "No battery" },
+      { "id": "c5", "label": "5 kWh" },
+      { "id": "c10", "label": "10 kWh" },
+      { "id": "c135", "label": "13 kWh" }
+    ] }
+  ],
+  "outputs": [
+    { "id": "usableKwh", "label": "Usable capacity", "emphasis": true, "format": { "type": "unit", "unit": "kWh", "decimals": 0 } },
+    { "id": "batteryCost", "label": "Battery cost", "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+  ]
+}
