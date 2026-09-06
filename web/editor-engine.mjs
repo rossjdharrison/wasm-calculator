@@ -45,7 +45,7 @@ export function delPath(base, path) {
 // additive capabilities (singleton + cross-doc collections, dot-path/root
 // targets, source-aware visibility & selects, kind-scoped select/onSelect,
 // seeded add) exist so presentation-editor can run fully on this one engine.
-export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange, onSelect }) {
+export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange, onSelect, onItemAdded }) {
   const rules = makeRuleUI(ctx.fields || (() => []));
   let sel = { c: 0, i: 0 };
   let adding = null;   // { ci } while an inline "add" input is open for a collection
@@ -140,6 +140,7 @@ export function createEditor({ schema, doc, outline, detail, ctx = {}, onChange,
       else { const tpl = clone(c.add.template || {}); tpl[c.add.into] = id; doc[c.key] = doc[c.key] || []; doc[c.key].push(tpl); }
       adding = null;
       sel = { c: ci, i: (c.kind === 'map' ? Object.keys(doc[c.key]).length : doc[c.key].length) - 1 };
+      if (onItemAdded) onItemAdded(c.key, id);   // let the page seed a counterpart (e.g. a presentation field/output)
       renderOutline(); renderDetail(); notify({ reason: 'edit' }); emitSelect();
     };
     const cancel = () => { adding = null; renderOutline(); };

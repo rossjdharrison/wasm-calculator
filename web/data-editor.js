@@ -13,6 +13,7 @@ import { DATA_SOURCES } from './schema-check.mjs';
 import { authorCategories, authorCategoryChoices, renderOf, supertypesOf } from './hqdm.mjs';
 import { ensureOwnLeaf, DEFAULT_CATEGORY } from './model-create-core.mjs';
 import { analyzeCoverage, applyFix, edgesOf } from './coverage.mjs';
+import { renameId } from './model-edit.mjs';
 import { el, hint } from './editor-ui.mjs';
 import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
 import { buildDefaults, renderStaticPreview } from './preview.mjs';
@@ -100,15 +101,68 @@ function mountEditor() {
       typeSpine, setType,
     },
     onChange: refresh,
+    // seed a presentation counterpart when a data item is added, so a new field shows
+    // with a label + section (and a computed value surfaces as an output) instead of
+    // rendering blank — the presentation half of "what it contains".
+    onItemAdded: seedPresFor,
   });
   refresh();
+}
+
+function seedPresFor(key, id) {
+  if (!id) return;
+  if (key === 'fields') {
+    pres.fields = pres.fields || [];
+    if (!pres.fields.some((f) => f.id === id)) { pres.fields.push({ id, label: humanizeType(id), section: (pres.sections && pres.sections[0] && pres.sections[0].id) || 'main' }); presDirty = true; }
+  } else if (key === 'computed') {
+    pres.outputs = pres.outputs || [];
+    if (!pres.outputs.some((o) => o.id === id)) { pres.outputs.push({ id, label: humanizeType(id) }); presDirty = true; }
+  }
 }
 
 // ---- right panel: coverage + depends-on/used-by + live preview -------------
 function refresh() {
   const cov = analyzeCoverage(data, pres); lastCov = cov;
-  renderCoverage(cov); renderInlineChecklist(cov);
+  renderCoverage(cov); renderInlineChecklist(cov); renderRenameControl();
   renderRelationships(); recompute(); if (!$('graph').hidden) renderGraph();
+}
+
+// rename-after-create: change a field/computed id and rewrite EVERY reference across
+// both files (renameId is pure + parity-tested). The op clones, so we adopt the new
+// docs and rebuild the engine, then reselect the renamed item.
+function renameSelected(oldId, newId) {
+  const r = renameId({ data, pres }, oldId, newId);
+  data = r.data; pres = r.pres; presDirty = true;
+  mountEditor();
+  editor.selectById(newId);
+}
+function renderRenameControl() {
+  const detail = $('detail'); if (!detail) return;
+  const old = detail.querySelector('.de-rename'); if (old) old.remove();
+  const selId = editor && editor.selectedId(); if (!selId) return;
+  const isField = (data.fields || []).some((f) => f.id === selId);
+  const isComputed = (data.computed || []).some((c) => c.id === selId);
+  if (!isField && !isComputed) return;   // renameId rewrites field/computed references; other ids aren't wired
+  const taken = new Set([...(data.fields || []).map((f) => f.id), ...(data.computed || []).map((c) => c.id)]);
+  const box = el('div', 'de-rename');
+  box.appendChild(el('div', 'de-rename__lab', { text: 'Rename id — updates every reference' }));
+  const line = el('div', 'de-optadd');
+  const input = el('input', 'qc-input de-optadd__in', { value: selId, 'aria-label': 'New id' });
+  const btn = el('button', 'de-optadd__btn', { type: 'button', text: 'Rename' }); btn.disabled = true;
+  const err = el('div', 'de-optadd__err', { 'aria-live': 'polite' }); err.hidden = true;
+  const check = () => {
+    const v = input.value.trim(); let msg = '';
+    if (v && !/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) msg = 'Letters, numbers & underscore — start with a letter.';
+    else if (v && v !== selId && taken.has(v)) msg = `"${v}" already exists.`;
+    err.textContent = msg; err.hidden = !msg; input.classList.toggle('is-invalid', !!msg);
+    btn.disabled = !v || v === selId || !!msg; return !btn.disabled;
+  };
+  const commit = () => { if (check()) renameSelected(selId, input.value.trim()); };
+  input.addEventListener('input', check);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+  btn.addEventListener('click', commit);
+  line.append(input, btn); box.append(line, err);
+  detail.appendChild(box);
 }
 
 // ---- coverage advisor (Slice 1: surface gaps + one-click connect) ----------

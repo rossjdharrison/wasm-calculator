@@ -290,6 +290,8 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; accent-
 .de-optadd__btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .de-optadd__btn:not(:disabled):hover { background: var(--qc-color-accent); color: var(--qc-color-accent-contrast); }
 .de-optadd__err { color: var(--qc-color-error); font-size: var(--qc-font-size-small); margin-top: 4px; }
+.de-rename { margin-top: var(--qc-space-4); padding-top: var(--qc-space-3); border-top: 1px solid var(--qc-color-border, rgba(255,255,255,0.08)); }
+.de-rename__lab { font-size: var(--qc-font-size-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--qc-color-text-soft); margin-bottom: var(--qc-space-2); }
 .de-expr { min-width: 0; }
 .de-expr__ta { min-height: 4.5em; }
 .de-expr__err { color: var(--qc-color-error); font-size: var(--qc-font-size-small); margin-top: 2px; }
