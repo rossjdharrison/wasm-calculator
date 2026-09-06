@@ -6,7 +6,8 @@
 // mounts the engine, and owns the domain right-panel: depends-on/used-by, the
 // dependency graph, and the live preview from the wasm engine.
 // =============================================================================
-import { currentData, currentPres, saveData, savePres, loadDefaultData } from './store.mjs';
+import { currentData, currentPres, saveData, savePres, loadDefaultData, MODEL_ID } from './store.mjs';
+import { publishModel } from './publish.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
 import { authorCategories } from './hqdm.mjs';
@@ -37,6 +38,7 @@ async function boot() {
   $('btn-revert').addEventListener('click', () => location.reload());
   $('btn-default').addEventListener('click', async () => { data = clone(await loadDefaultData()); mountEditor(); });
   $('btn-graph').addEventListener('click', toggleGraph);
+  $('btn-publish').addEventListener('click', publish);
   mountEditor();
 }
 
@@ -280,4 +282,13 @@ function save() {
   if (!saveData(data)) { setStatus('error', 'Could not save (storage blocked).'); return; }
   if (presDirty) savePres(pres); // labels added via the coverage advisor live in the presentation model
   location.href = './';
+}
+
+// publish the current model to the edge (KV) — validated server-side by the real
+// assembler; served everywhere with no redeploy. Needs the PUBLISH_TOKEN (prompted once).
+async function publish() {
+  if (!assembledOk) { setStatus('error', 'Fix the errors before publishing.'); return; }
+  setStatus('ok', 'Publishing to the edge…');
+  const res = await publishModel(MODEL_ID, { data, presentation: pres, card: { title: pres.name || MODEL_ID } });
+  setStatus(res.ok ? 'ok' : 'error', res.ok ? `Published “${MODEL_ID}” to the edge — served everywhere, no redeploy.` : `Publish failed: ${res.error}`);
 }

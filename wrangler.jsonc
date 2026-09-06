@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "wasm-calculator",
 	"pages_build_output_dir": "./dist",
-	"compatibility_date": "2026-09-06",
+	"compatibility_date": "2026-06-01",
 	// The authored-document store (read-serve). Keys:
 	//   model:<id>   -> { data, presentation }   (a whole authored model)
 	//   journey:<id> -> <journey doc>

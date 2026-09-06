@@ -32,3 +32,6 @@ web/antiques/*.avif
 
 # generated KV seed (npm run seed:kv)
 kv-seed.json
+
+# local Pages secrets (wrangler pages dev)
+.dev.vars

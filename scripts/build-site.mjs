@@ -41,6 +41,7 @@ const FILES = [
   [join(ROOT, 'web', 'presentation-editor.js'), 'presentation-editor.js'],
   [join(ROOT, 'web', 'assembler.mjs'), 'assembler.mjs'],
   [join(ROOT, 'web', 'store.mjs'), 'store.mjs'],
+  [join(ROOT, 'web', 'publish.mjs'), 'publish.mjs'],
   [join(ROOT, 'web', 'expr.mjs'), 'expr.mjs'],
   [join(ROOT, 'web', 'rule.mjs'), 'rule.mjs'],
   [join(ROOT, 'web', 'editor-ui.mjs'), 'editor-ui.mjs'],
