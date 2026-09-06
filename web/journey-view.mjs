@@ -105,7 +105,11 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
         const display = line.amount != null ? money(line.amount, line.currency) : (line.value != null ? String(line.value) : '');
         railHost.appendChild(renderByCategory(line.category || 'amount_of_money', {
           label: aliasLabel(line.alias), display,
-          origin: line.alias === captureAlias ? (o.committed[captureAlias] ? `set in ${(PH[0] || {}).label || 'capture'}` : 'live') : null,
+          // origin badge only once the capture is committed — a live/uncommitted line shows no
+          // pill (the old 'live' pill read as a finished state before anything was locked).
+          // Names the capture step's OWN phase (not PH[0]) — the capture is not always phase 1
+          // (in go-solar it's Design, phase 2, after the survey ceremony).
+          origin: line.alias === captureAlias && o.committed[captureAlias] ? `set in ${(PH.find((p) => p.id === captureStep.phase) || PH[0] || {}).label || 'capture'}` : null,
         }, typesOf(line.alias)));
       }
       // the money total is shown only when there ARE money lines (a money-free domain has none).
@@ -171,6 +175,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       mountShowroom(slot, {
         model: cm.merged, ir: cm.assembled.ir, engine, brand: cm.merged.brand || brand, resolveImage, links, modelId: step.model,
         initialConfig: Object.keys(currentConfig).length ? currentConfig : undefined,
+        ctaLabel: step.commitLabel,   // authored step CTA ("Lock this design ▸") instead of the showroom default
         onConfigChange: (cfg) => { currentConfig = cfg; recompute(); },
         onRequest: (cfg) => completeCapture(step, cfg),
       });
@@ -246,19 +251,37 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   function renderCeremony(step) {
     const o = order.fold(events);
     const wrap = el('div', 'phase-ceremony');
-    wrap.append(el('div', 'phase-hd', { text: (PH.find((p) => p.id === step.phase) || {}).label || step.phase }), specCard());
-    if (step.activity) wrap.appendChild(renderByCategory(step.activity, { label: step.label || step.id }, typesOf(captureAlias)));
+    wrap.appendChild(el('div', 'phase-hd', { text: (PH.find((p) => p.id === step.phase) || {}).label || step.phase }));
+    // the spec card IS the configured build — only meaningful once it exists, so it is
+    // hidden on an opening ceremony (e.g. the site survey, before anything is designed)
+    // and shown on later sign-offs after the capture.
+    if (o.committed[captureAlias]) wrap.appendChild(specCard());
     const done = o.steps[step.id] && o.steps[step.id].done;
     if (done) {
       if (step.outcome) wrap.appendChild(renderByCategory(step.outcome, o.steps[step.id], typesOf(captureAlias)));
-      wrap.appendChild(el('p', 'phase-note', { text: 'Complete. Continue from the stepper.' }));
+      wrap.appendChild(el('p', 'phase-note', { text: L('ceremonyDone', 'Done — pick a step above to continue.') }));
     } else {
       const box = el('div', 'sign-box');
-      if (step.prompt) box.appendChild(el('label', 'sign-l', { text: step.prompt }));
-      const input = el('input', 'sign-input', { type: 'text', placeholder: 'Full name', 'aria-label': step.prompt || 'Your name' });
-      const btn = el('button', 'sign-go', { type: 'button', text: step.actionLabel || 'Confirm ▸', disabled: true });
+      // WHAT this step is + what happens next — the sign-off was previously unexplained.
+      // Data-authored per step (step.meaning), with a neutral generic fallback.
+      const why = step.meaning || L('signHint', 'Signing opens your record — every later step attaches to it. Nothing is charged yet.');
+      if (why) box.appendChild(el('p', 'sign-why', { text: why }));
+      const fieldId = `sign-${step.id}`;
+      if (step.prompt) { const lab = el('label', 'sign-l', { text: step.prompt }); lab.setAttribute('for', fieldId); box.appendChild(lab); }
+      const input = el('input', 'sign-input', { id: fieldId, type: 'text', placeholder: L('signPlaceholder', 'Your full name'), 'aria-label': step.prompt || 'Your name' });
+      const btn = el('button', 'sign-go', { type: 'button', text: step.actionLabel || L('confirmLabel', 'Confirm ▸'), disabled: true });
+      const confirm = () => {
+        if (!input.value.trim()) return;
+        const r = cmd({ type: 'complete', step: step.id, payload: { by: input.value.trim(), outcome: step.outcome, ref: `${orderId}-${step.id}`, at: Date.now(), enters: step.enters } });
+        if (r.error) return;
+        const to = nextPhase(step.phase);
+        if (to !== step.phase) cmd({ type: 'enter', phase: to, at: Date.now() });
+        recompute();
+        gotoPhase(to);   // AUTO-ADVANCE to the next phase (was gotoPhase(step.phase) — the dead-end the user hit)
+      };
       input.addEventListener('input', () => { btn.disabled = !input.value.trim(); });
-      btn.addEventListener('click', () => { const r = cmd({ type: 'complete', step: step.id, payload: { by: input.value.trim(), outcome: step.outcome, ref: `${orderId}-${step.id}`, at: Date.now(), enters: step.enters } }); if (!r.error) { const to = nextPhase(step.phase); if (to !== step.phase) cmd({ type: 'enter', phase: to, at: Date.now() }); recompute(); gotoPhase(step.phase); } });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirm(); } }); // Enter advances once the name is filled
+      btn.addEventListener('click', confirm);
       box.append(input, btn); wrap.appendChild(box);
     }
     phaseHost.appendChild(wrap);

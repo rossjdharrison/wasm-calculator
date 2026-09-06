@@ -650,7 +650,9 @@
 .preview-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
 .preview-card .preview-t { font-family: var(--display); font-size: 15px; }
 .sign-box { display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-.sign-box .sign-l { font-size: 13px; color: var(--text-soft); }
+/* the meaning line — WHAT this step is + what happens next; an accented callout above the field */
+.sign-box .sign-why { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text-soft); padding: 10px 12px; background: var(--bg); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; }
+.sign-box .sign-l { font-size: 13px; color: var(--text-soft); font-weight: 600; }
 .sign-box .sign-input { background: var(--bg); border: 1px solid var(--border-strong); border-radius: 9px; color: var(--text); padding: 10px 12px; font: inherit; }
 .sign-box .sign-input:focus { outline: none; border-color: var(--accent); }
 .sign-box .sign-go { align-self: flex-start; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
