@@ -2,6 +2,7 @@
   "$schema": "https://quote.rowblaa.com/schema/model.schema.json",
   "id": "antiques-configurator",
   "version": "1.0.0",
+  "configures": "ArtworkClass",
   "currency": "GBP",
   "fields": [
     {
@@ -33,7 +34,8 @@
         {
           "id": "muranoChandelier"
         }
-      ]
+      ],
+      "category": "ArtworkClass"
     },
     {
       "id": "provenance",
@@ -607,7 +609,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "GuidePrice"
     },
     {
       "id": "feesTotal",
@@ -652,7 +655,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "GuidePrice"
     },
     {
       "id": "monthlyPayment",
@@ -698,7 +702,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "GuidePrice"
     },
     {
       "id": "insuranceValue",
@@ -715,7 +720,8 @@
           },
           1.15
         ]
-      }
+      },
+      "category": "GuidePrice"
     },
     {
       "id": "height",
@@ -730,7 +736,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "width",
@@ -745,7 +752,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "weight",
@@ -760,7 +768,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     }
   ],
   "validations": [
@@ -822,5 +831,22 @@
       ],
       "discount": 350
     }
-  ]
+  ],
+  "types": {
+    "ArtworkClass": {
+      "specializes": [
+        "class_of_physical_object"
+      ]
+    },
+    "GuidePrice": {
+      "specializes": [
+        "amount_of_money"
+      ]
+    },
+    "SpecFigure": {
+      "specializes": [
+        "physical_quantity"
+      ]
+    }
+  }
 }

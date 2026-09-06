@@ -16,10 +16,8 @@ export function validateBinding(data, presentation) {
     const pf = presFields.get(f.id);
     if (!pf) { warnings.push(`Field "${f.id}" has no presentation binding (renders with its id as label).`); continue; }
     if (pf.section && !sectionIds.has(pf.section)) errors.push(`Field "${f.id}" is placed in unknown section "${pf.section}".`);
-    for (const o of f.options || []) {
-      const po = (pf.options || []).find((x) => x.id === o.id);
-      if (!po || po.label === undefined) warnings.push(`Option "${f.id}.${o.id}" has no label.`);
-    }
+    // per-option label completeness is coverage.mjs's job (missing-label findings);
+    // binding.mjs stays a cross-file EXISTENCE checker to avoid a duplicate warning.
   }
 
   for (const pf of presentation.fields || []) {

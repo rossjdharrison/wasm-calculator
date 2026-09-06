@@ -1,0 +1,21 @@
+{
+  "$schema": "../../data.schema.json",
+  "id": "financing-configurator",
+  "version": "1.0.0",
+  "currency": "EUR",
+  "types": {
+    "LoanPrincipal": { "specializes": ["amount_of_money"] },
+    "MonthlyPayment": { "specializes": ["amount_of_money"] }
+  },
+  "fields": [
+    { "id": "price", "type": "number", "default": 0, "min": 0, "category": "LoanPrincipal" },
+    { "id": "deposit", "type": "number", "default": 0, "min": 0 },
+    { "id": "termMonths", "type": "number", "default": 36, "min": 12, "max": 84, "step": 12 }
+  ],
+  "computed": [
+    { "id": "fees", "label": "Arrangement fee", "formula": 495 },
+    { "id": "financed", "label": "Amount financed", "category": "LoanPrincipal", "formula": { "op": "sub", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["deposit"] }] } },
+    { "id": "totalPayable", "label": "Total payable", "category": "LoanPrincipal", "formula": { "op": "add", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["fees"] }] } },
+    { "id": "monthly", "label": "Monthly payment", "category": "MonthlyPayment", "formula": { "op": "div", "args": [{ "op": "add", "args": [{ "op": "field", "args": ["financed"] }, { "op": "field", "args": ["fees"] }] }, { "op": "field", "args": ["termMonths"] }] } }
+  ]
+}

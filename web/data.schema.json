@@ -2,6 +2,20 @@
   "title": "Data model",
   "collections": [
     {
+      "key": "settings", "kind": "singleton", "title": "Model", "titleText": "Model settings",
+      "form": [
+        { "prop": "configures", "label": "This model configures (HQDM class)", "widget": "select", "source": "typeIds", "target": "root", "allowNone": true, "noAutoSelect": true }
+      ]
+    },
+    {
+      "key": "types", "kind": "map", "title": "Classes (HQDM)", "singular": "Class", "sub": "specializes",
+      "add": { "prompt": "New class id:", "template": { "specializes": [] } },
+      "form": [
+        { "prop": "title", "label": "Label", "widget": "text" },
+        { "prop": "specializes", "label": "Specialises", "widget": "parents", "source": "categories" }
+      ]
+    },
+    {
       "key": "fields", "kind": "array", "title": "Fields", "singular": "Field",
       "itemLabel": "id", "sub": "type",
       "add": { "prompt": "New field id:", "into": "id", "template": { "type": "number" } },
@@ -11,6 +25,7 @@
         { "prop": "max", "label": "Max", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
         { "prop": "step", "label": "Step", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
         { "prop": "default", "label": "Default", "widget": "default" },
+        { "prop": "category", "label": "Category (HQDM)", "widget": "select", "source": "categories", "allowNone": true, "noAutoSelect": true },
         { "prop": "options", "widget": "optionList" }
       ]
     },
@@ -20,7 +35,8 @@
       "add": { "prompt": "New computed id:", "into": "id", "template": { "formula": 0 } },
       "form": [
         { "prop": "label", "label": "Label", "widget": "text" },
-        { "prop": "formula", "label": "Formula", "widget": "formula", "multiline": true, "required": true }
+        { "prop": "formula", "label": "Formula", "widget": "formula", "multiline": true, "required": true },
+        { "prop": "category", "label": "Category (HQDM)", "widget": "select", "source": "categories", "allowNone": true, "noAutoSelect": true }
       ]
     },
     {

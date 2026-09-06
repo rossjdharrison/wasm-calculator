@@ -1,7 +1,20 @@
 {
-  // Cloudflare Pages project config.
-  // Static assets only — no Pages Functions, no bindings.
-  "name": "wasm-calculator",
-  "pages_build_output_dir": "./dist",
-  "compatibility_date": "2026-09-04"
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "wasm-calculator",
+	"pages_build_output_dir": "./dist",
+	"compatibility_date": "2026-06-01",
+	// The authored-document store (read-serve). Keys:
+	//   model:<id>   -> { data, presentation }   (a whole authored model)
+	//   journey:<id> -> <journey doc>
+	//   catalog      -> { models:[...], journeys:[...] }   (the authored overlay for the landing)
+	// The Pages Functions in functions/api/* read from this; the browser falls back to the
+	// shipped static files under dist/models|journeys when a key is absent, so the site works
+	// with OR without KV. Replace the id after `wrangler kv namespace create DOCS`
+	// (local dev uses `wrangler pages dev dist --kv DOCS`, which needs no id).
+	"kv_namespaces": [
+		{
+			"binding": "DOCS",
+			"id": "c6855c8000f24952bd0b1dfdfb479ca4"
+		}
+	]
 }

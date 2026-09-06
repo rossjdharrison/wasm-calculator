@@ -1,0 +1,38 @@
+{
+  "$schema": "hqdm-domain/v1",
+  "id": "rowblaa-luxury",
+  "title": "ROWBLAA LUXURY",
+  "note": "The top-level SITE model: brand, user-facing label vocabulary, feature flags, and the process phases (a SALE lifecycle here). The TAXONOMY is NOT authored here — it is DERIVED from the models' own data.types + each model's `configures` tag (see catalogue-build.mjs), so adding a model in the studio grows it. Optional keys: `taxonomy` (a seed of grouping-only classes that have no model yet, { id: { specializes, title } }) and `rootCatalogue` (the class the landing browses from; defaults to class_of_physical_object). Journeys stay here (activity rows, a different lattice branch).",
+  "brand": { "mark": "ROWBLAA", "rest": "LUXURY", "sub": "Haarlem" },
+  "labels": {
+    "eyebrow": "The Collections",
+    "heroTitle": "Curated luxury, configured to you.",
+    "heroLede": "Choose a collection to begin. Each opens a private configurator — specify every detail, compare, and request your build.",
+    "cardCta": "Enter",
+    "savedLabel": "Saved builds",
+    "cartLabel": "Basket",
+    "studioLabel": "Journey Studio",
+    "journeysTitle": "Composed journeys",
+    "footerName": "Rowblaa Motors Haarlem",
+    "footerNote": "© Rowblaa Luxury",
+    "record": "order",
+    "recordPlural": "orders",
+    "recordTotal": "Order total",
+    "emptyPrompt": "Configure a build to begin your order.",
+    "lifecycleLabel": "Order lifecycle",
+    "captureNoun": "build"
+  },
+  "features": { "basket": true, "saved": true, "studio": true, "journeys": true },
+  "phases": [
+    { "id": "configure", "label": "Configure", "order": 1, "tint": "#7f9bb0" },
+    { "id": "agree_sign", "label": "Agree & Sign", "order": 2, "tint": "#d8a24a" },
+    { "id": "exchange_settlement", "label": "Exchange & Settlement", "order": 3, "tint": "#74c2a2" },
+    { "id": "fulfilment", "label": "Fulfilment", "order": 4, "tint": "#b98cc9" }
+  ],
+  "defaultModel": "vehicles",
+  "catalog": {
+    "journeys": [
+      { "id": "vehicle-sale" }
+    ]
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quote.rowblaa.com/schema/journey.schema.json",
+  "title": "CPQ Journey (composition / process document)",
+  "description": "A model-INDEPENDENT composition document: which models participate, the typed seams (bindings) + behavioural triggers between them, and the neutral process steps. Documentation + editor autocomplete only — the authoritative runtime gate is the pure validator in web/journey-schema.mjs, and the kind/phase/category enums here are a static snapshot of the vocabulary that actually lives in web/hqdm-core.json (stepKinds / phases / renderHints).",
+  "type": "object",
+  "required": ["id", "version", "title", "models", "process"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9_.-]+$" },
+    "version": { "type": "string" },
+    "title": { "type": "string" },
+    "correlationPrefix": { "type": "string", "description": "Prefix for minted order ids, e.g. \"VS\"." },
+    "types": {
+      "type": "object",
+      "description": "Journey-local HQDM type declarations ({ id: { specializes: [\"state\", ...] } }), e.g. lifecycle states used by process steps. Merged over hqdm-core.json when categories are inferred.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": { "specializes": { "type": "array", "items": { "type": "string" } } }
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["ref", "as", "phase"],
+        "properties": {
+          "ref": { "type": "string", "description": "Model directory id under models/." },
+          "as": { "type": "string", "description": "Unique alias within this journey." },
+          "phase": { "type": "string", "description": "A phase id declared in this journey's (or its domain's) phases[]." },
+          "role": { "type": "string" }
+        }
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "description": "Structural seams: one model's output injected into another's input (single-authority).",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "contract"],
+        "properties": {
+          "id": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "contract": {
+            "type": "object",
+            "required": ["provides", "requires"],
+            "properties": {
+              "provides": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["as", "source"],
+                  "properties": {
+                    "as": { "type": "string" },
+                    "source": { "type": "string", "description": "e.g. \"output:grandTotal\" or \"field:price\"." },
+                    "l0": { "type": "string" }
+                  }
+                }
+              },
+              "requires": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "target": { "type": "string", "description": "e.g. \"field:price\"." },
+                    "l0": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["to", "from"],
+              "properties": {
+                "to": { "type": "string" },
+                "from": { "description": "Expression AST ({op,args}) or a literal." }
+              }
+            }
+          },
+          "condition": { "description": "Optional gate expression AST." }
+        }
+      }
+    },
+    "triggers": {
+      "type": "array",
+      "description": "NOT SUPPORTED — behavioural saga edges are not interpreted by this framework (cross-model feedback is outside the frozen one-pass numeric scope); a populated triggers[] is rejected by web/journey-schema.mjs. Kept here only to document the rejection.",
+      "items": {
+        "type": "object",
+        "required": ["id", "on", "activates"],
+        "properties": {
+          "id": { "type": "string" },
+          "on": { "type": "string" },
+          "activates": { "type": "string" },
+          "guard": { "description": "Optional predicate AST over the on-model's scope; absent = fires unconditionally." }
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "phase", "kind"],
+            "properties": {
+              "id": { "type": "string" },
+              "phase": { "type": "string", "description": "A phase id declared in this journey's (or its domain's) phases[]." },
+              "kind": {
+                "type": "string",
+                "enum": ["capture", "capture-downstream", "ceremony", "preview"],
+                "description": "Neutral step kind — authoritative list is hqdm-core.json.stepKinds."
+              },
+              "model": { "type": "string", "description": "A declared model alias." },
+              "produces": { "type": "string", "description": "HQDM category of what the step produces." },
+              "activity": { "type": "string", "description": "HQDM activity category the step performs." },
+              "outcome": { "type": "string", "description": "HQDM category of the recorded outcome." },
+              "prompt": { "type": "string" },
+              "actionLabel": { "type": "string" },
+              "commitLabel": { "type": "string" },
+              "label": { "type": "string" },
+              "enters": {
+                "type": "array",
+                "description": "State transitions the step records (4-D temporal): each an {individual, category, role, label}.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "individual": { "type": "string" },
+                    "category": { "type": "string" },
+                    "role": { "type": "string" },
+                    "label": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

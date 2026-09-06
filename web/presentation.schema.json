@@ -49,6 +49,7 @@
         { "widget": "select", "prop": "control", "label": "Control", "source": "controls", "noAutoSelect": true },
         { "widget": "select", "prop": "section", "label": "Section", "source": "sections", "allowNone": true },
         { "widget": "select", "prop": "width", "label": "Width", "options": ["full", "half", "third", "quarter"], "noAutoSelect": true },
+        { "widget": "select", "prop": "render", "label": "Render as", "options": ["glyph", "swatch", "track"], "allowNone": true, "noAutoSelect": true },
         { "widget": "text", "prop": "help", "label": "Help" },
         { "widget": "number", "prop": "decimals", "label": "Decimals", "when": { "from": "source", "prop": "type", "eq": "number" } },
         { "widget": "rule", "prop": "visibleWhen", "label": "Show when" },
@@ -72,6 +73,7 @@
         { "widget": "text", "prop": "formatUnit", "path": "format.unit", "label": "Unit", "when": { "path": "format.type", "eq": "unit" } },
         { "widget": "text", "prop": "formatCurrency", "path": "format.currencyCode", "label": "Currency code", "when": { "path": "format.type", "eq": "currency" } },
         { "widget": "toggle", "prop": "emphasis", "label": "Emphasis (headline)" },
+        { "widget": "select", "prop": "role", "label": "Role", "options": ["subtotal", "recurring", "total", "line"], "allowNone": true, "noAutoSelect": true },
         { "widget": "rule", "prop": "visibleWhen", "label": "Show when" }
       ]
     }

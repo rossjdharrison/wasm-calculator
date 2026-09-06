@@ -6,11 +6,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { validateEditorSchema, validateDocAgainstSchema, DATA_SOURCES } from '../web/schema-check.mjs';
+import { validateEditorSchema, validateDocAgainstSchema, DATA_SOURCES, PRES_SOURCES } from '../web/schema-check.mjs';
 import { WIDGET_TYPES, WIDGET_CONTRACTS } from '../web/editor-engine.mjs';
+import { authorCategories } from '../web/hqdm.mjs';
 
 const readJson = (p) => readFile(new URL(p, import.meta.url)).then((b) => JSON.parse(b));
 const SCHEMA = await readJson('../web/data.schema.json');
+const PRES_SCHEMA = await readJson('../web/presentation.schema.json');
 const DOC = await readJson('../web/models/vehicles/data-model.json');
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const errs = (r) => r.errors.join(' | ');
@@ -123,6 +125,32 @@ test('add.seed skips the static-template itemLabel requirement', () => {
   const noSeed = { collections: [{ key: 'outputs', kind: 'array', itemLabel: 'id', title: 'Outputs', add: { template: {} }, form: [] }] };
   assert.ok(validateEditorSchema(noSeed).errors.some((e) => e.includes('seed the itemLabel')), 'a template add must still seed itemLabel');
 });
+// ---- D7: the L0-tag editor widgets (category / render) --------------------
+test('the data schema offers a category select (source: categories) on fields AND computed', () => {
+  for (const key of ['fields', 'computed']) {
+    const sel = coll(SCHEMA, key).form.find((f) => f.widget === 'select' && f.prop === 'category');
+    assert.ok(sel, `${key} has a category select`);
+    assert.equal(sel.source, 'categories');
+    assert.equal(sel.allowNone, true);
+  }
+  assert.ok(DATA_SOURCES.includes('categories'), 'categories is a declared data source');
+});
+
+test('the presentation schema offers a render select with the fixed neutral vocabulary', () => {
+  const r = validateEditorSchema(PRES_SCHEMA, { sources: PRES_SOURCES });
+  assert.equal(r.errors.length, 0, `pres schema errors: ${errs(r)}`);
+  const sel = coll(PRES_SCHEMA, 'fields').form.find((f) => f.widget === 'select' && f.prop === 'render');
+  assert.ok(sel, 'fields has a render select');
+  assert.deepEqual(sel.options, ['glyph', 'swatch', 'track']);
+  assert.equal(sel.allowNone, true);
+});
+
+test('every category in the shipped model is offered by authorCategories(types)', () => {
+  const allowed = new Set(authorCategories(DOC.types));
+  const tagged = [...(DOC.fields || []), ...(DOC.computed || [])].filter((x) => x && x.category);
+  for (const x of tagged) assert.ok(allowed.has(x.category), `category "${x.category}" on "${x.id}" is not offered by the editor`);
+});
+
 test('when accepts exists and a nested path with source', () => {
   const s = { collections: [{ key: 'fields', kind: 'array', itemLabel: 'id', title: 'Fields', docSource: 'data.fields', editIn: 'fields', form: [
     { widget: 'number', prop: 'decimals', label: 'Decimals', when: { from: 'source', prop: 'type', eq: 'number' } },

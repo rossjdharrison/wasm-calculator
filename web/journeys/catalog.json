@@ -1,0 +1,5 @@
+{
+  "journeys": [
+    { "id": "vehicle-sale", "title": "Vehicle sale", "blurb": "Configure a vehicle, then finance it — one composed order." }
+  ]
+}

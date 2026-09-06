@@ -11,6 +11,24 @@
     "CHF",
     "AED"
   ],
+  "types": {
+    "VehicleClass": {
+      "specializes": [
+        "class_of_physical_object"
+      ]
+    },
+    "PurchasePrice": {
+      "specializes": [
+        "amount_of_money"
+      ]
+    },
+    "SpecFigure": {
+      "specializes": [
+        "physical_quantity"
+      ]
+    }
+  },
+  "configures": "VehicleClass",
   "name": "Vehicle Configurator",
   "brand": {
     "mark": "ROWBLAA",
@@ -98,6 +116,7 @@
           "image": "cars/hypercar.png"
         }
       ],
+      "category": "VehicleClass",
       "label": "Model",
       "control": "buttons",
       "section": "s_model",
@@ -488,7 +507,8 @@
       "label": "Wheels",
       "control": "buttons",
       "section": "s_appearance",
-      "width": "full"
+      "width": "full",
+      "render": "glyph"
     },
     {
       "id": "colour",
@@ -498,17 +518,29 @@
         {
           "id": "solid",
           "label": "Solid",
-          "priceDelta": 0
+          "priceDelta": 0,
+          "swatch": [
+            "#8a9099",
+            "#6d737c"
+          ]
         },
         {
           "id": "metallic",
           "label": "Metallic",
-          "priceDelta": 650
+          "priceDelta": 650,
+          "swatch": [
+            "#aeb7c4",
+            "#7c8794"
+          ]
         },
         {
           "id": "premium",
           "label": "Premium",
-          "priceDelta": 900
+          "priceDelta": 900,
+          "swatch": [
+            "#3a4c6b",
+            "#243149"
+          ]
         },
         {
           "id": "matte",
@@ -542,13 +574,18 @@
             ]
           },
           "label": "Matte",
-          "priceDelta": 1200
+          "priceDelta": 1200,
+          "swatch": [
+            "#4a4d52",
+            "#3a3d42"
+          ]
         }
       ],
       "label": "Colour",
       "control": "dropdown",
       "section": "s_appearance",
-      "width": "half"
+      "width": "half",
+      "render": "swatch"
     },
     {
       "id": "packages",
@@ -667,7 +704,8 @@
             ]
           },
           "label": "Performance",
-          "priceDelta": 3200
+          "priceDelta": 3200,
+          "badge": true
         },
         {
           "id": "towing",
@@ -725,7 +763,8 @@
             ]
           },
           "label": "Towing",
-          "priceDelta": 1300
+          "priceDelta": 1300,
+          "badge": true
         },
         {
           "id": "panoramicRoof",
@@ -759,7 +798,8 @@
             ]
           },
           "label": "Panoramic Roof",
-          "priceDelta": 1600
+          "priceDelta": 1600,
+          "badge": true
         }
       ],
       "label": "Packages",
@@ -892,7 +932,8 @@
           },
           "finance"
         ]
-      }
+      },
+      "render": "track"
     },
     {
       "id": "annualMileage",
@@ -1651,7 +1692,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "PurchasePrice"
     },
     {
       "id": "roadTax",
@@ -1707,7 +1749,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "PurchasePrice"
     },
     {
       "id": "monthlyPayment",
@@ -1955,7 +1998,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "PurchasePrice"
     },
     {
       "id": "range",
@@ -2021,7 +2065,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "hp",
@@ -2065,7 +2110,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "topSpeed",
@@ -2097,7 +2143,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "zeroToSixty",
@@ -2153,7 +2200,8 @@
             ]
           }
         ]
-      }
+      },
+      "category": "SpecFigure"
     },
     {
       "id": "weight",
@@ -2210,7 +2258,8 @@
           }
         ]
       },
-      "label": "Weight"
+      "label": "Weight",
+      "category": "SpecFigure"
     },
     {
       "id": "shippingCost",
@@ -2337,7 +2386,8 @@
           }
         ]
       },
-      "currency": true
+      "currency": true,
+      "category": "PurchasePrice"
     }
   ],
   "validations": [
@@ -2557,6 +2607,7 @@
     {
       "id": "vehiclePrice",
       "label": "Vehicle price",
+      "role": "subtotal",
       "format": {
         "type": "currency",
         "decimals": 2,
@@ -2575,6 +2626,7 @@
     {
       "id": "monthlyPayment",
       "label": "Monthly payment",
+      "role": "recurring",
       "format": {
         "type": "currency",
         "decimals": 2,
@@ -2705,6 +2757,7 @@
     {
       "id": "grandTotal",
       "label": "Total",
+      "role": "total",
       "format": {
         "type": "currency",
         "decimals": 2,

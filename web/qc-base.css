@@ -164,6 +164,13 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; accent-
 .qc-output.qc-total .qc-output__label { color: var(--qc-color-text); font-weight: 700; }
 .qc-output.qc-total .qc-output__value { font-size: var(--qc-font-size-total); font-weight: 800; color: var(--qc-color-accent); }
 
+/* ---- presentation affordances reflected in the preview (D5/D7) ---- */
+.qc-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
+.qc-swatch-select { display: flex; align-items: center; gap: 8px; } .qc-swatch-select .qc-swatch { width: 16px; height: 16px; margin: 0; flex: none; }
+.qc-badge { margin-left: 6px; color: var(--qc-color-accent); font-size: .85em; }
+.qc-output.qc-role-recurring .qc-output__value::after { content: " · recurring"; font-size: .7em; text-transform: uppercase; letter-spacing: .05em; opacity: .6; font-weight: 500; }
+.qc-output.qc-role-subtotal .qc-output__label::before { content: "subtotal · "; font-size: .8em; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
+
 /* ---- fatal ---- */
 .qc-fatal { max-width: 60ch; margin: var(--qc-space-6) auto; padding: var(--qc-space-4); border-radius: var(--qc-radius); background: var(--qc-color-error-bg); color: var(--qc-color-error); }
 
