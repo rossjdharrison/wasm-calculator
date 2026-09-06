@@ -183,13 +183,31 @@ function doFix(list) {
   if (changed) { editor.renderOutline(); editor.renderDetail(); }
   refresh();
 }
+// how to RESOLVE a finding (the "what next", not just the "what's wrong"). Findings that
+// carry a one-click `fix` show the button instead; these guide the ones the author must
+// resolve by hand, so no warning is a dead-end.
+function fixHint(f) {
+  switch (f.kind) {
+    case 'orphan-field': return `Use “${f.field}” in a computed value’s formula (e.g. a price), or remove the field if it isn’t needed.`;
+    case 'dead-option': return `Reference “${f.option}” in a price or rule (e.g. give it a value in a table), or remove the option.`;
+    case 'cycle': return `Break the loop — remove the reference that makes “${f.field}” depend on itself.`;
+    case 'undefined-table': return `Create a table named “${f.table}” (Tables → + add), or fix the lookup() that names it.`;
+    case 'unknown-category': return `Choose a known category for “${f.field}”, or declare it as a class under Classes (HQDM).`;
+    case 'no-purchase-price': return `Add a computed value, set its Category to a money type (amount_of_money), then emphasise its output on the Presentation page — that becomes the price handed downstream.`;
+    default: return '';
+  }
+}
 function covItem(f) {
   const row = el('div', 'cov-item');
   row.appendChild(el('span', `cov-dot cov-dot--${f.severity}`));
+  const mid = el('div', 'cov-mid');
   const msg = el('button', 'cov-msg'); msg.type = 'button'; msg.textContent = plainLabel(f);
   msg.title = 'Go to this item';
   msg.addEventListener('click', () => { const id = f.field || f.table; if (id) editor.selectById(id); });
-  row.appendChild(msg);
+  mid.appendChild(msg);
+  // a one-click fix IS the resolution; otherwise show how to resolve it by hand.
+  if (!f.fix) { const h = fixHint(f); if (h) mid.appendChild(el('div', 'cov-hint', { text: h })); }
+  row.appendChild(mid);
   if (f.fix) { const b = el('button', 'cov-fix'); b.type = 'button'; b.textContent = f.fix.type === 'add-label' ? 'Add label' : 'Add'; b.addEventListener('click', () => doFix([f])); row.appendChild(b); }
   return row;
 }

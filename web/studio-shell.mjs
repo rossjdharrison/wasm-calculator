@@ -7,6 +7,7 @@
 // early. Adding a Studio route is now a one-array edit here.
 // =============================================================================
 import { el } from './ui.mjs';
+import { loadDomain } from './store.mjs';
 
 // The canvas routes for a model — the SINGLE source of truth for cross-page studio
 // nav, consumed by the shell here, by the Configurator's Studio menu (app.js), and by
@@ -28,11 +29,20 @@ export function mountStudioShell(host, { active, title, blurb, modelId } = {}) {
   if (!host) return;
   host.innerHTML = '';
 
-  // brand lockup — the same ROWBLAA mark the public pages carry, linking home
-  const brand = el('a', 'studio-brand', {
-    href: 'index.html', 'aria-label': 'ROWBLAA LUXURY — collections',
-    html: '<span class="studio-brand__mark"><b>ROWBLAA</b> LUXURY</span><span class="studio-brand__sub">Studio</span>',
-  });
+  // brand lockup — links home; the mark is DOMAIN-DRIVEN (domain.brand) so a swapped
+  // domain re-skins the studio too, not just the landing. Painted with a generic
+  // fallback synchronously (the shell mounts before awaits), then updated when
+  // domain.json resolves — no per-editor wiring needed.
+  const brand = el('a', 'studio-brand', { href: 'index.html' });
+  const paintBrand = (b) => {
+    const mark = (b && b.mark) ? `<b>${b.mark}</b>${b.rest ? ` ${b.rest}` : ''}` : '<b>Studio</b>';
+    const name = (b && [b.mark, b.rest].filter(Boolean).join(' ')) || 'Studio';
+    brand.innerHTML = `<span class="studio-brand__mark">${mark}</span><span class="studio-brand__sub">Studio</span>`;
+    brand.setAttribute('aria-label', `${name} — home`);
+    if (title) document.title = `${title} · ${name}`;
+  };
+  paintBrand(null);
+  loadDomain().then((d) => { if (d && d.brand) paintBrand(d.brand); }).catch(() => {});
 
   const nav = el('nav', 'qc-nav', { 'aria-label': 'Pages' });
   for (const n of studioRoutes(modelId)) {
@@ -46,5 +56,5 @@ export function mountStudioShell(host, { active, title, blurb, modelId } = {}) {
   host.appendChild(top);
   if (title) host.appendChild(el('h1', null, { text: title }));
   if (blurb) host.appendChild(el('p', null, { html: blurb }));
-  if (title) document.title = `${title} · ROWBLAA LUXURY`;
+  // document.title is set by paintBrand (domain-driven) above.
 }

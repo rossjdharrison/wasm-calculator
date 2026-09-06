@@ -325,6 +325,8 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; accent-
 .cov-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .cov-msg { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: var(--qc-color-text); font: inherit; font-size: var(--qc-font-size-small); cursor: pointer; padding: 0; }
 .cov-msg:hover { color: var(--qc-color-accent); }
+.cov-mid { flex: 1; min-width: 0; }
+.cov-hint { font-size: var(--qc-font-size-small); color: var(--qc-color-text-soft); margin-top: 2px; line-height: 1.4; }
 .cov-fix { flex: none; font: inherit; font-size: var(--qc-font-size-small); cursor: pointer; padding: 2px 11px; border-radius: 999px; border: 1px solid var(--qc-color-accent); background: var(--qc-color-accent-soft); color: var(--qc-color-accent); transition: background var(--qc-dur-fast,120ms) var(--qc-ease, ease), color var(--qc-dur-fast,120ms) var(--qc-ease, ease); }
 .cov-fix:hover { background: var(--qc-color-accent); color: var(--qc-color-accent-contrast); }
 .cov-fixall { margin-top: var(--qc-space-2); font: inherit; font-size: var(--qc-font-size-small); cursor: pointer; padding: 5px 12px; border-radius: var(--qc-radius-sm); border: 1px solid var(--qc-color-border); background: var(--qc-color-surface-2); color: var(--qc-color-text); }
