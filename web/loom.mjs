@@ -21,8 +21,14 @@ import { parseExpr, formatExpr } from './expr.mjs';
 import { edgesOf, findCycles } from './coverage.mjs';
 import { buildDefaults } from './preview.mjs';
 import { loadRates } from './fx.mjs';
+import { studioRoutes } from './studio-shell.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
+
+// sibling-canvas nav: the Loom is no longer an island — link every OTHER canvas of THIS
+// model into the top bar (from the shared studioRoutes, so it can't drift from the shell
+// or the Configurator's Studio menu). The brand lockup links Home.
+(() => { const nav = $('#loomnav'); if (!nav) return; for (const r of studioRoutes(MODEL_ID)) { if (r.key === 'loom') continue; const a = document.createElement('a'); a.href = r.href; a.textContent = r.label; nav.appendChild(a); } })();
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const mk = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
 const clone = (x) => JSON.parse(JSON.stringify(x));

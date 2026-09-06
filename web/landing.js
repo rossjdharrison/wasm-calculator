@@ -211,12 +211,26 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     a.append(media, body);
     if (m.hero) resolveImage(m.hero).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = `<img src="${u}" alt="">`; }; im.src = u; }).catch(() => {});
     if (!features.studio) return a;
-    // a "Fork" affordance sits OVER the card (a button can't live inside the <a>): one
-    // click opens the create modal straight into the fork path with this model selected.
+    // In builder mode the card becomes a machine you OPERATE: the card <a> stays Open
+    // (run the configurator), and an always-visible action bar puts every CANVAS one
+    // click away. A button/link can't nest inside the card <a>, so the bar is a sibling
+    // in .lp-cardwrap. Every href is row.model + a static filename; every label is a
+    // generic L() fallback — no domain token enters this neutral module.
     const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
-    const fork = el('button', 'lp-forkbtn', { type: 'button', text: 'Fork', title: `Duplicate ${m.title || m.id}`, 'aria-label': `Duplicate ${m.title || m.id}` });
+    const name = m.title || m.id;
+    const mid = encodeURIComponent(row.model);
+    const actions = el('div', 'lp-actions'); actions.setAttribute('role', 'group'); actions.setAttribute('aria-label', `Canvases for ${name}`);
+    const mkLink = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${name}`); return x; };
+    actions.append(
+      mkLink(L('editLabel', 'Edit'), `data-editor.html?m=${mid}`, `${L('editLabel', 'Edit')} data model`),
+      mkLink(L('designLabel', 'Design'), `presentation-editor.html?m=${mid}`, L('designLabel', 'Design')),
+      mkLink(L('loomLabel', 'Loom'), `loom.html?m=${mid}`, `${L('loomLabel', 'Loom')} — live canvas`),
+    );
+    const fork = el('button', 'lp-action lp-action--fork', { type: 'button', text: L('forkLabel', 'Fork') });
+    fork.setAttribute('aria-label', `${L('forkLabel', 'Fork')} — ${name}`);
     fork.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openCreateModel(catModels, m.id); });
-    cw.appendChild(fork);
+    actions.appendChild(fork);
+    cw.appendChild(actions);
     return cw;
   };
   // a section header; when the sub-tree has real depth, its title links deeper (?c=).
@@ -313,7 +327,17 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
         for (const j of journeys) {
           const a = el('a', 'lp-card lp-card--journey'); a.href = `configure.html?j=${encodeURIComponent(j.id)}`;
           a.appendChild(el('div', 'lp-cardbody', { html: `<div class="lp-cardtitle">${j.title || j.id}</div><div class="lp-blurb">${j.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Begin')} <span aria-hidden="true">→</span></div>` }));
-          grid.appendChild(a);
+          if (!features.studio) { grid.appendChild(a); continue; }
+          // a journey is a composed machine — the card runs it; the bar opens its canvases.
+          const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
+          const jname = j.title || j.id; const jid = encodeURIComponent(j.id);
+          const acts = el('div', 'lp-actions'); acts.setAttribute('role', 'group'); acts.setAttribute('aria-label', `Canvases for ${jname}`);
+          const mk = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${jname}`); return x; };
+          acts.append(
+            mk(L('canvasLabel', 'Canvas'), `journey.html?j=${jid}`, `${L('canvasLabel', 'Canvas')} — journey loom`),
+            mk(L('composeLabel', 'Compose'), `journey-create.html?j=${jid}`, L('composeLabel', 'Compose')),
+          );
+          cw.appendChild(acts); grid.appendChild(cw);
         }
         wrap.appendChild(section);
       }

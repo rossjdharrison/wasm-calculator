@@ -20,7 +20,13 @@
     "recordTotal": "Order total",
     "emptyPrompt": "Configure a build to begin your order.",
     "lifecycleLabel": "Order lifecycle",
-    "captureNoun": "build"
+    "captureNoun": "build",
+    "editLabel": "Edit",
+    "designLabel": "Design",
+    "loomLabel": "Loom",
+    "forkLabel": "Fork",
+    "canvasLabel": "Canvas",
+    "composeLabel": "Compose"
   },
   "features": { "basket": true, "saved": true, "studio": true, "journeys": true },
   "phases": [

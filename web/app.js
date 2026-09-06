@@ -16,15 +16,14 @@ import { listOrders, deleteOrder } from './order-store.mjs';
 import { ordersForJourney } from './order.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 import { takeRestore } from './saved.mjs';
+import { studioRoutes } from './studio-shell.mjs';
 
 const WASM_URL = 'quote.wasm';
 // editor/studio links carry the active model id so they edit THIS collection.
 // (The brand lockup links home to the collections; these live in the Studio menu.)
-const LINKS = [
-  { href: `data-editor.html?m=${MODEL_ID}`, label: 'Data model' },
-  { href: `presentation-editor.html?m=${MODEL_ID}`, label: 'Presentation' },
-  { href: `editor.html?m=${MODEL_ID}`, label: 'JSON' },
-];
+// Sourced from the shared studioRoutes so the menu never drifts from the shell/Loom —
+// drop the Configurator entry (this IS the configurator).
+const LINKS = studioRoutes(MODEL_ID).filter((r) => r.key !== 'cfg').map((r) => ({ href: r.href, label: r.label }));
 
 (async function boot() {
   // ---- journey mode (opt-in via ?j=): run the composed sale, not a single model ----

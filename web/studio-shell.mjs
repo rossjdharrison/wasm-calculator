@@ -8,20 +8,25 @@
 // =============================================================================
 import { el } from './ui.mjs';
 
-const NAV = [
-  { href: 'configure.html', label: 'Configurator' },
-  { href: 'data-editor.html', label: 'Data model', key: 'data' },
-  { href: 'presentation-editor.html', label: 'Presentation', key: 'pres' },
-  { href: 'editor.html', label: 'JSON', key: 'json' },
-];
+// The canvas routes for a model — the SINGLE source of truth for cross-page studio
+// nav, consumed by the shell here, by the Configurator's Studio menu (app.js), and by
+// the Loom's own top bar (loom.mjs), so the lists can never drift. The Loom is included
+// so the live canvas is reachable in one click from every other canvas. Each href is a
+// static filename + the model-id variable — never a domain literal (ratchet-safe).
+export const studioRoutes = (modelId) => {
+  const q = modelId ? `?m=${encodeURIComponent(modelId)}` : '';
+  return [
+    { key: 'cfg', label: 'Configurator', href: 'configure.html' + q },
+    { key: 'data', label: 'Data model', href: 'data-editor.html' + q },
+    { key: 'pres', label: 'Presentation', href: 'presentation-editor.html' + q },
+    { key: 'loom', label: 'Loom', href: 'loom.html' + q },
+    { key: 'json', label: 'JSON', href: 'editor.html' + q },
+  ];
+};
 
 export function mountStudioShell(host, { active, title, blurb, modelId } = {}) {
   if (!host) return;
   host.innerHTML = '';
-  // carry the active model through every studio route — without ?m=<id> the nav
-  // silently reverts to the URL default model, so you'd edit a different object than
-  // the one you opened. Each editor passes modelId: MODEL_ID from store.mjs.
-  const q = modelId ? `?m=${encodeURIComponent(modelId)}` : '';
 
   // brand lockup — the same ROWBLAA mark the public pages carry, linking home
   const brand = el('a', 'studio-brand', {
@@ -30,8 +35,8 @@ export function mountStudioShell(host, { active, title, blurb, modelId } = {}) {
   });
 
   const nav = el('nav', 'qc-nav', { 'aria-label': 'Pages' });
-  for (const n of NAV) {
-    const a = el('a', n.key === active ? 'is-active' : null, { href: n.href + q, text: n.label });
+  for (const n of studioRoutes(modelId)) {
+    const a = el('a', n.key === active ? 'is-active' : null, { href: n.href, text: n.label });
     if (n.key === active) a.setAttribute('aria-current', 'page');
     nav.appendChild(a);
   }
