@@ -479,6 +479,47 @@
   .lp-crumb:hover { color: var(--accent); }
   .lp-crumb.cur { color: var(--text-soft); }
   .lp-crumb-sep { color: var(--text-dim); opacity: .6; }
+  /* library toolbar: search + type-filter chips (find existing objects) */
+  .lp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; max-width: 1000px; margin: 0 auto 6px; width: 100%; padding: 6px 24px; }
+  .lp-search { flex: 1 1 240px; min-width: 200px; background: var(--ground, var(--surface)); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 9px 12px; font: inherit; font-size: 13.5px; }
+  .lp-search:focus { outline: none; border-color: var(--accent); }
+  .lp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lp-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text-soft); padding: 6px 13px; font: inherit; font-size: 12px; letter-spacing: .02em; cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .lp-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .lp-chip.is-active { background: var(--accent); border-color: var(--accent); color: #12130f; }
+  /* per-card TYPE badge — the neutral glyph + the category the model sits under */
+  .lp-typebadge { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+  .lp-typebadge-g { color: var(--accent); font-size: 13px; letter-spacing: 0; }
+  .lp-empty { max-width: 1000px; margin: 0 auto; width: 100%; padding: 4vh 24px; text-align: center; color: var(--text-dim); font-size: 14px; }
+  /* create/fork modal: two paths (start new with a plain-language type picker, or fork) */
+  .lp-modal--create { width: min(560px, 94vw); max-height: 88vh; overflow: auto; }
+  .lp-tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
+  .lp-tab { flex: 1; border: 1px solid var(--border); background: none; color: var(--text-soft); padding: 8px; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px; }
+  .lp-tab.is-active { border-color: var(--accent); color: var(--accent); }
+  .lp-pane { display: flex; flex-direction: column; }
+  .lp-pane[hidden] { display: none; }   /* a class `display` beats the UA [hidden] rule — restore it */
+  .lp-typecards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 4px 0 8px; }
+  .lp-typecard { text-align: left; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border); background: none; color: var(--text); border-radius: 11px; padding: 11px 12px; cursor: pointer; font: inherit; }
+  .lp-typecard:hover { border-color: var(--accent); }
+  .lp-typecard.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .lp-typecard-g { font-size: 18px; color: var(--accent); }
+  .lp-typecard-l { font-weight: 600; font-size: 13.5px; }
+  .lp-typecard-h { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; }
+  .lp-placement { font-size: 12px; color: var(--text-soft); margin: 6px 0 2px; }
+  .lp-placement-g { color: var(--accent); }
+  .lp-pane-note { font-size: 13px; color: var(--text-soft); margin: 2px 0 10px; line-height: 1.5; }
+  .lp-forklist { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow: auto; margin-bottom: 10px; }
+  .lp-forkrow { text-align: left; display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); background: none; color: var(--text); border-radius: 9px; padding: 9px 11px; cursor: pointer; font: inherit; }
+  .lp-forkrow:hover { border-color: var(--accent); }
+  .lp-forkrow.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .lp-forkrow-t { font-weight: 600; font-size: 13.5px; }
+  .lp-forkrow-b { font-size: 11.5px; color: var(--text-dim); }
+  /* per-card fork affordance (revealed on hover; a button can't live inside the card <a>) */
+  .lp-cardwrap { position: relative; display: flex; }
+  .lp-cardwrap > .lp-card { flex: 1; }
+  .lp-forkbtn { position: absolute; top: 10px; right: 10px; z-index: 2; border: 1px solid var(--border); background: rgba(20,19,15,.72); color: var(--text-soft); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; opacity: 0; transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .lp-cardwrap:hover .lp-forkbtn, .lp-forkbtn:focus-visible { opacity: 1; }
+  .lp-forkbtn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* =========================================================================
    Journey shell (opt-in via ?j=) — the phased sale runner. Self-contained;

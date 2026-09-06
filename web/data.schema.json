@@ -4,7 +4,7 @@
     {
       "key": "settings", "kind": "singleton", "title": "Model", "titleText": "Model settings",
       "form": [
-        { "prop": "configures", "label": "This model configures (HQDM class)", "widget": "select", "source": "typeIds", "target": "root", "allowNone": true, "noAutoSelect": true }
+        { "widget": "typePick", "label": "This model is a…" }
       ]
     },
     {
@@ -20,6 +20,7 @@
       "itemLabel": "id", "sub": "type",
       "add": { "prompt": "New field id:", "into": "id", "template": { "type": "number" } },
       "form": [
+        { "prop": "type", "label": "Type", "widget": "select", "options": ["number", "choice", "boolean", "multichoice"], "rerender": true },
         { "prop": "unit", "label": "Unit", "widget": "text", "when": { "prop": "type", "eq": "number" } },
         { "prop": "min", "label": "Min", "widget": "formula", "when": { "prop": "type", "eq": "number" } },
         { "prop": "max", "label": "Max", "widget": "formula", "when": { "prop": "type", "eq": "number" } },

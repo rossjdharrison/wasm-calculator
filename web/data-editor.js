@@ -10,8 +10,10 @@ import { currentData, currentPres, saveData, savePres, loadDefaultData, MODEL_ID
 import { publishModel } from './publish.mjs';
 import { createEditor } from './editor-engine.mjs';
 import { DATA_SOURCES } from './schema-check.mjs';
-import { authorCategories } from './hqdm.mjs';
+import { authorCategories, authorCategoryChoices, renderOf, supertypesOf } from './hqdm.mjs';
+import { ensureOwnLeaf, DEFAULT_CATEGORY } from './model-create-core.mjs';
 import { analyzeCoverage, applyFix, edgesOf } from './coverage.mjs';
+import { renameId } from './model-edit.mjs';
 import { el, hint } from './editor-ui.mjs';
 import { $, clone, setStatus, assembleLive } from './studio-dom.mjs';
 import { buildDefaults, renderStaticPreview } from './preview.mjs';
@@ -25,7 +27,7 @@ let lastEngine = null; // most recent loaded engine, for its authoritative graph
 
 boot();
 async function boot() {
-  mountStudioShell($('studio-head'), { active: 'data', title: 'Data model', blurb: 'How the quote is calculated and how fields depend on each other. Edit fields, options &amp; availability, computed formulas, tables, validations and effects. <strong>Save</strong> applies it (this browser) and reopens the Configurator. Presentation (labels, layout, controls) lives on its own page.' });
+  mountStudioShell($('studio-head'), { active: 'data', modelId: MODEL_ID, title: 'Data model', blurb: 'How the quote is calculated and how fields depend on each other. Edit fields, options &amp; availability, computed formulas, tables, validations and effects. <strong>Save</strong> applies it (this browser) and reopens the Configurator. Presentation (labels, layout, controls) lives on its own page.' });
   try {
     [data, pres, wasmBytes, schema] = await Promise.all([
       currentData().then(clone),
@@ -51,6 +53,41 @@ const SOURCE_FNS = {
   typeIds: () => Object.keys(data.types || {}),   // the model's OWN declared classes (for `configures`)
 };
 
+const humanizeType = (id) => String(id || '').replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const glyphOfType = (id) => (renderOf(id, data.types) || {}).glyph || '◈';
+const labelOfType = (id) => (data.types && data.types[id] && data.types[id].title) || (renderOf(id, data.types) || {}).label || humanizeType(id);
+
+// the TYPE SPINE the typePick widget renders: the model's current category, the
+// plain-language choices it may pick (neutral authorable leaves ∪ this model's OWN
+// classes — never other models' classes, which would create a cross-model dependency),
+// and the ancestry breadcrumb (hint-bearing supertypes + own categories, root-last).
+function typeSpine() {
+  const leaf = data.configures;
+  const def = (data.types && leaf && data.types[leaf]) || {};
+  const category = (def.specializes && def.specializes[0]) || DEFAULT_CATEGORY;
+  const neutral = authorCategoryChoices();                                  // [{id,glyph,label,hint}]
+  const seen = new Set(neutral.map((c) => c.id));
+  const own = Object.keys(data.types || {})
+    .filter((id) => id !== leaf && !seen.has(id))                           // same-model categories, not the leaf itself
+    .map((id) => ({ id, glyph: glyphOfType(id), label: labelOfType(id), hint: 'This model’s own class' }));
+  const choices = [...neutral, ...own];
+  if (category && !choices.some((c) => c.id === category)) choices.unshift({ id: category, glyph: glyphOfType(category), label: labelOfType(category), hint: '' });
+  const ancestry = supertypesOf(leaf, data.types)
+    .filter((id) => (data.types && data.types[id]) || renderOf(id, data.types))   // meaningful nodes only (skip bare structural types)
+    .map((id) => ({ id, glyph: glyphOfType(id), label: labelOfType(id) }));
+  return { category, choices, ancestry };
+}
+
+// change the model's type: re-point its existing configured leaf to the chosen category
+// (preserving that leaf's id + title), or mint the born-typed own leaf if there is none.
+function setType(categoryId) {
+  const leaf = data.configures;
+  if (leaf && data.types && data.types[leaf]) data.types[leaf] = { ...data.types[leaf], specializes: [categoryId] };
+  else ensureOwnLeaf(data, categoryId);
+  editor.commit();   // re-render outline + detail so the spine + Classes reflect the change
+  refresh();
+}
+
 function mountEditor() {
   editor = createEditor({
     schema, doc: data, outline: $('outline'), detail: $('detail'),
@@ -59,17 +96,73 @@ function mountEditor() {
       // Built from DATA_SOURCES (shared with the schema validator) so a schema
       // can never reference a source name the page forgets to wire.
       sources: Object.fromEntries(DATA_SOURCES.map((name) => [name, SOURCE_FNS[name]])),
+      // the typePick type-spine hooks (the model-specific read + write the generic
+      // widget delegates to — keeps editor-engine free of model knowledge).
+      typeSpine, setType,
     },
     onChange: refresh,
+    // seed a presentation counterpart when a data item is added, so a new field shows
+    // with a label + section (and a computed value surfaces as an output) instead of
+    // rendering blank — the presentation half of "what it contains".
+    onItemAdded: seedPresFor,
   });
   refresh();
+}
+
+function seedPresFor(key, id) {
+  if (!id) return;
+  if (key === 'fields') {
+    pres.fields = pres.fields || [];
+    if (!pres.fields.some((f) => f.id === id)) { pres.fields.push({ id, label: humanizeType(id), section: (pres.sections && pres.sections[0] && pres.sections[0].id) || 'main' }); presDirty = true; }
+  } else if (key === 'computed') {
+    pres.outputs = pres.outputs || [];
+    if (!pres.outputs.some((o) => o.id === id)) { pres.outputs.push({ id, label: humanizeType(id) }); presDirty = true; }
+  }
 }
 
 // ---- right panel: coverage + depends-on/used-by + live preview -------------
 function refresh() {
   const cov = analyzeCoverage(data, pres); lastCov = cov;
-  renderCoverage(cov); renderInlineChecklist(cov);
+  renderCoverage(cov); renderInlineChecklist(cov); renderRenameControl();
   renderRelationships(); recompute(); if (!$('graph').hidden) renderGraph();
+}
+
+// rename-after-create: change a field/computed id and rewrite EVERY reference across
+// both files (renameId is pure + parity-tested). The op clones, so we adopt the new
+// docs and rebuild the engine, then reselect the renamed item.
+function renameSelected(oldId, newId) {
+  const r = renameId({ data, pres }, oldId, newId);
+  data = r.data; pres = r.pres; presDirty = true;
+  mountEditor();
+  editor.selectById(newId);
+}
+function renderRenameControl() {
+  const detail = $('detail'); if (!detail) return;
+  const old = detail.querySelector('.de-rename'); if (old) old.remove();
+  const selId = editor && editor.selectedId(); if (!selId) return;
+  const isField = (data.fields || []).some((f) => f.id === selId);
+  const isComputed = (data.computed || []).some((c) => c.id === selId);
+  if (!isField && !isComputed) return;   // renameId rewrites field/computed references; other ids aren't wired
+  const taken = new Set([...(data.fields || []).map((f) => f.id), ...(data.computed || []).map((c) => c.id)]);
+  const box = el('div', 'de-rename');
+  box.appendChild(el('div', 'de-rename__lab', { text: 'Rename id — updates every reference' }));
+  const line = el('div', 'de-optadd');
+  const input = el('input', 'qc-input de-optadd__in', { value: selId, 'aria-label': 'New id' });
+  const btn = el('button', 'de-optadd__btn', { type: 'button', text: 'Rename' }); btn.disabled = true;
+  const err = el('div', 'de-optadd__err', { 'aria-live': 'polite' }); err.hidden = true;
+  const check = () => {
+    const v = input.value.trim(); let msg = '';
+    if (v && !/^[A-Za-z][A-Za-z0-9_]*$/.test(v)) msg = 'Letters, numbers & underscore — start with a letter.';
+    else if (v && v !== selId && taken.has(v)) msg = `"${v}" already exists.`;
+    err.textContent = msg; err.hidden = !msg; input.classList.toggle('is-invalid', !!msg);
+    btn.disabled = !v || v === selId || !!msg; return !btn.disabled;
+  };
+  const commit = () => { if (check()) renameSelected(selId, input.value.trim()); };
+  input.addEventListener('input', check);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+  btn.addEventListener('click', commit);
+  line.append(input, btn); box.append(line, err);
+  detail.appendChild(box);
 }
 
 // ---- coverage advisor (Slice 1: surface gaps + one-click connect) ----------
@@ -281,7 +374,7 @@ function save() {
   if (!assembledOk) { setStatus('error', 'Fix the errors before saving.'); return; }
   if (!saveData(data)) { setStatus('error', 'Could not save (storage blocked).'); return; }
   if (presDirty) savePres(pres); // labels added via the coverage advisor live in the presentation model
-  location.href = './';
+  location.href = `configure.html?m=${encodeURIComponent(MODEL_ID)}`; // reopen THIS model's configurator, not the catalogue
 }
 
 // publish the current model to the edge (KV) — validated server-side by the real

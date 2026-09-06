@@ -17,7 +17,7 @@ import { evaluateJourney } from './compose.mjs';
 import { categoryOf } from './individuals.mjs';
 import { phasesOf } from './hqdm.mjs';
 import * as order from './order.mjs';
-import { loadEvents, saveEvents, newOrderId } from './order-store.mjs';
+import { loadEvents, saveEvents, commit, newOrderId, onExternalChange } from './order-store.mjs';
 
 export function mountJourney(root, { journey, models, host, brand, resolveImage, links, resumeOrderId, phases, labels }) {
   root.innerHTML = '';
@@ -43,9 +43,13 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // resume only an order that belongs to THIS journey; a foreign/empty ?o= mints fresh
   // (guards against a hand-edited/bookmarked ?o= adopting another journey's log).
   if (resumeOrderId) { events = loadEvents(resumeOrderId); if (!events.length || order.fold(events).journeyId !== journey.id) resumeOrderId = null; }
-  if (!resumeOrderId) events = order.startOrder(newOrderId(journey.correlationPrefix || 'ORD'), journey.id, journey.version);
+  const freshOrder = !resumeOrderId;
+  if (freshOrder) events = order.startOrder(newOrderId(journey.correlationPrefix || 'ORD'), journey.id, journey.version);
   const orderId = order.fold(events).orderId;
-  saveEvents(orderId, events);
+  // persist ONLY a newly-minted order's opening log; a resumed order already exists in
+  // the store (re-writing it would be a needless blind overwrite + notify). Every later
+  // write goes through commit() below — compare-and-set, never a whole-array clobber.
+  if (freshOrder) saveEvents(orderId, events);
   // pin the active order id in the URL so a refresh resumes it (self-heals when a
   // stale ?o= resolved to an empty log above and a fresh order was minted).
   try {
@@ -54,7 +58,11 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       if (u.searchParams.get('o') !== orderId) { u.searchParams.set('o', orderId); history.replaceState(null, '', u); }
     }
   } catch (_) { /* non-browser / blocked history — harmless */ }
-  const cmd = (c) => { const r = order.apply(events, c); if (!r.error) { events = r.events; saveEvents(orderId, events); } return r; };
+  // the single write path: compare-and-set on the substrate. commit() re-reads the
+  // fresh stored log, re-validates `c` against it, and appends only if no other tab
+  // advanced the log — so two open tabs on this order never clobber each other. We
+  // ADOPT the returned authoritative log (it may already carry another tab's events).
+  const cmd = (c) => { const r = commit(orderId, c); if (!r.error) events = r.events; return r; };
 
   // ---- layout ----
   const grid = el('div', 'journey');
@@ -290,8 +298,21 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     phaseHost.appendChild(wrap);
   }
 
+  // live cross-tab sync: if ANOTHER tab advances this order's log, adopt the fresh log
+  // and re-render the rail + stepper. We deliberately do NOT rebuild the active input
+  // panel here (that would discard in-progress typing) — the next navigation reflects
+  // the new state; the CAS in cmd() has already guaranteed no write was lost.
+  const stopSync = onExternalChange(() => {
+    const fresh = loadEvents(orderId);
+    if (fresh.length > events.length && order.fold(fresh).orderId === orderId) {
+      events = fresh;
+      stepper.setActive(order.fold(events).phase || phaseIds[0], reached());
+      recompute();
+    }
+  });
+
   // compute the journey once BEFORE mounting the active phase, so a phase that
   // resumes straight into a downstream capture/preview has its injected figures ready.
   recompute().then(() => gotoPhase(order.fold(events).phase || phaseIds[0]));
-  return { recompute, orderId };
+  return { recompute, orderId, destroy: stopSync };
 }

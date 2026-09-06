@@ -9,15 +9,19 @@
 import { el } from './ui.mjs';
 
 const NAV = [
-  { href: './', label: 'Configurator' },
+  { href: 'configure.html', label: 'Configurator' },
   { href: 'data-editor.html', label: 'Data model', key: 'data' },
   { href: 'presentation-editor.html', label: 'Presentation', key: 'pres' },
   { href: 'editor.html', label: 'JSON', key: 'json' },
 ];
 
-export function mountStudioShell(host, { active, title, blurb } = {}) {
+export function mountStudioShell(host, { active, title, blurb, modelId } = {}) {
   if (!host) return;
   host.innerHTML = '';
+  // carry the active model through every studio route — without ?m=<id> the nav
+  // silently reverts to the URL default model, so you'd edit a different object than
+  // the one you opened. Each editor passes modelId: MODEL_ID from store.mjs.
+  const q = modelId ? `?m=${encodeURIComponent(modelId)}` : '';
 
   // brand lockup — the same ROWBLAA mark the public pages carry, linking home
   const brand = el('a', 'studio-brand', {
@@ -27,7 +31,7 @@ export function mountStudioShell(host, { active, title, blurb } = {}) {
 
   const nav = el('nav', 'qc-nav', { 'aria-label': 'Pages' });
   for (const n of NAV) {
-    const a = el('a', n.key === active ? 'is-active' : null, { href: n.href, text: n.label });
+    const a = el('a', n.key === active ? 'is-active' : null, { href: n.href + q, text: n.label });
     if (n.key === active) a.setAttribute('aria-current', 'page');
     nav.appendChild(a);
   }

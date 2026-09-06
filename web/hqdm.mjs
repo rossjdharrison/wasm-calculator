@@ -69,3 +69,13 @@ export const isKnownType = (id, extra) => !!typeMap(extra)[id];
 // model's OWN declared domain types (which climb the lattice to a neutral leaf).
 // Pure + deterministic — used to populate the studio's `category` dropdown.
 export const authorCategories = (types) => [...new Set([...NEUTRAL_CATEGORIES, ...Object.keys(types || {})])];
+
+// the plain-language CHOICES a NEW configurator can be created as — the render-hint
+// leaves marked `authorable` (a rank), each with its glyph + author-facing label/hint.
+// All vocabulary is DATA (hqdm-core.renderHints), so the studio's "What is it?" picker
+// hardcodes no category ids or labels. Ordered by the authorable rank. Pure.
+export const authorCategoryChoices = () =>
+  Object.entries(HINTS)
+    .filter(([, h]) => h && h.authorable != null)
+    .sort((a, b) => a[1].authorable - b[1].authorable)
+    .map(([id, h]) => ({ id, glyph: h.glyph || '◈', label: h.label || id, hint: h.hint || '' }));

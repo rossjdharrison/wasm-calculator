@@ -8,7 +8,7 @@
 // =============================================================================
 
 import { assemble, loadEngine, mergeModel, splitModel } from './assembler.mjs';
-import { currentModel, saveData, savePres, loadDefaultData, loadDefaultPres } from './store.mjs';
+import { currentModel, saveData, savePres, loadDefaultData, loadDefaultPres, MODEL_ID } from './store.mjs';
 import { $, debounce, setStatus } from './studio-dom.mjs';
 import { buildDefaults, renderStaticPreview } from './preview.mjs';
 import { mountStudioShell } from './studio-shell.mjs';
@@ -21,7 +21,7 @@ let lastValid = null; // parsed model object from the most recent successful val
 boot();
 
 async function boot() {
-  mountStudioShell($('studio-head'), { active: 'json', title: 'Edit model', blurb: 'View and update the model that drives the configurator. <strong>Update model</strong> validates it, loads it into the WebAssembly engine, saves it (in this browser), and reopens the Configurator with the fresh model. Nothing here changes the engine.' });
+  mountStudioShell($('studio-head'), { active: 'json', modelId: MODEL_ID, title: 'Edit model', blurb: 'View and update the model that drives the configurator. <strong>Update model</strong> validates it, loads it into the WebAssembly engine, saves it (in this browser), and reopens the Configurator with the fresh model. Nothing here changes the engine.' });
   try {
     wasmBytes = new Uint8Array(await (await fetch(WASM_URL)).arrayBuffer());
   } catch (e) {
@@ -102,7 +102,7 @@ function update() {
       engine.evaluate(buildDefaults(assembled.ir)); // final proof it loads
       const { data, presentation } = splitModel(JSON.parse($('model-src').value));
       if (!saveData(data) || !savePres(presentation)) { setStatus('error', 'Could not save (storage blocked).'); return; }
-      location.href = './'; // reopen the Configurator with the fresh model
+      location.href = `configure.html?m=${encodeURIComponent(MODEL_ID)}`; // reopen THIS model's configurator with the fresh model
     })
     .catch((e) => setStatus('error', `Engine rejected the model: ${e.message}`));
 }
