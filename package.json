@@ -8,6 +8,7 @@
     "asbuild:release": "asc assembly/quote.ts --target release",
     "asbuild": "npm run asbuild:debug && npm run asbuild:release",
     "check:neutral": "node scripts/check-neutral.mjs",
+    "seed:kv": "node scripts/seed-kv.mjs",
     "validate:model": "node scripts/validate-model.mjs",
     "build:site": "node scripts/build-site.mjs",
     "build": "npm run check:neutral && npm run validate:model && npm run asbuild:release && npm run build:site",

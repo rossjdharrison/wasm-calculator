@@ -20,6 +20,16 @@ const get = (k) => { try { const s = localStorage.getItem(k); return s ? JSON.pa
 const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (_) { return false; } };
 const del = (k) => { try { localStorage.removeItem(k); } catch (_) { /* ignore */ } };
 
+// READ-SERVE: authored documents from the edge (Pages Functions over KV), null-tolerant
+// so a missing key / a static-only host / no functions all fall through to the shipped
+// static files. Memoised per page load. See functions/api/* + wrangler.jsonc.
+const _api = new Map();
+const apiJson = (path) => { if (!_api.has(path)) _api.set(path, fetch(path).then((r) => (r.ok ? r.json() : null)).catch(() => null)); return _api.get(path); };
+const apiModel = (id) => apiJson(`/api/models/${id}`);
+const apiJourneyDoc = (id) => apiJson(`/api/journeys/${id}`);
+const apiCatalog = () => apiJson('/api/catalog');
+const fetchJson = (path) => fetch(path).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
 // per-MODEL override keys (multi-model aware; a created model has no shipped file).
 const DKEY = (id) => `qc:data:${id}:v1`;
 const PKEY = (id) => `qc:pres:${id}:v1`;
@@ -39,8 +49,9 @@ export const isCustom = () => !!(getStoredData() || getStoredPres());
 
 // override-or-fetch, per id — null-tolerant so a browser-created model (no shipped
 // file) resolves from its localStorage override rather than 404-ing.
-export const loadModelData = async (id) => getStoredDataFor(id) ?? await fetch(`models/${id}/data-model.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-export const loadModelPres = async (id) => getStoredPresFor(id) ?? await fetch(`models/${id}/presentation-model.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+// order of authority: this browser's override → the edge (KV) → the shipped static file.
+export const loadModelData = async (id) => getStoredDataFor(id) ?? (await apiModel(id))?.data ?? await fetchJson(`models/${id}/data-model.json`);
+export const loadModelPres = async (id) => getStoredPresFor(id) ?? (await apiModel(id))?.presentation ?? await fetchJson(`models/${id}/presentation-model.json`);
 
 export const loadDefaultData = () => fetch(`models/${MODEL_ID}/data-model.json`).then((r) => r.json());
 export const loadDefaultPres = () => fetch(`models/${MODEL_ID}/presentation-model.json`).then((r) => r.json());
@@ -67,10 +78,13 @@ export const removeLocalModelEntry = (id) => {
   return set(LMCAT, cat);
 };
 // shipped models ∪ the local overlay, merged by id (local wins).
+// shipped (static) ← edge/KV (authored, shared) ← this browser's overlay (local wins).
 export const mergedModelCatalog = async () => {
   const shipped = await loadCatalog().catch(() => ({ models: [] }));
+  const kv = (await apiCatalog()) || {};
   const local = getLocalModelCatalog();
   const byId = new Map((shipped.models || []).map((e) => [e.id, e]));
+  for (const e of kv.models || []) byId.set(e.id, e);
   for (const e of local.models || []) byId.set(e.id, e);
   return { ...shipped, models: [...byId.values()] };
 };
@@ -102,7 +116,7 @@ export const JOURNEY_ID = (((params.get('j') || '').replace(/[^a-z0-9_-]/gi, '')
 // the active catalogue node to browse from (?c=<classId>); null → the domain root.
 export const CAT_ID = (((params.get('c') || '').replace(/[^a-z0-9_-]/gi, '')) || null);
 export const loadJourneyCatalog = () => fetch('journeys/catalog.json').then((r) => r.json()).catch(() => ({ journeys: [] }));
-export const loadJourney = (id) => fetch(`journeys/${String(id).replace(/[^a-z0-9_-]/gi, '')}.json`).then((r) => r.json());
+export const loadJourney = async (id) => { const s = String(id).replace(/[^a-z0-9_-]/gi, ''); return (await apiJourneyDoc(s)) ?? await fetch(`journeys/${s}.json`).then((r) => r.json()); };
 // a browser-edited journey overrides the shipped default (like the model overrides).
 const JKEY = (id) => `qc:journey:${id}:v1`;
 export const getStoredJourney = (id) => get(JKEY(id));
@@ -139,8 +153,10 @@ export const removeLocalJourneyEntry = (id) => {
 // shipped journeys + the local overlay, merged by id (local wins). {journeys:[...]}.
 export const mergedJourneyCatalog = async () => {
   const shipped = await loadJourneyCatalog().catch(() => ({ journeys: [] }));
+  const kv = (await apiCatalog()) || {};
   const local = getLocalJourneyCatalog();
   const byId = new Map((shipped.journeys || []).map((e) => [e.id, e]));
+  for (const e of kv.journeys || []) byId.set(e.id, e);
   for (const e of local.journeys || []) byId.set(e.id, e);
   return { journeys: [...byId.values()] };
 };
