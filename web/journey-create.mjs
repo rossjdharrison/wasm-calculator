@@ -1,7 +1,7 @@
 // =============================================================================
 // journey-create.mjs — the form-based journey CREATE/EDIT surface (a companion to
 // the macro canvas journey.html). It mints new journeys and edits models[],
-// bindings[], triggers[], and the process steps through FORMS, every write going
+// bindings[] and the process steps through FORMS, every write going
 // through the pure ops in journey-edit.mjs + journey-create-core.mjs, live-checked
 // by journey-validate.mjs, and persisted via store.saveJourney (+ a local catalog
 // overlay for created journeys). Domain-agnostic: it reads models + the neutral
@@ -142,7 +142,7 @@ function renderModelsSection(main) {
     head.appendChild(el('div', 'ct', m.as));
     head.appendChild(el('div', 'cmeta', `${m.ref} · ${m.phase}${m.role ? ' · ' + m.role : ''}`));
     const x = el('button', 'cx', 'remove');
-    x.onclick = () => { const refs = jedit.referencesToModel(jrn, m.as); if (refs.length && !confirm(`"${m.as}" is used by ${refs.length} binding/trigger(s). Remove anyway?`)) return; mut((j) => jedit.removeModelRef(j, m.as)); };
+    x.onclick = () => { const refs = jedit.referencesToModel(jrn, m.as); if (refs.length && !confirm(`"${m.as}" is used by ${refs.length} binding(s). Remove anyway?`)) return; mut((j) => jedit.removeModelRef(j, m.as)); };
     head.appendChild(x); card.appendChild(head); main.appendChild(card);
   }
   // add-model row

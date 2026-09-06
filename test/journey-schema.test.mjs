@@ -80,6 +80,15 @@ test('a binding with condition:null is accepted (matches the trigger-guard null 
   assert.ok(!validateJourneyShape(j).errors.some((e) => e.includes('condition')), 'condition:null is not an error');
 });
 
+test('a populated triggers[] is REJECTED — the framework does not interpret triggers (accepted == executed)', () => {
+  const j = clone(shipped);
+  j.triggers = [{ id: 't1', on: 'shopping', activates: 'financing' }];
+  const r = validateJourneyShape(j);
+  assert.ok(r.errors.some((e) => e.includes('triggers') && e.includes('not supported')), 'populated triggers[] is an error');
+  // an empty/absent triggers[] stays tolerated (back-compat)
+  assert.deepEqual(validateJourneyShape({ ...clone(shipped), triggers: [] }).errors, validateJourneyShape(clone(shipped)).errors);
+});
+
 test('the kind list is injected data, not a closed hardcode (D4-forward extensibility)', () => {
   const j = clone(shipped); j.process.steps[0].kind = 'transfer';
   assert.ok(validateJourneyShape(j).errors.some((e) => e.includes('not a known step kind')), 'rejected with shipped list');

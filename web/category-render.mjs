@@ -29,7 +29,6 @@ export const CATEGORY_RENDERERS = {
   period_of_time: (n) => el('div', 'cr cr-timeline', { html: `<span class="cr-l">${n.label || 'Timeline'}</span><div class="cr-tl">${(n.parts || []).map((p) => `<span class="cr-tl-part${p.current ? ' current' : ''}"><b>${p.label}</b>${p.at ? `<span class="cr-when">${p.at}</span>` : ''}</span>`).join('')}</div>` }),
   transfer_of_ownership: transfer,
   transfer_of_possession: transfer,
-  transfer_of_ownership_of_money: transfer,
 };
 
 // render a node by the (inferred) neutral category of `category`. `types` = the

@@ -9,8 +9,12 @@ import { mergeModel } from './assembler.mjs';
 import { registryFromModels } from './catalogue-build.mjs';
 
 // Active model id from the URL (?m=antiques). Sanitised to a safe path segment.
+// The bootstrap default is a single domain literal (the studio/landing resolve
+// domain.defaultModel; this only names the URL fallback) — carried on the neutrality
+// ratchet in scripts/check-neutral.mjs.
 const params = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
-export const MODEL_ID = ((params.get('m') || 'vehicles').replace(/[^a-z0-9_-]/gi, '') || 'vehicles');
+const DEFAULT_MODEL = 'vehicles';
+export const MODEL_ID = ((params.get('m') || DEFAULT_MODEL).replace(/[^a-z0-9_-]/gi, '') || DEFAULT_MODEL);
 
 const get = (k) => { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : null; } catch (_) { return null; } };
 const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (_) { return false; } };

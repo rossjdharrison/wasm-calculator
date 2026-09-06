@@ -34,7 +34,6 @@
       "mapping": [{ "to": "price", "from": { "op": "field", "args": ["grandTotal"] } }]
     }
   ],
-  "triggers": [],
   "process": {
     "steps": [
       { "id": "build", "phase": "configure", "kind": "capture", "model": "shopping", "produces": "class_of_physical_object", "commitLabel": "Request this build ▸" },

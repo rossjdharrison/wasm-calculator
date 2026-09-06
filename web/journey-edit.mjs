@@ -2,7 +2,8 @@
 // journey-edit.mjs — PURE mutations on a journey document (the composition/process
 // model), mirroring model-edit.mjs. Every op deep-clones and returns a new
 // journey; legality is journey-validate.mjs's job. Domain-agnostic: it edits
-// models[], bindings[], triggers[] and the process — never any sale concept.
+// models[], bindings[] and the process — never any sale concept. (Triggers are NOT
+// interpreted by this framework — cross-model feedback is outside the numeric scope.)
 // =============================================================================
 import { clone } from './studio-dom.mjs';
 
@@ -18,7 +19,6 @@ export function removeModelRef(journey, alias) {
   const next = j(journey);
   next.models = (next.models || []).filter((m) => m.as !== alias);
   next.bindings = (next.bindings || []).filter((b) => b.from !== alias && b.to !== alias);
-  next.triggers = (next.triggers || []).filter((t) => t.activates !== alias && t.on !== alias);
   if (next.process) next.process.steps = (next.process.steps || []).filter((s) => s.model !== alias);
   return next;
 }
@@ -39,16 +39,6 @@ export function setSeamCondition(journey, bindingId, ast) {
   const next = j(journey); const b = (next.bindings || []).find((x) => x.id === bindingId);
   if (b) { if (ast == null) delete b.condition; else b.condition = ast; } return next;
 }
-export function setTrigger(journey, trigger) {
-  const next = j(journey); next.triggers = next.triggers || [];
-  const i = byId(next.triggers, trigger.id);
-  if (i < 0) next.triggers.push(trigger); else next.triggers[i] = trigger;
-  return next;
-}
-export function removeTrigger(journey, id) {
-  const next = j(journey); next.triggers = (next.triggers || []).filter((t) => t.id !== id); return next;
-}
-
 // top-level metadata (title / correlationPrefix / version) — id is never rewritten
 // here (it is the storage key). Pure clone-and-return.
 export function setMeta(journey, patch) {
@@ -80,11 +70,10 @@ export function moveStep(journey, id, dir) {
   return next;
 }
 
-// everything (bindings + triggers) that touches a model alias — the cross-model
-// blast radius, so the editor can warn before removing/renaming a model.
+// every binding that touches a model alias — the cross-model blast radius, so the
+// editor can warn before removing/renaming a model.
 export function referencesToModel(journey, alias) {
   const out = [];
   for (const b of journey.bindings || []) if (b.from === alias || b.to === alias) out.push({ kind: 'binding', id: b.id, where: b.from === alias ? 'from' : 'to' });
-  for (const t of journey.triggers || []) if (t.activates === alias || t.on === alias) out.push({ kind: 'trigger', id: t.id });
   return out;
 }

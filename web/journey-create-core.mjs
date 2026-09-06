@@ -25,7 +25,7 @@ export function uniqueJourneyId(base, existingIds = []) {
 // a blank, VALID-shaped journey document (passes validateJourneyShape once it has
 // at least one model + one step; empty models/steps are intentional on creation).
 export function newJourney(id, title, correlationPrefix = '', version = '1.0.0') {
-  const j = { id, version, title, models: [], bindings: [], triggers: [], process: { steps: [] } };
+  const j = { id, version, title, models: [], bindings: [], process: { steps: [] } };
   if (correlationPrefix) j.correlationPrefix = correlationPrefix;
   return j;
 }

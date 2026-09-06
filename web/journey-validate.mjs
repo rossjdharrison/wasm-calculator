@@ -5,7 +5,7 @@
 // to the real assembler via a synthetic seam model, so the journey editor's live
 // validation cannot drift from the build gate.
 // =============================================================================
-import { tryAssemble, validateFormula } from './model-validate.mjs';
+import { tryAssemble } from './model-validate.mjs';
 import { orderModels, buildSeamModel } from './compose.mjs';
 import { isA } from './hqdm.mjs';
 
@@ -50,22 +50,6 @@ export function validateSeam(journey, binding, models) {
   return { ok: errors.length === 0, errors };
 }
 
-// validate ONE behavioural trigger. `on`/`activates` must be declared model
-// aliases; the guard (optional — absent = fires unconditionally) must assemble
-// against the ON-model's own scope. Delegated to the real assembler (via
-// validateFormula) so this can never drift from the build gate. { ok, errors }.
-export function validateTrigger(journey, trigger, models) {
-  const errors = [];
-  const on = models[trigger.on], act = models[trigger.activates];
-  if (!on) errors.push(`trigger "${trigger.id}": unknown on-model alias "${trigger.on}"`);
-  if (!act) errors.push(`trigger "${trigger.id}": unknown activates-model alias "${trigger.activates}"`);
-  if (on && trigger.guard != null) {
-    const r = validateFormula(on.merged, trigger.guard);
-    if (!r.ok) errors.push(`trigger "${trigger.id}": guard does not assemble against "${trigger.on}" — ${r.error.message}`);
-  }
-  return { ok: errors.length === 0, errors };
-}
-
 // analyse a whole journey → { findings:[{kind,severity,message}], counts }.
 export function analyzeJourney(journey, models) {
   const findings = [];
@@ -79,11 +63,9 @@ export function analyzeJourney(journey, models) {
     for (const b of journey.bindings || []) { touched.add(b.from); touched.add(b.to); }
     for (const m of journey.models || []) if (!touched.has(m.as)) add('orphan-model', 'warn', `model "${m.as}" participates in no binding`);
   }
-  for (const t of journey.triggers || []) {
-    const v = validateTrigger(journey, t, models);
-    for (const e of v.errors) add('trigger', 'error', e);
-    if (!t.guard) add('unguarded-trigger', 'info', `trigger "${t.id}" has no guard`);
-  }
+  // triggers (behavioural saga edges) are NOT interpreted by this framework —
+  // cross-model feedback is outside the frozen one-pass numeric scope. A populated
+  // triggers[] is rejected by the shape gate (journey-schema.mjs), so nothing to run here.
 
   const counts = { error: 0, warn: 0, info: 0 };
   for (const f of findings) counts[f.severity]++;

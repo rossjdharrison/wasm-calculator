@@ -1,14 +1,23 @@
 # wasm-calculator — a model-driven quote configurator
 
 A **quote/configurator machine** whose entire form — the fields, the rules for
-when things appear, and the pricing — is described as **data** in `model.json`
-and evaluated by a **model-agnostic WebAssembly engine**. Change the model and
-republish; the engine never needs rebuilding. Restyle it by editing design
-tokens; the logic never needs touching.
+when things appear, and the pricing — is described as **data** (a
+`data-model.json` + `presentation-model.json` pair) and evaluated by a
+**model-agnostic WebAssembly engine**. Change the model and republish; the engine
+never needs rebuilding. Restyle it by editing design tokens; the logic never
+needs touching.
 
 The example model is a **vehicle configurator** (trims gate engines, packages
 have prerequisites and conflicts, financing reveals a computed monthly payment).
-Swap `model.json` for your own domain — see [Deploy a new model](#deploy-a-new-model).
+Add your own via the studio — see [Deploy a new model](#deploy-a-new-model).
+
+> **The framework contract** — the document types the machinery interprets, the
+> neutral vocabulary vs domain data, the extension points, and the invariants that
+> are *enforced* (`npm run build` runs `scripts/check-neutral.mjs`) — is
+> **[`docs/FRAMEWORK.md`](docs/FRAMEWORK.md)**. Beyond a single configurator, models
+> compose into **journeys** (`web/journeys/`), a **domain** model (`web/domain.json`)
+> drives the site, and the **taxonomy** is a browsable catalogue *derived* from the
+> models — see [`docs/catalogue-authoring-spec.md`](docs/catalogue-authoring-spec.md).
 
 ```mermaid
 flowchart LR
@@ -23,7 +32,7 @@ flowchart LR
 
 | Layer | Owner | Files | Contains | Never contains |
 |---|---|---|---|---|
-| **Model** | Non-dev author | `model.json` (+ `model.schema.json`) | fields, sections, control hints, and all logic (conditions, pricing, effects, validations) | any colour, font, size, class, CSS |
+| **Model** | Non-dev author | `data-model.json` + `presentation-model.json` (+ their schemas) | fields, sections, control hints, and all logic (conditions, pricing, effects, validations); HQDM classes | any colour, font, size, class, CSS |
 | **Engine** | Dev (built once) | `assembly/quote.ts` → `quote.wasm`, `web/assembler.mjs`, `web/app.js`, `web/qc-base.css` | the VM, the assembler, the DOM contract, structural CSS | brand look, per-model logic |
 | **Designer** | Designer | `web/theme.css` | `--qc-*` tokens (light/dark) + skins | logic, markup, field ids |
 

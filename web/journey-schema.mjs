@@ -39,7 +39,12 @@ export function validateJourneyShape(journey, opts = {}) {
   if (!Array.isArray(journey.models)) { E('"models" is required and must be an array'); }
   else if (!journey.models.length) E('"models" must not be empty');
   if ('bindings' in journey && !Array.isArray(journey.bindings)) E('"bindings" must be an array');
-  if ('triggers' in journey && !Array.isArray(journey.triggers)) E('"triggers" must be an array');
+  // triggers (behavioural saga edges) are NOT interpreted: cross-model feedback is
+  // outside this framework's frozen one-pass numeric scope. The contract forbids what
+  // the engine cannot execute rather than accepting-and-ignoring it. An empty/absent
+  // triggers[] is tolerated for back-compat; a populated one is an error.
+  if (Array.isArray(journey.triggers) && journey.triggers.length) E('"triggers" is not supported — this framework does not interpret triggers (cross-model feedback is outside the frozen numeric scope); remove them');
+  else if ('triggers' in journey && !Array.isArray(journey.triggers)) E('"triggers" must be an array');
   if (!isObj(journey.process)) E('"process" is required and must be an object');
   // phases are a domain lifecycle held as data; without them (inline or from the
   // domain) the process is undefined — one clear error beats a cascade of "unknown phase".
@@ -100,21 +105,7 @@ export function validateJourneyShape(journey, opts = {}) {
     if ('condition' in b && b.condition != null && !isExpr(b.condition)) E(`${bid}: "condition" must be an expression`);
   });
 
-  // ---- triggers[] ----------------------------------------------------------
-  const triggerIds = new Set();
-  (Array.isArray(journey.triggers) ? journey.triggers : []).forEach((t, i) => {
-    const at = `triggers[${i}]`;
-    if (!isObj(t)) { E(`${at} must be an object`); return; }
-    if (!isStr(t.id)) E(`${at}: "id" is required`);
-    else if (triggerIds.has(t.id)) E(`${at}: duplicate trigger id "${t.id}"`);
-    else triggerIds.add(t.id);
-    const tid = isStr(t.id) ? `trigger "${t.id}"` : at;
-    if (!isStr(t.on)) E(`${tid}: "on" is required`);
-    else if (!alias(t.on)) E(`${tid}: "on" alias "${t.on}" is not a declared model`);
-    if (!isStr(t.activates)) E(`${tid}: "activates" is required`);
-    else if (!alias(t.activates)) E(`${tid}: "activates" alias "${t.activates}" is not a declared model`);
-    if ('guard' in t && t.guard != null && !isExpr(t.guard)) E(`${tid}: "guard" must be an expression`);
-  });
+  // (triggers[] are rejected wholesale at the top-level check above — not interpreted.)
 
   // ---- process.steps[] -----------------------------------------------------
   if (isObj(journey.process)) {

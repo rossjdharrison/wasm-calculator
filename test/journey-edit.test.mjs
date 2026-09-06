@@ -1,6 +1,6 @@
 // Phase 4: pure journey mutations + the macro-graph builder. journey-edit clones
 // and returns a new journey (never mutates); macroGraph turns a journey doc into
-// boxes (models) + typed wires (bindings solid / triggers dashed).
+// boxes (models) + typed wires (bindings — the only interpreted seam).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -12,7 +12,7 @@ import { macroGraph } from '../web/journey-loom.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const journey = JSON.parse(await readFile(join(here, '..', 'web', 'journeys', 'vehicle-sale.json'), 'utf8'));
 
-test('macroGraph builds boxes from models and typed wires from bindings/triggers', () => {
+test('macroGraph builds boxes from models and typed wires from bindings', () => {
   const g = macroGraph(journey);
   assert.equal(g.nodes.length, 2);
   assert.deepEqual(g.nodes.map((n) => n.alias).sort(), ['financing', 'shopping']);
@@ -38,7 +38,7 @@ test('setSeamCondition adds and clears', () => {
   assert.equal('condition' in cleared.bindings[0], false, 'condition cleared');
 });
 
-test('removeModelRef cascades to bindings/triggers/process', () => {
+test('removeModelRef cascades to bindings/process', () => {
   const next = jedit.removeModelRef(journey, 'financing');
   assert.equal(next.models.some((m) => m.as === 'financing'), false);
   assert.equal((next.bindings || []).some((b) => b.from === 'financing' || b.to === 'financing'), false);

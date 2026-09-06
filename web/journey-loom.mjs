@@ -1,7 +1,7 @@
 // =============================================================================
-// journey-loom.mjs — the MACRO authoring altitude: the sale-hqdm picture, live
+// journey-loom.mjs — the MACRO authoring altitude: the composition picture, live
 // and editable. Boxes = models (tinted by phase), solid wires = structural
-// bindings, dashed = behavioural triggers. Click a box → drill into its value-
+// bindings (the only interpreted seam). Click a box → drill into its value-
 // graph Loom (loom.html?m=…). Click a wire → edit its mapping/condition, live-
 // validated by validateSeam (the assembler's own error, inline). A lattice-lint
 // rail shows analyzeJourney findings. Domain-agnostic: it edits the journey doc
@@ -10,7 +10,7 @@
 import { assemble, mergeModel } from './assembler.mjs';
 import { JOURNEY_ID, currentJourney, saveJourney, resetJourney, loadModelFiles, loadDomain } from './store.mjs';
 import { EngineHost, evaluateJourney } from './compose.mjs';
-import { analyzeJourney, validateSeam, validateTrigger } from './journey-validate.mjs';
+import { analyzeJourney, validateSeam } from './journey-validate.mjs';
 import * as jedit from './journey-edit.mjs';
 import { parseExpr, formatExpr } from './expr.mjs';
 import { buildDefaults } from './preview.mjs';
@@ -26,7 +26,6 @@ export function macroGraph(journey) {
   const nodes = (journey.models || []).map((m) => ({ alias: m.as, ref: m.ref, phase: m.phase || null, role: m.role || null }));
   const edges = [];
   for (const b of journey.bindings || []) edges.push({ id: b.id, kind: 'binding', from: b.from, to: b.to, label: (b.contract && b.contract.provides && b.contract.provides[0] && b.contract.provides[0].as) || b.id });
-  for (const t of journey.triggers || []) edges.push({ id: t.id, kind: 'trigger', from: t.on, to: t.activates, label: t.id });
   return { nodes, edges };
 }
 
@@ -46,7 +45,6 @@ if (typeof document !== 'undefined') (async function boot() {
   $('#jboot')?.remove();
   $('#jundo').onclick = () => { if (undo.length) { jrn = undo.pop(); persist(); recompute(); } };
   $('#jreset').onclick = () => { resetJourney(JID); location.reload(); };
-  const addTrig = $('#jaddtrig'); if (addTrig) addTrig.onclick = (ev) => openTrigger(newTrigger(), ev);
   const struct = $('#jstruct'); if (struct) struct.href = `journey-create.html?j=${encodeURIComponent(JID)}`;
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
   window.addEventListener('mousedown', (e) => { if (!e.target.closest('.jpop')) closePop(); }, true);
@@ -64,7 +62,7 @@ async function recompute() {
 
 function lintSets() {
   const a = analyzeJourney(jrn, models); const edges = new Set(), nodes = new Set();
-  const ids = (jrn.bindings || []).map((b) => b.id).concat((jrn.triggers || []).map((t) => t.id));
+  const ids = (jrn.bindings || []).map((b) => b.id);
   const aliases = (jrn.models || []).map((m) => m.as);
   for (const f of a.findings) { if (f.severity !== 'error') continue; for (const id of ids) if (f.message.includes(`"${id}"`)) edges.add(id); for (const al of aliases) if (f.message.includes(`"${al}"`)) nodes.add(al); }
   return { edges, nodes, findings: a.findings };
@@ -126,54 +124,10 @@ function closePop() { const l = $('#jpoplayer'); if (l) l.innerHTML = ''; }
 function place(p, ev) { const r = p.getBoundingClientRect(); let x = (ev.clientX || 200) + 8, y = (ev.clientY || 200) + 8; if (x + r.width > innerWidth - 10) x = innerWidth - r.width - 10; if (y + r.height > innerHeight - 10) y = innerHeight - r.height - 10; p.style.left = Math.max(10, x) + 'px'; p.style.top = Math.max(10, y) + 'px'; }
 function toast(msg, isErr) { const old = $('.jtoast'); if (old) old.remove(); const t = el('div', 'jtoast' + (isErr ? ' err' : ''), `<b>${msg}</b>`); document.body.appendChild(t); setTimeout(() => { try { t.remove(); } catch (_) { } }, 3000); }
 
-// a fresh domain-neutral trigger with a unique id (deterministic counter).
-function newTrigger() {
-  const al = (jrn.models || []).map((m) => m.as);
-  let n = 1; while ((jrn.triggers || []).some((t) => t.id === 'trigger' + n)) n++;
-  return { id: 'trigger' + n, on: al[0] || '', activates: al[1] || al[0] || '', guard: undefined };
-}
-
-// the editable trigger popover (behavioural seam): on / activates / guard, live-
-// validated by validateTrigger. `trigger` may be an existing one (edit) or a fresh
-// newTrigger() (add) — Save upserts via jedit.setTrigger, so one code path serves both.
-function openTrigger(trigger, ev) {
-  closePop();
-  const exists = (jrn.triggers || []).some((t) => t.id === trigger.id);
-  const p = el('div', 'jpop');
-  const opts = (jrn.models || []).map((m) => `<option value="${m.as}"${m.as === trigger.on ? ' selected' : ''}>${m.as}</option>`).join('');
-  const optsAct = (jrn.models || []).map((m) => `<option value="${m.as}"${m.as === trigger.activates ? ' selected' : ''}>${m.as}</option>`).join('');
-  p.innerHTML = `<button class="close">✕</button><div class="jp-k">trigger</div><h4>${trigger.id}</h4>`
-    + `<div class="jlab">On (model reaches guard)</div><select class="jsel" id="jton">${opts}</select>`
-    + `<div class="jlab">Activates</div><select class="jsel" id="jtact">${optsAct}</select>`
-    + `<div class="jlab">Guard (blank = fires unconditionally)</div><textarea class="jfx" id="jtguard" spellcheck="false">${trigger.guard ? formatExpr(trigger.guard) : ''}</textarea>`
-    + `<div class="jvmsg" id="jtvm"></div><div class="jrow">${exists ? '<button class="del">Delete</button>' : ''}<button class="cancel">Cancel</button><button class="save">Save</button></div>`;
-  $('#jpoplayer').appendChild(p); place(p, ev);
-  const on = $('#jton', p), act = $('#jtact', p), guard = $('#jtguard', p), vm = $('#jtvm', p), save = $('.save', p);
-  const candidate = () => {
-    const g = guard.value.trim();
-    const guardAst = g ? parseExpr(g) : undefined;
-    return jedit.setTrigger(jrn, { id: trigger.id, on: on.value, activates: act.value, ...(guardAst !== undefined ? { guard: guardAst } : {}) });
-  };
-  const check = () => {
-    let cand; try { cand = candidate(); } catch (e) { vm.className = 'jvmsg bad'; vm.textContent = e.message; guard.classList.add('bad'); save.disabled = true; return null; }
-    guard.classList.remove('bad');
-    const r = validateTrigger(cand, cand.triggers.find((x) => x.id === trigger.id), models);
-    if (r.ok) { vm.className = 'jvmsg ok'; vm.textContent = 'valid'; save.disabled = false; } else { vm.className = 'jvmsg bad'; vm.textContent = r.errors[0]; save.disabled = true; }
-    return cand;
-  };
-  on.onchange = check; act.onchange = check; guard.oninput = check; check();
-  $('.close', p).onclick = closePop; $('.cancel', p).onclick = closePop;
-  save.onclick = () => { const cand = check(); if (!cand || save.disabled) return; pushUndo(); jrn = cand; persist(); closePop(); recompute(); toast('Trigger saved'); };
-  const del = $('.del', p); if (del) del.onclick = () => { pushUndo(); jrn = jedit.removeTrigger(jrn, trigger.id); persist(); closePop(); recompute(); toast('Trigger removed'); };
-}
-
 function openSeam(edgeId, ev) {
   closePop();
   const b = (jrn.bindings || []).find((x) => x.id === edgeId);
-  if (!b) { // a trigger edge → the editable trigger popover
-    const t = (jrn.triggers || []).find((x) => x.id === edgeId); if (!t) return;
-    return openTrigger(t, ev);
-  }
+  if (!b) return;   // only bindings are interpreted (triggers are not a seam this framework runs)
   const p = el('div', 'jpop');
   const provs = (b.contract.provides || []).map((x) => `${x.as}:${x.l0}`).join(', ');
   const reqs = (b.contract.requires || []).map((x) => `${x.target} (${x.l0})`).join(', ');

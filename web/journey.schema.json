@@ -90,7 +90,7 @@
     },
     "triggers": {
       "type": "array",
-      "description": "Behavioural seams (saga edges): when the on-model reaches a guard, activate another model.",
+      "description": "NOT SUPPORTED — behavioural saga edges are not interpreted by this framework (cross-model feedback is outside the frozen one-pass numeric scope); a populated triggers[] is rejected by web/journey-schema.mjs. Kept here only to document the rejection.",
       "items": {
         "type": "object",
         "required": ["id", "on", "activates"],

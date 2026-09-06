@@ -10,7 +10,8 @@
     { "id": "ceremony", "label": "Ceremony", "note": "perform a declared L0 activity + record its outcome" },
     { "id": "preview", "label": "Preview", "note": "show a downstream model's live figures (read-only)" }
   ],
-  "relations": ["specialization", "classification", "member_of", "member_of_kind", "part_of", "temporal_part_of", "participant_in"],
+  "note_relations": "Only `specialization` is interpreted (the reader climbs it for isA/leafCategoryOf). The other HQDM relations (classification, part_of, participant_in, temporal_part_of…) are real ontology but NOT executed by this framework, so they are not carried as inert vocabulary — a coupled/relational framework would re-derive them where they'd actually be traversed.",
+  "relations": ["specialization"],
   "types": {
     "thing": { "specializes": [] },
     "abstract_object": { "specializes": ["thing"] },

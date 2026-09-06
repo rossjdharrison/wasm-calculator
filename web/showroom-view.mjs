@@ -353,7 +353,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
     const all = primaryOpts().map((o) => o.id);
     const cur = state[primary.id];
     compareIds = [cur, ...all.filter((id) => id !== cur)].slice(0, 3);
-    cmpModal = openModal({ root, inert: shell, overlayClass: 'cmp-overlay', modalClass: 'cmp-modal', label: 'Compare vehicles', onClose: () => { compareIds = null; cmpModal = null; } });
+    cmpModal = openModal({ root, inert: shell, overlayClass: 'cmp-overlay', modalClass: 'cmp-modal', label: 'Compare', onClose: () => { compareIds = null; cmpModal = null; } });
     renderCompare('init');
   }
   function closeCompare() { if (cmpModal) cmpModal.close(); }

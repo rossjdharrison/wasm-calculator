@@ -23,7 +23,7 @@ test('uniqueJourneyId disambiguates against existing ids', () => {
 
 test('newJourney mints the exact blank template shape', () => {
   const j = newJourney('demo', 'Demo', 'DM');
-  assert.deepEqual(j, { id: 'demo', version: '1.0.0', title: 'Demo', correlationPrefix: 'DM', models: [], bindings: [], triggers: [], process: { steps: [] } });
+  assert.deepEqual(j, { id: 'demo', version: '1.0.0', title: 'Demo', correlationPrefix: 'DM', models: [], bindings: [], process: { steps: [] } });
   const noPfx = newJourney('demo2', 'Demo 2');
   assert.equal('correlationPrefix' in noPfx, false, 'omits an empty prefix');
 });
