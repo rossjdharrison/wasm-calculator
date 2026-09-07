@@ -22,6 +22,7 @@ const DIST = join(ROOT, 'dist');
 
 // [source, destination-name-in-dist]
 const FILES = [
+  [join(ROOT, 'web', '_headers'), '_headers'],   // Cloudflare Pages: browser-cache policy (revalidate; no stale deploys)
   [join(ROOT, 'web', 'index.html'), 'index.html'],
   [join(ROOT, 'web', 'landing.js'), 'landing.js'],
   [join(ROOT, 'web', 'configure.html'), 'configure.html'],

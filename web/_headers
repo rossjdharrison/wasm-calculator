@@ -1,0 +1,12 @@
+# Cloudflare Pages custom headers — parsed by Pages, not served as an asset.
+# Our static assets are NOT fingerprinted (stable names: /app.js, /landing.js,
+# /offer.mjs, /showroom.css, /models/*/*.json, /quote.wasm, …), so a long browser
+# cache serves STALE code after a deploy. Revalidate on every request instead:
+# the browser still caches and sends a conditional request, getting a cheap 304
+# when the file is unchanged (no re-download) and the new file immediately when it
+# changed — so a deploy is picked up at once and stale content is never served.
+# This is Cloudflare's recommended default for non-fingerprinted static sites.
+# NB: _headers does NOT apply to Pages Functions (/api/*); those set their own
+# short Cache-Control in functions/api/*.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
