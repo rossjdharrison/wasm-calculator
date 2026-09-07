@@ -14,12 +14,11 @@ const journey = JSON.parse(await readFile(join(here, '..', 'web', 'journeys', 'v
 
 test('macroGraph builds boxes from models and typed wires from bindings', () => {
   const g = macroGraph(journey);
-  assert.equal(g.nodes.length, 2);
-  assert.deepEqual(g.nodes.map((n) => n.alias).sort(), ['financing', 'shopping']);
-  assert.equal(g.edges.length, 1);
-  assert.equal(g.edges[0].kind, 'binding');
-  assert.equal(g.edges[0].from, 'shopping');
-  assert.equal(g.edges[0].to, 'financing');
+  assert.equal(g.nodes.length, 4);
+  assert.deepEqual(g.nodes.map((n) => n.alias).sort(), ['financing', 'insurance', 'shipping', 'shopping']);
+  assert.equal(g.edges.length, 3);
+  assert.ok(g.edges.every((e) => e.kind === 'binding' && e.from === 'shopping'), 'every wire runs from the vehicle');
+  assert.deepEqual(g.edges.map((e) => e.to).sort(), ['financing', 'insurance', 'shipping']);
 });
 
 test('mutations are pure (input journey untouched)', () => {
@@ -32,10 +31,11 @@ test('mutations are pure (input journey untouched)', () => {
 });
 
 test('setSeamCondition adds and clears', () => {
-  const withCond = jedit.setSeamCondition(journey, 'price-to-financing', { op: 'gt', args: [{ op: 'field', args: ['grandTotal'] }, 0] });
-  assert.ok(withCond.bindings[0].condition, 'condition set');
+  const withCond = jedit.setSeamCondition(journey, 'price-to-financing', { op: 'gt', args: [{ op: 'field', args: ['otr'] }, 0] });
+  const b = (j) => j.bindings.find((x) => x.id === 'price-to-financing');
+  assert.ok(b(withCond).condition, 'condition set');
   const cleared = jedit.setSeamCondition(withCond, 'price-to-financing', null);
-  assert.equal('condition' in cleared.bindings[0], false, 'condition cleared');
+  assert.equal('condition' in b(cleared), false, 'condition cleared');
 });
 
 test('removeModelRef cascades to bindings/process', () => {

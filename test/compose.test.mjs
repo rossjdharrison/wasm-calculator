@@ -19,75 +19,80 @@ const loadModel = async (id) => {
 const near = (a, b) => Math.abs(a - b) <= 1e-6 + Math.abs(b) * 1e-9;
 
 const journey = await readJson('web/journeys/vehicle-sale.json');
-const models = { shopping: await loadModel('vehicles'), financing: await loadModel('financing') };
-const shopCfg = { model: 'hotHatch', trim: 'standard', engine: 'electric', drivetrain: 'fwd', wheels: 'w17', colour: 'solid', packages: [], financing: 'cash' };
+const models = { shopping: await loadModel('vehicles'), shipping: await loadModel('shipping'), insurance: await loadModel('insurance'), financing: await loadModel('financing') };
+const shopCfg = { model: 'hotHatch', trim: 'standard', engine: 'electric', drivetrain: 'fwd', wheels: 'w17', colour: 'solid', packages: [], financing: 'finance' };
 
-test('evaluateJourney sequences, injects the seam value, and accumulates the order', async () => {
+test('evaluateJourney sequences, injects the seam values, and accumulates the order', async () => {
   const host = new EngineHost(wasm);
-  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { deposit: 8000, termMonths: 36 } });
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, shipping: {}, insurance: {}, financing: {} });
 
-  assert.deepEqual(r.order, ['shopping', 'financing']); // topo: product before finance
-  const grand = r.byAlias.shopping.valueById.grandTotal;
-  assert.ok(grand > 0);
+  assert.equal(r.order[0], 'shopping'); // topo: product first, its downstreams after
+  const otr = r.byAlias.shopping.valueById.otr;
+  assert.ok(otr > 0);
 
-  // the seam injected shopping.grandTotal into financing.price (no hardcoding)
-  assert.equal(r.byAlias.financing.config.price, grand);
-  // financing computed FROM the injected price (totalPayable = price + 495 fee)
-  assert.ok(near(r.byAlias.financing.valueById.totalPayable, grand + 495), 'financing evaluated from the injected price');
+  // the three seams inject the vehicle's figures downstream (no hardcoding)
+  assert.equal(r.byAlias.shipping.config.vehicleWeight, r.byAlias.shopping.valueById.weight, 'weight → shipping');
+  assert.equal(r.byAlias.insurance.config.vehicleValue, otr, 'otr → insurance value');
+  assert.equal(r.byAlias.financing.config.price, otr, 'otr → financing price');
 
-  // the accumulated order carries both Purchase Prices + a currency total
-  assert.equal(r.lines.length, 2);
-  assert.equal(r.lines[0].ref, 'vehicle-configurator#grandTotal');
-  assert.equal(r.lines[1].ref, 'financing-configurator#totalPayable');
-  assert.ok(near(r.totalsByCurrency.EUR, grand + r.byAlias.financing.valueById.totalPayable));
+  // one order line per model + a currency total that does NOT double-count the vehicle
+  assert.equal(r.lines.length, 4);
+  const total = otr + r.byAlias.shipping.valueById.shippingCost + r.byAlias.insurance.valueById.totalPremium + r.byAlias.financing.valueById.financeCharge;
+  assert.ok(near(r.totalsByCurrency.EUR, total), 'total = vehicle + shipping + insurance + cost-of-financing');
 });
 
-test('D5: recurring outputs are surfaced apart from the one-off order total', async () => {
+test('D5: recurring outputs (monthly) are surfaced apart from the one-off order total', async () => {
   const host = new EngineHost(wasm);
-  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { deposit: 8000, termMonths: 36 } });
-  // financing.monthly is tagged role:recurring → it appears in `recurring`, not lines
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { deposit: 5000, termMonths: 48 } });
   const fin = r.recurring.find((x) => x.alias === 'financing' && x.localId === 'monthly');
   assert.ok(fin, 'financing monthly is surfaced as recurring');
   assert.ok(fin.amount > 0 && fin.currency === 'EUR');
-  // the one-off total is only the two Purchase Prices — the recurring figure is NOT added in
-  assert.ok(near(r.totalsByCurrency.EUR, r.byAlias.shopping.valueById.grandTotal + r.byAlias.financing.valueById.totalPayable));
   assert.ok(!r.lines.some((l) => l.localId === 'monthly'), 'monthly is not a one-off order line');
 });
 
-test('the typed seam payload flows: shopping produces a Purchase Price individual', async () => {
+test('the typed seam payload flows: shopping produces a Purchase Price individual (otr)', async () => {
   const host = new EngineHost(wasm);
-  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: {} });
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg });
   const price = r.byAlias.shopping.individuals.price;
   assert.equal(price.category, 'PurchasePrice');
-  assert.equal(price.ref, 'vehicle-configurator#grandTotal');
-  assert.equal(price.amount, r.byAlias.shopping.valueById.grandTotal);
+  assert.equal(price.ref, 'vehicle-configurator#otr');
+  assert.equal(price.amount, r.byAlias.shopping.valueById.otr);
 });
 
-test('D4: boundTargetsOf derives the upstream-authoritative fields of a downstream model', () => {
+test('D4: boundTargetsOf derives the upstream-authoritative fields of each downstream model', () => {
   assert.deepEqual([...boundTargetsOf(journey, 'financing')], ['price']);
+  assert.deepEqual([...boundTargetsOf(journey, 'shipping')], ['vehicleWeight']);
+  assert.deepEqual([...boundTargetsOf(journey, 'insurance')], ['vehicleValue']);
   assert.deepEqual([...boundTargetsOf(journey, 'shopping')], [], 'no inbound binding → no bound fields');
 });
 
 test('D4/review: evaluateJourney reports the injected map; a GATED binding injects nothing', async () => {
   const host = new EngineHost(wasm);
-  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: {} });
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg });
   assert.ok(r.injected && r.injected.financing && 'price' in r.injected.financing, 'unconditional binding injects price');
 
-  // clone with a condition that is always false → the seam is gated → nothing injected,
+  // gate the price→financing binding with an always-false condition → nothing injected,
   // so a downstream capture would NOT lock `price` (it becomes a free field).
   const gated = JSON.parse(JSON.stringify(journey));
-  gated.bindings[0].condition = { op: 'lt', args: [{ op: 'field', args: ['grandTotal'] }, 0] };
-  const r2 = await evaluateJourney(gated, models, host, { shopping: shopCfg, financing: {} });
+  gated.bindings.find((b) => b.id === 'price-to-financing').condition = { op: 'lt', args: [{ op: 'field', args: ['otr'] }, 0] };
+  const r2 = await evaluateJourney(gated, models, host, { shopping: shopCfg });
   assert.ok(!r2.injected.financing || !('price' in r2.injected.financing), 'gated binding injects no price');
 });
 
 test('D4: the bound field stays authoritative while the user configures free inputs (single-authority)', async () => {
   const host = new EngineHost(wasm);
   // the user "tries" to set price (bound) AND sets its own free deposit/termMonths
-  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { price: 1, deposit: 8000, termMonths: 36 } });
-  const grand = r.byAlias.shopping.valueById.grandTotal;
-  assert.equal(r.byAlias.financing.config.price, grand, 'injected price wins over the user value');
-  assert.ok(near(r.byAlias.financing.valueById.totalPayable, grand + 495), 'free deposit/term honoured, price authoritative');
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { price: 1, deposit: 5000, termMonths: 36 } });
+  const otr = r.byAlias.shopping.valueById.otr;
+  assert.equal(r.byAlias.financing.config.price, otr, 'injected otr wins over the user value');
+});
+
+test('a conditional step: runStepGuard skips the financing step for a cash buyer', async () => {
+  const host = new EngineHost(wasm);
+  const cash = await evaluateJourney(journey, models, host, { shopping: { ...shopCfg, financing: 'cash' } });
+  const financed = await evaluateJourney(journey, models, host, { shopping: { ...shopCfg, financing: 'finance' } });
+  assert.equal(cash.stepGuards.finance, false, 'cash → financing step guarded out');
+  assert.equal(financed.stepGuards.finance, true, 'finance → financing step available');
 });
 
 test('swap-test: a MONEY-FREE model composes — line rendered by its category, no total', async () => {

@@ -40,6 +40,5 @@ test('the de-leaked visual affordances now live in presentation DATA', async () 
   assert.equal(colour.render, 'swatch');
   assert.ok((colour.options || []).every((o) => Array.isArray(o.swatch)), 'every colour option declares a swatch gradient');
   assert.equal(vp.fields.find((f) => f.id === 'wheels').render, 'glyph');
-  assert.equal(vp.fields.find((f) => f.id === 'deposit').render, 'track');
   assert.ok((vp.fields.find((f) => f.id === 'packages').options || []).some((o) => o.badge), 'a package option is flagged badge:true');
 });

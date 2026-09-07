@@ -95,6 +95,29 @@ function runSeam(binding, providedValues) {
   return { injected, gated };
 }
 
+// a step's `availableWhen` guard — a data-authored predicate over upstream values that
+// decides whether the step is part of the flow (a conditional/skippable step). Evaluated
+// by the SAME assembler + parity-pinned oracle as a binding condition (no second
+// interpreter), off to the side — the frozen VM is never touched.
+export function buildStepGuardModel(step) {
+  const reads = (step.availableWhen && step.availableWhen.reads) || [];
+  const fields = reads.map((r) => ({ id: r.as, type: 'number', default: 0 }));
+  const computed = [{ id: '__guard__', formula: step.availableWhen && step.availableWhen.test }];
+  return { id: '__stepguard__', fields, computed };
+}
+export function runStepGuard(step, byAlias) {
+  if (!step || !step.availableWhen) return true;
+  const provided = {};
+  for (const r of (step.availableWhen.reads || [])) {
+    const id = (r.source || '').split(':')[1] || r.as;
+    provided[r.as] = (byAlias[r.from] && byAlias[r.from].valueById[id]) ?? 0;
+  }
+  try {
+    const g = assemble(buildStepGuardModel(step));
+    return referenceEvaluate(g.ir, provided).valueById.__guard__ !== 0;
+  } catch { return true; }   // fail-open: bad guard data degrades to "available", never crashes the runner
+}
+
 // evaluate a whole journey. `models` = { alias: { merged, assembled } } (pre-loaded
 // by the caller — fs+assemble in tests, store+assemble in the app). Returns the
 // per-model results + the accumulated order. One forward pass; no upstream re-run.
@@ -141,5 +164,8 @@ export async function evaluateJourney(journey, models, host, configByAlias = {})
   }
   // `injected` = the fields actually written into each alias this pass (gated
   // bindings inject nothing) — the authority for which downstream fields are locked.
-  return { order, byAlias, lines, totalsByCurrency, recurring, injected };
+  // `stepGuards` = per-step availableWhen results (a false step is skipped by the runner).
+  const stepGuards = {};
+  for (const s of ((journey.process && journey.process.steps) || [])) if (s.availableWhen) stepGuards[s.id] = runStepGuard(s, byAlias);
+  return { order, byAlias, lines, totalsByCurrency, recurring, injected, stepGuards };
 }

@@ -6,7 +6,7 @@
 // validation cannot drift from the build gate.
 // =============================================================================
 import { tryAssemble } from './model-validate.mjs';
-import { orderModels, buildSeamModel } from './compose.mjs';
+import { orderModels, buildSeamModel, buildStepGuardModel } from './compose.mjs';
 import { isA } from './hqdm.mjs';
 
 const has = (arr, id) => (arr || []).some((x) => x.id === id);
@@ -81,6 +81,21 @@ export function analyzeJourney(journey, models) {
       if (!f) { add('step-requires', 'error', `step "${s.id}": required field "${id}" is not an input of model "${s.model}"`); continue; }
       if (typeof req === 'string' && filled(f.default)) add('step-requires', 'warn', `step "${s.id}": required field "${id}" has a default (${JSON.stringify(f.default)}) that already reads as filled — the presence gate is a no-op; use { field, notEqual } or a model error-validation`);
     }
+  }
+
+  // step `availableWhen`: each read must resolve in a declared upstream model, and the
+  // guard predicate must assemble through the seam oracle (mirrors binding.condition).
+  for (const s of ((journey.process && journey.process.steps) || [])) {
+    if (!s.availableWhen) continue;
+    for (const r of (s.availableWhen.reads || [])) {
+      const M = models[r.from];
+      if (!M) { add('step-guard', 'error', `step "${s.id}": availableWhen reads from unknown model "${r.from}"`); continue; }
+      const [kind, id] = (r.source || '').split(':');
+      const ok = kind === 'output' ? has(M.merged.outputs, id) : kind === 'field' ? (has(M.merged.fields, id) || has(M.merged.computed, id)) : false;
+      if (!ok) add('step-guard', 'error', `step "${s.id}": availableWhen source "${r.source}" not found in "${r.from}"`);
+    }
+    const g = tryAssemble(buildStepGuardModel(s));
+    if (!g.ok) add('step-guard', 'error', `step "${s.id}": availableWhen.test does not assemble — ${g.errors[0].message}`);
   }
 
   const counts = { error: 0, warn: 0, info: 0 };

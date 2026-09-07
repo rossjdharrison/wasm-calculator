@@ -27,7 +27,6 @@ test('Ex1 — Hot Hatchback/Standard, electric, FWD, 17", solid, no packages, Ca
   assert.ok(near(r.valueById.vehiclePrice, 42000, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`);
   assert.ok(near(r.valueById.otr, 43000, 0.01), `otr ${r.valueById.otr}`);
   assert.ok(near(r.valueById.range, 300, 0.01), `range ${r.valueById.range}`);
-  assert.equal(out(r, 'monthlyPayment').visible, false, 'monthly hidden for cash');
 });
 
 test('Ex2 — Rugged Off-roader/Off-road, Hybrid, (AWD forced+locked), 18", metallic, {winter,tech,towing}, Finance t48 dep 9000', () => {
@@ -39,7 +38,6 @@ test('Ex2 — Rugged Off-roader/Off-road, Hybrid, (AWD forced+locked), 18", meta
   assert.equal(r.status, 0, `status ${r.status}`);
   assert.ok(near(r.valueById.vehiclePrice, 87850, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`);
   assert.ok(near(r.valueById.otr, 89000, 0.01), `otr ${r.valueById.otr}`);
-  assert.ok(near(r.valueById.monthlyPayment, 1949.28, 0.05), `monthly ${r.valueById.monthlyPayment}`);
   assert.ok(near(r.valueById.range, 558.6, 0.01), `range ${r.valueById.range}`);
   assert.equal(r.valueById.drivetrain, 1, 'drivetrain forced to awd');
   assert.equal(r.enabled.drivetrain, false, 'drivetrain locked on off-road');
@@ -56,7 +54,6 @@ test('Ex3 — GT Coupe/Sport, V8, AWD, 19", matte, {tech,performance,driverAssis
   assert.equal(r.status, 0, `status ${r.status}`);
   assert.ok(near(r.valueById.vehiclePrice, 96400, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`); // incl. Technology Suite -800 + Track Pack -400
   assert.ok(near(r.valueById.otr, 97590, 0.01), `otr ${r.valueById.otr}`);
-  assert.ok(near(r.valueById.monthlyPayment, 2678.13, 0.05), `monthly ${r.valueById.monthlyPayment}`);
   assert.ok(near(r.valueById.range, 389.88, 0.01), `range ${r.valueById.range}`);
   assert.equal(r.optionState.packages.performance, true, 'performance available');
   assert.equal(r.optionState.colour.matte, true, 'matte available on sport');
@@ -72,7 +69,6 @@ test('Ex4 — Hyper-car/Luxury, electric, AWD, 20", premium, {winter,tech,premiu
   assert.equal(r.status, 0, `status ${r.status}`);
   assert.ok(near(r.valueById.vehiclePrice, 1869200, 0.01), `vehiclePrice ${r.valueById.vehiclePrice}`); // incl. Grand Touring Pack -500
   assert.ok(near(r.valueById.otr, 1870200, 0.01), `otr ${r.valueById.otr}`);
-  assert.ok(near(r.valueById.monthlyPayment, 32927.75, 0.1), `monthly ${r.valueById.monthlyPayment}`);
   assert.ok(near(r.valueById.range, 267.9, 0.01), `range ${r.valueById.range}`);
   assert.ok(r.messages.some((m) => m.id === 'big_wheels_info'), 'w20 info message');
   assert.equal(r.optionState.packages.panoramicRoof, true, 'panoramic available (no towing)');

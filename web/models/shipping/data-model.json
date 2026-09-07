@@ -1,0 +1,49 @@
+{
+  "$schema": "../../data.schema.json",
+  "id": "shipping-configurator",
+  "version": "1.0.0",
+  "currency": "EUR",
+  "configures": "ShippingService",
+  "types": {
+    "ShippingService": { "specializes": ["class_of_physical_object"] },
+    "ShippingCost": { "specializes": ["amount_of_money"] },
+    "TransitWeight": { "specializes": ["physical_quantity"] }
+  },
+  "fields": [
+    { "id": "method", "type": "choice", "default": "roro", "options": [
+      { "id": "collect" },
+      { "id": "roro" },
+      { "id": "container" },
+      { "id": "express", "availableWhen": { "op": "not", "args": [{ "op": "eq", "args": [{ "op": "field", "args": ["destination"] }, "nl"] }] } }
+    ] },
+    { "id": "destination", "type": "choice", "default": "nl", "options": [
+      { "id": "nl" }, { "id": "uk" }, { "id": "usa" }, { "id": "uae" }, { "id": "ch" }, { "id": "sg" }, { "id": "hk" }, { "id": "jp" }
+    ] },
+    { "id": "vehicleWeight", "type": "number", "default": 1800, "min": 0, "max": 5000, "step": 10, "unit": "kg", "category": "TransitWeight" }
+  ],
+  "tables": {
+    "destBase": { "kind": "1d", "map": { "nl": 250, "uk": 2200, "usa": 3800, "uae": 4200, "ch": 1500, "sg": 5200, "hk": 5400, "jp": 4900 } },
+    "methodFactor": { "kind": "1d", "map": { "collect": 0, "roro": 1, "container": 1.6, "express": 2.4 } }
+  },
+  "computed": [
+    { "id": "baseRate", "label": "Base route rate", "category": "ShippingCost", "formula": { "op": "lookup", "args": ["destBase", { "op": "field", "args": ["destination"] }] } },
+    { "id": "weightSurcharge", "label": "Weight surcharge", "category": "ShippingCost", "formula": { "op": "mul", "args": [{ "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["vehicleWeight"] }, 1800] }] }, 0.9] } },
+    { "id": "shippingCost", "label": "Shipping cost", "category": "ShippingCost", "formula": { "op": "if", "args": [
+      { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "collect"] },
+      0,
+      { "op": "add", "args": [
+        { "op": "mul", "args": [{ "op": "field", "args": ["baseRate"] }, { "op": "lookup", "args": ["methodFactor", { "op": "field", "args": ["method"] }] }] },
+        { "op": "field", "args": ["weightSurcharge"] }
+      ] }
+    ] } }
+  ],
+  "validations": [
+    {
+      "id": "express_far",
+      "field": "method",
+      "severity": "info",
+      "message": "Express (air) freight is the fastest option but carries the highest rate.",
+      "when": { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "express"] }
+    }
+  ]
+}

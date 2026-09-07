@@ -14,7 +14,7 @@ const readJson = (p) => readFile(join(here, '..', p), 'utf8').then(JSON.parse);
 const loadModel = async (id) => { const merged = mergeModel(await readJson(`web/models/${id}/data-model.json`), await readJson(`web/models/${id}/presentation-model.json`)); return { merged, assembled: assemble(merged) }; };
 
 const baseJourney = await readJson('web/journeys/vehicle-sale.json');
-const models = { shopping: await loadModel('vehicles'), financing: await loadModel('financing') };
+const models = { shopping: await loadModel('vehicles'), shipping: await loadModel('shipping'), insurance: await loadModel('insurance'), financing: await loadModel('financing') };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const kinds = (j) => analyzeJourney(j, models).findings.map((f) => f.kind);
 
@@ -33,16 +33,16 @@ test('a dangling provide source is a seam error', () => {
 
 test('a target that is not a plain input is rejected', () => {
   const j = clone(baseJourney);
-  j.bindings[0].contract.requires[0].target = 'field:monthly'; // monthly is a computed
-  j.bindings[0].mapping[0].to = 'monthly';
+  j.bindings[0].contract.requires[0].target = 'field:shippingCost'; // shippingCost is a computed
+  j.bindings[0].mapping[0].to = 'shippingCost';
   assert.ok(analyzeJourney(j, models).findings.some((f) => /not an input|computed/.test(f.message)));
 });
 
 test('double-authority: two bindings writing the same target', () => {
   const j = clone(baseJourney);
   j.bindings.push({ id: 'rival', from: 'shopping', to: 'financing',
-    contract: { provides: [{ as: 'grandTotal', l0: 'amount_of_money', source: 'output:grandTotal' }], requires: [{ name: 'price', l0: 'amount_of_money', target: 'field:price' }] },
-    mapping: [{ to: 'price', from: { op: 'field', args: ['grandTotal'] } }] });
+    contract: { provides: [{ as: 'otr', l0: 'amount_of_money', source: 'output:otr' }], requires: [{ name: 'price', l0: 'amount_of_money', target: 'field:price' }] },
+    mapping: [{ to: 'price', from: { op: 'field', args: ['otr'] } }] });
   assert.ok(analyzeJourney(j, models).findings.some((f) => /double-authority/.test(f.message)));
 });
 
