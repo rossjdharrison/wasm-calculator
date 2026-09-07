@@ -1,0 +1,4 @@
+# Cloudflare Pages config files must stay LF — a CRLF checkout would append a
+# stray \r to header values (e.g. "must-revalidate\r"), which can break parsing.
+_headers text eol=lf
+_redirects text eol=lf
