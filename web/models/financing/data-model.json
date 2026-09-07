@@ -1,7 +1,7 @@
 {
   "$schema": "../../data.schema.json",
   "id": "financing-configurator",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "currency": "EUR",
   "configures": "FinancePlan",
   "types": {
@@ -12,19 +12,32 @@
     "ResidualValue": { "specializes": ["amount_of_money"] }
   },
   "fields": [
+    { "id": "loanType", "type": "choice", "default": "auto", "options": [
+      { "id": "personal" },
+      { "id": "auto" },
+      { "id": "mortgage" },
+      { "id": "business" }
+    ] },
     { "id": "price", "type": "number", "default": 0, "min": 0, "category": "LoanPrincipal" },
     { "id": "deposit", "type": "number", "default": 0, "min": 0 },
-    { "id": "termMonths", "type": "number", "default": 36, "min": 12, "max": 84, "step": 12 },
+    { "id": "termMonths", "type": "number", "default": 60, "min": 12, "max": 360, "step": 12 },
     { "id": "mode", "type": "number", "default": 1, "min": 0, "max": 2, "visibleWhen": { "op": "eq", "args": [0, 1] } }
   ],
+  "tables": {
+    "aprByType": { "kind": "1d", "map": { "personal": 0.119, "auto": 0.079, "mortgage": 0.049, "business": 0.094 } },
+    "feeByType": { "kind": "1d", "map": { "personal": 149, "auto": 495, "mortgage": 999, "business": 595 } }
+  },
   "computed": [
-    { "id": "fees", "label": "Arrangement fee", "formula": 495 },
-    { "id": "rate", "label": "Monthly rate", "formula": { "op": "div", "args": [0.079, 12] } },
-    { "id": "moneyFactor", "label": "Lease money factor", "formula": { "op": "div", "args": [0.079, 24] } },
+    { "id": "apr", "label": "APR", "formula": { "op": "lookup", "args": ["aprByType", { "op": "field", "args": ["loanType"] }] } },
+    { "id": "aprPct", "label": "Representative APR", "formula": { "op": "mul", "args": [{ "op": "field", "args": ["apr"] }, 100] } },
+    { "id": "fees", "label": "Arrangement fee", "formula": { "op": "lookup", "args": ["feeByType", { "op": "field", "args": ["loanType"] }] } },
+    { "id": "rate", "label": "Monthly rate", "formula": { "op": "div", "args": [{ "op": "field", "args": ["apr"] }, 12] } },
+    { "id": "moneyFactor", "label": "Lease money factor", "formula": { "op": "div", "args": [{ "op": "field", "args": ["apr"] }, 24] } },
     { "id": "adjCap", "label": "Adjusted capital cost", "category": "LoanPrincipal", "formula": { "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["deposit"] }] }] } },
+    { "id": "financed", "label": "Amount financed", "category": "LoanPrincipal", "formula": { "op": "if", "args": [{ "op": "eq", "args": [{ "op": "field", "args": ["mode"] }, 1] }, { "op": "field", "args": ["adjCap"] }, 0] } },
+    { "id": "ltv", "label": "Loan to value", "formula": { "op": "if", "args": [{ "op": "gt", "args": [{ "op": "field", "args": ["price"] }, 0] }, { "op": "mul", "args": [{ "op": "div", "args": [{ "op": "field", "args": ["financed"] }, { "op": "field", "args": ["price"] }] }, 100] }, 0] } },
     { "id": "residualPct", "label": "Residual %", "formula": { "op": "max", "args": [0.25, { "op": "min", "args": [0.75, { "op": "sub", "args": [0.80, { "op": "mul", "args": [{ "op": "field", "args": ["termMonths"] }, 0.00625] }] }] }] } },
     { "id": "residualValue", "label": "Residual value (lease-end)", "category": "ResidualValue", "formula": { "op": "mul", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["residualPct"] }] } },
-    { "id": "financed", "label": "Amount financed", "category": "LoanPrincipal", "formula": { "op": "if", "args": [{ "op": "eq", "args": [{ "op": "field", "args": ["mode"] }, 1] }, { "op": "field", "args": ["adjCap"] }, 0] } },
     { "id": "loanMonthly", "label": "Loan monthly", "category": "MonthlyPayment", "formula": { "op": "if", "args": [
       { "op": "gt", "args": [{ "op": "field", "args": ["financed"] }, 0] },
       { "op": "div", "args": [
@@ -58,5 +71,16 @@
         0
       ] }
     ] } }
+  ],
+  "validations": [
+    { "id": "mortgage_deposit", "field": "deposit", "severity": "warn",
+      "message": "Mortgages usually need a deposit of at least 5–10% of the property value.",
+      "when": { "op": "and", "args": [
+        { "op": "eq", "args": [{ "op": "field", "args": ["loanType"] }, "mortgage"] },
+        { "op": "lt", "args": [{ "op": "field", "args": ["deposit"] }, { "op": "mul", "args": [{ "op": "field", "args": ["price"] }, 0.05] }] }
+      ] } },
+    { "id": "business_guarantee", "field": "loanType", "severity": "info",
+      "message": "Business lending is subject to affordability checks and may require a personal guarantee.",
+      "when": { "op": "eq", "args": [{ "op": "field", "args": ["loanType"] }, "business"] } }
   ]
 }

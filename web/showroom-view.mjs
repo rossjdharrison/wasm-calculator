@@ -567,8 +567,12 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   let prevOtr = null;
   function renderRail(res) {
     const opt = primaryOpts().find((o) => o.id === state[primary.id]) || {};
-    $('sh-marque').textContent = brand.mark + ' · ' + (opt.label || state[primary.id]).toUpperCase();
-    $('sh-name').textContent = opt.label || state[primary.id];
+    // the "primary" is normally a choice field (its options drive the deck/marque). A model
+    // with NO choice field falls back to fields[0], whose value can be a number — so coerce
+    // to a string before .toUpperCase() (a bare number would otherwise throw and blank the page).
+    const primaryName = String(opt.label ?? state[primary.id] ?? '');
+    $('sh-marque').textContent = brand.mark + ' · ' + primaryName.toUpperCase();
+    $('sh-name').textContent = primaryName;
     const bits = ir.fields.filter((f) => f.type === 'choice' && f.id !== primary.id).slice(0, 2).map((f) => { const o = f.options.find((x) => x.id === state[f.id]); return o ? (o.label || o.id) : null; }).filter(Boolean);
     $('sh-sub').textContent = bits.join(' · ');
     const emOut = ir.outputs.find((o) => emphasis.has(o.id)) || ir.outputs[0];
