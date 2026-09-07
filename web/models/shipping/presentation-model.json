@@ -30,6 +30,7 @@
     { "id": "shippingCost", "label": "Landed shipping total", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
     { "id": "freight", "label": "Freight", "role": "subtotal", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
     { "id": "importDuty", "label": "Import duty / excise", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
-    { "id": "importVat", "label": "Import VAT / GST", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+    { "id": "importVat", "label": "Import VAT / GST", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "landedValue", "label": "Landed vehicle value (financed)", "spec": true, "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
   ]
 }

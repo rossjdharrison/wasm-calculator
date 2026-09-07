@@ -74,7 +74,7 @@ test('D4/review: evaluateJourney reports the injected map; a GATED binding injec
   // gate the price→financing binding with an always-false condition → nothing injected,
   // so a downstream capture would NOT lock `price` (it becomes a free field).
   const gated = JSON.parse(JSON.stringify(journey));
-  gated.bindings.find((b) => b.id === 'price-to-financing').condition = { op: 'lt', args: [{ op: 'field', args: ['otr'] }, 0] };
+  gated.bindings.find((b) => b.id === 'landed-to-financing').condition = { op: 'lt', args: [{ op: 'field', args: ['landedValue'] }, 0] };
   const r2 = await evaluateJourney(gated, models, host, { shopping: shopCfg });
   assert.ok(!r2.injected.financing || !('price' in r2.injected.financing), 'gated binding injects no price');
 });
