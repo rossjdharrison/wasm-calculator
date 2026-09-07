@@ -128,6 +128,7 @@
               "actionLabel": { "type": "string" },
               "commitLabel": { "type": "string" },
               "label": { "type": "string" },
+              "sealsOffer": { "type": "boolean", "description": "Marks the step whose completion seals the binding offer snapshot (totals + lines + model/journey versions) that web/offer.mjs grades to detect an expired offer on resume." },
               "enters": {
                 "type": "array",
                 "description": "State transitions the step records (4-D temporal): each an {individual, category, role, label}.",

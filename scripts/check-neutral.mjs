@@ -28,7 +28,7 @@ const readText = (p) => readFile(join(WEB, p), 'utf8');
 // the neutral machinery: modules that interpret DATA and must carry no domain vocab.
 const NEUTRAL_MODULES = [
   'hqdm.mjs', 'catalogue.mjs', 'catalogue-build.mjs', 'compose.mjs', 'individuals.mjs',
-  'order.mjs', 'order-store.mjs', 'order-picker.mjs', 'journey-view.mjs', 'category-render.mjs',
+  'order.mjs', 'order-store.mjs', 'order-picker.mjs', 'offer.mjs', 'journey-view.mjs', 'category-render.mjs',
   'journey-validate.mjs', 'journey-schema.mjs', 'phase-stepper.mjs', 'store.mjs',
   'showroom-view.mjs', 'journey-loom.mjs', 'journey-create.mjs', 'journey-edit.mjs',
   'landing.js', 'app.js',

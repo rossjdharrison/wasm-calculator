@@ -19,8 +19,9 @@ import { categoryOf } from './individuals.mjs';
 import { phasesOf } from './hqdm.mjs';
 import * as order from './order.mjs';
 import { loadEvents, saveEvents, commit, newOrderId, onExternalChange } from './order-store.mjs';
+import { checkOffer } from './offer.mjs';
 
-export function mountJourney(root, { journey, models, host, brand, resolveImage, links, resumeOrderId, phases, labels }) {
+export function mountJourney(root, { journey, models, host, brand, resolveImage, links, resumeOrderId, phases, labels, onRestart }) {
   root.innerHTML = '';
   const steps = (journey.process && journey.process.steps) || [];
   // process phases come from DATA (the domain/journey), never a baked-in constant.
@@ -63,7 +64,10 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // (guards against a hand-edited/bookmarked ?o= adopting another journey's log).
   if (resumeOrderId) { events = loadEvents(resumeOrderId); if (!events.length || order.fold(events).journeyId !== journey.id) resumeOrderId = null; }
   const freshOrder = !resumeOrderId;
-  if (freshOrder) events = order.startOrder(newOrderId(journey.correlationPrefix || 'ORD'), journey.id, journey.version);
+  // provenance: which model bytecode versions this order is priced against (offer.mjs
+  // reads it on resume to detect an expired offer). Also reused by offerSeal below.
+  const modelVersions = Object.fromEntries(Object.entries(models).map(([a, m]) => [a, (m.merged && m.merged.version) || null]));
+  if (freshOrder) events = order.startOrder(newOrderId(journey.correlationPrefix || 'ORD'), journey.id, journey.version, modelVersions);
   const orderId = order.fold(events).orderId;
   // persist ONLY a newly-minted order's opening log; a resumed order already exists in
   // the store (re-writing it would be a needless blind overwrite + notify). Every later
@@ -82,14 +86,25 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // advanced the log — so two open tabs on this order never clobber each other. We
   // ADOPT the returned authoritative log (it may already carry another tab's events).
   const cmd = (c) => { const r = commit(orderId, c); if (!r.error) events = r.events; return r; };
+  // seal an OPAQUE offer snapshot (base-currency totals + lines + the versions they were
+  // priced against) onto the StepDone of a step flagged `sealsOffer` — the moment the
+  // customer assents to a total. offer.mjs reads it from the raw log to detect an expired
+  // offer on resume; order.mjs never folds it, so its state stays derived-value-free.
+  // Returns {} when the step does not seal (spread into the StepDone payload either way).
+  const offerSeal = (step) => (step && step.sealsOffer && lastResult) ? { offer: {
+    totalsByCurrency: { ...lastResult.totalsByCurrency },
+    lines: lastResult.lines.filter((l) => l.amount != null).map((l) => ({ alias: l.alias, amount: l.amount, currency: l.currency })),
+    modelVersions, journeyVersion: journey.version || null, at: Date.now(),
+  } } : {};
 
   // ---- layout ----
+  const banner = el('div', 'journey-banner'); banner.hidden = true;   // "Offer expired" notice on resume
   const grid = el('div', 'journey');
   const stepHost = el('div', 'journey-steps');
   const phaseHost = el('div', 'journey-phase');
   const railHost = el('aside', 'order-rail');
   grid.append(stepHost, phaseHost, railHost);
-  root.appendChild(grid);
+  root.append(banner, grid);
 
   // reachable = the first phase (always) + every phase in the MONOTONIC reached set
   // (order.mjs). Never a prefix of the scalar o.phase — a backward Entered can no
@@ -324,7 +339,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     const c = cmd({ type: 'commit', alias, hash: configKey(free) });
     // commit rejected (already committed elsewhere) — do NOT record the step or advance.
     if (c.error) { recompute(); gotoPhase(step.phase); return; }
-    cmd({ type: 'complete', step: step.id, payload: { outcome: step.outcome, label: step.label, value: `Ref ${orderId}-${step.id}`, at: Date.now(), enters: step.enters } });
+    cmd({ type: 'complete', step: step.id, payload: { outcome: step.outcome, label: step.label, value: `Ref ${orderId}-${step.id}`, at: Date.now(), enters: step.enters, ...offerSeal(step) } });
     const to = nextPhase(step.phase);
     if (to !== step.phase) cmd({ type: 'enter', phase: to, at: Date.now() });
     recompute();
@@ -355,7 +370,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       const btn = el('button', 'sign-go', { type: 'button', text: step.actionLabel || L('confirmLabel', 'Confirm ▸'), disabled: true });
       const confirm = () => {
         if (!input.value.trim()) return;
-        const r = cmd({ type: 'complete', step: step.id, payload: { by: input.value.trim(), outcome: step.outcome, ref: `${orderId}-${step.id}`, at: Date.now(), enters: step.enters } });
+        const r = cmd({ type: 'complete', step: step.id, payload: { by: input.value.trim(), outcome: step.outcome, ref: `${orderId}-${step.id}`, at: Date.now(), enters: step.enters, ...offerSeal(step) } });
         if (r.error) return;
         const to = nextPhase(step.phase);
         if (to !== step.phase) cmd({ type: 'enter', phase: to, at: Date.now() });
@@ -421,8 +436,25 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // selector works immediately and a persisted non-base currency renders converted.
   if (journeyCurrencies.length > 1) loadRates({ base: baseCur, symbols: journeyCurrencies }).then((r) => { fxRates = r; renderRail(); }).catch(() => {});
 
+  // Re-price: mint a fresh order (app supplies onRestart → mount(null); fall back to
+  // dropping ?o= so the app boot decides).
+  const restart = () => { if (onRestart) return onRestart(); try { const u = new URL(location.href); u.searchParams.delete('o'); location.href = u.href; } catch (_) { location.reload(); } };
+
   // compute the journey once BEFORE mounting the active phase, so a phase that
   // resumes straight into a downstream capture/preview has its injected figures ready.
-  recompute().then(() => gotoPhase(order.fold(events).phase || firstPhase()));
+  recompute().then(() => {
+    gotoPhase(order.fold(events).phase || firstPhase());
+    // on RESUME, flag a sealed offer that no longer holds against the current models:
+    // view-only (the build stays visible) + a "Re-price" action. Draft/valid show nothing.
+    if (resumeOrderId) checkOffer(events, journey, models, host).then((v) => {
+      if (!v || v.status !== 'expired') return;
+      banner.innerHTML = '';
+      banner.appendChild(el('span', 'jb-msg', { text: `Offer expired — ${v.reason}. This ${L('record', 'order')} is view-only; re-price for the current figures.` }));
+      const btn = el('button', null, { type: 'button', text: L('repriceLabel', 'Re-price ▸') });
+      btn.addEventListener('click', restart);
+      banner.appendChild(btn);
+      banner.hidden = false;
+    }).catch(() => {});
+  });
   return { recompute, orderId, destroy: stopSync };
 }

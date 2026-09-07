@@ -135,6 +135,9 @@ export function validateJourneyShape(journey, opts = {}) {
           }
         }
         for (const k of ['prompt', 'actionLabel', 'commitLabel', 'label', 'meaning']) if (k in s && typeof s[k] !== 'string') W(`${sid}: "${k}" should be a string`);
+        // `sealsOffer` (optional boolean): marks the step whose completion snapshots the
+        // binding offer (totals + versions) that offer.mjs grades on resume.
+        if ('sealsOffer' in s && typeof s.sealsOffer !== 'boolean') W(`${sid}: "sealsOffer" should be a boolean`);
         if ('enters' in s && !Array.isArray(s.enters)) E(`${sid}: "enters" must be an array`);
         // `requires` (optional): fields that must be filled before the step advances.
         // Each entry is a field-id string, or { field, notEqual } (a sentinel escape hatch
