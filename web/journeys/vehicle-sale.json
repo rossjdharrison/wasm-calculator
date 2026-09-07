@@ -58,23 +58,24 @@
       "mapping": [{ "to": "vehicleValue", "from": { "op": "field", "args": ["otr"] } }]
     },
     {
-      "id": "price-to-financing",
+      "id": "mode-to-financing",
       "from": "shopping",
       "to": "financing",
       "contract": {
-        "provides": [
-          { "as": "otr", "l0": "amount_of_money", "source": "output:otr" },
-          { "as": "paymentMode", "source": "field:paymentMode" }
-        ],
-        "requires": [
-          { "name": "price", "l0": "amount_of_money", "target": "field:price" },
-          { "name": "mode", "target": "field:mode" }
-        ]
+        "provides": [{ "as": "paymentMode", "source": "field:paymentMode" }],
+        "requires": [{ "name": "mode", "target": "field:mode" }]
       },
-      "mapping": [
-        { "to": "price", "from": { "op": "field", "args": ["otr"] } },
-        { "to": "mode", "from": { "op": "field", "args": ["paymentMode"] } }
-      ]
+      "mapping": [{ "to": "mode", "from": { "op": "field", "args": ["paymentMode"] } }]
+    },
+    {
+      "id": "landed-to-financing",
+      "from": "shipping",
+      "to": "financing",
+      "contract": {
+        "provides": [{ "as": "landedValue", "l0": "amount_of_money", "source": "output:landedValue" }],
+        "requires": [{ "name": "price", "l0": "amount_of_money", "target": "field:price" }]
+      },
+      "mapping": [{ "to": "price", "from": { "op": "field", "args": ["landedValue"] } }]
     }
   ],
   "process": {

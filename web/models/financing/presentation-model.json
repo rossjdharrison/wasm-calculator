@@ -5,11 +5,13 @@
   "fields": [
     { "id": "price", "label": "Amount", "section": "terms" },
     { "id": "deposit", "label": "Deposit", "section": "terms", "render": "track" },
-    { "id": "termMonths", "label": "Term (months)", "section": "terms" }
+    { "id": "termMonths", "label": "Term (months)", "section": "terms" },
+    { "id": "mode", "label": "Payment mode", "section": "terms" }
   ],
   "outputs": [
     { "id": "monthly", "label": "Monthly payment", "role": "recurring", "format": { "type": "currency", "decimals": 2, "currencyCode": "EUR" } },
     { "id": "financeCharge", "label": "Cost of financing", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "residualValue", "label": "Residual value (lease-end)", "visibleWhen": { "op": "eq", "args": [{ "op": "field", "args": ["mode"] }, 2] }, "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
     { "id": "totalPayable", "label": "Total payable", "role": "subtotal", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
   ]
 }

@@ -54,7 +54,8 @@
       ] }
     ] } },
     { "id": "customs", "label": "Customs & excise", "category": "ImportCharge", "formula": { "op": "add", "args": [{ "op": "field", "args": ["importDuty"] }, { "op": "field", "args": ["importVat"] }] } },
-    { "id": "shippingCost", "label": "Landed shipping total", "category": "ShippingCost", "formula": { "op": "add", "args": [{ "op": "field", "args": ["freight"] }, { "op": "field", "args": ["customs"] }] } }
+    { "id": "shippingCost", "label": "Landed shipping total", "category": "ShippingCost", "formula": { "op": "add", "args": [{ "op": "field", "args": ["freight"] }, { "op": "field", "args": ["customs"] }] } },
+    { "id": "landedValue", "label": "Landed vehicle value", "category": "ImportCharge", "formula": { "op": "add", "args": [{ "op": "field", "args": ["vehicleValue"] }, { "op": "field", "args": ["customs"] }] } }
   ],
   "validations": [
     {

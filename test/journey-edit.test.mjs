@@ -16,25 +16,25 @@ test('macroGraph builds boxes from models and typed wires from bindings', () => 
   const g = macroGraph(journey);
   assert.equal(g.nodes.length, 4);
   assert.deepEqual(g.nodes.map((n) => n.alias).sort(), ['financing', 'insurance', 'shipping', 'shopping']);
-  assert.equal(g.edges.length, 3);
-  assert.ok(g.edges.every((e) => e.kind === 'binding' && e.from === 'shopping'), 'every wire runs from the vehicle');
-  assert.deepEqual(g.edges.map((e) => e.to).sort(), ['financing', 'insurance', 'shipping']);
+  assert.equal(g.edges.length, 4);
+  assert.ok(g.edges.every((e) => e.kind === 'binding'));
+  assert.deepEqual(g.edges.map((e) => `${e.from}->${e.to}`).sort(), ['shipping->financing', 'shopping->financing', 'shopping->insurance', 'shopping->shipping']);
 });
 
 test('mutations are pure (input journey untouched)', () => {
   const snap = JSON.stringify(journey);
-  jedit.setSeamMapping(journey, 'price-to-financing', [{ to: 'price', from: { op: 'field', args: ['grandTotal'] } }]);
-  jedit.setSeamCondition(journey, 'price-to-financing', { op: 'gt', args: [{ op: 'field', args: ['grandTotal'] }, 0] });
-  jedit.removeBinding(journey, 'price-to-financing');
+  jedit.setSeamMapping(journey, 'landed-to-financing', [{ to: 'price', from: { op: 'field', args: ['grandTotal'] } }]);
+  jedit.setSeamCondition(journey, 'landed-to-financing', { op: 'gt', args: [{ op: 'field', args: ['grandTotal'] }, 0] });
+  jedit.removeBinding(journey, 'landed-to-financing');
   jedit.addModelRef(journey, { ref: 'x', as: 'x', phase: 'fulfilment' });
   assert.equal(JSON.stringify(journey), snap, 'input journey unchanged');
 });
 
 test('setSeamCondition adds and clears', () => {
-  const withCond = jedit.setSeamCondition(journey, 'price-to-financing', { op: 'gt', args: [{ op: 'field', args: ['otr'] }, 0] });
-  const b = (j) => j.bindings.find((x) => x.id === 'price-to-financing');
+  const withCond = jedit.setSeamCondition(journey, 'landed-to-financing', { op: 'gt', args: [{ op: 'field', args: ['otr'] }, 0] });
+  const b = (j) => j.bindings.find((x) => x.id === 'landed-to-financing');
   assert.ok(b(withCond).condition, 'condition set');
-  const cleared = jedit.setSeamCondition(withCond, 'price-to-financing', null);
+  const cleared = jedit.setSeamCondition(withCond, 'landed-to-financing', null);
   assert.equal('condition' in b(cleared), false, 'condition cleared');
 });
 
@@ -47,5 +47,5 @@ test('removeModelRef cascades to bindings/process', () => {
 
 test('referencesToModel reports the cross-model blast radius', () => {
   const refs = jedit.referencesToModel(journey, 'financing');
-  assert.ok(refs.some((r) => r.kind === 'binding' && r.id === 'price-to-financing'));
+  assert.ok(refs.some((r) => r.kind === 'binding' && r.id === 'landed-to-financing'));
 });

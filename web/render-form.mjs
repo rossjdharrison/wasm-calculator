@@ -21,7 +21,7 @@ const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.cla
 const setChecked = (b, on) => { b.setAttribute('aria-checked', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
 const setPressed = (b, on) => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
 
-export function mountConfigurator(root, { model, ir, engine, onEdit, initialConfig, lockedFields, onConfigChange, onRequest, ctaLabel, gate }) {
+export function mountConfigurator(root, { model, ir, engine, onEdit, initialConfig, lockedFields, onConfigChange, onRequest, ctaLabel, gate, fmtOpts }) {
   const controls = {}, wraps = {}, errs = {}, outEls = {}, secEls = {};
   let ctaEl = null, ctaReasonEl = null;   // optional step-gate: the CTA + its "why disabled" line
   // fields written by an upstream binding (single-authority): rendered disabled +
@@ -226,7 +226,7 @@ export function mountConfigurator(root, { model, ir, engine, onEdit, initialConf
     for (let i = 0; i < ir.outputs.length; i++) {
       const o = ir.outputs[i], r = res.outputs[i];
       outEls[o.id].wrap.classList.toggle('is-hidden', !r.visible);
-      outEls[o.id].value.textContent = fmt(r);
+      outEls[o.id].value.textContent = fmt(r, fmtOpts || {});   // fmtOpts carries the journey display currency + FX rates
     }
     messagesEl.innerHTML = '';
     const sev = { 2: 'error', 1: 'warn', 0: 'info' };

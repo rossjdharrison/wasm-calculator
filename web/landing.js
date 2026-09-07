@@ -354,6 +354,37 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
     if (!shown) catHost.appendChild(emptyState(q));
   }
 
+  // ---- composed journeys — rendered ABOVE the configurators (a journey is the headline
+  // product; a configurator is a building block). A journey card reuses the model card's
+  // media/thumbnail (its own `hero`, resolved async → neutral placeholder).
+  const buildJourneys = () => {
+    if (!features.journeys || !journeysAll.length) return null;
+    const { section, grid } = sectionOf(L('journeysTitle', 'Journeys'), '⇄', null, L('journeyDescriptor', ''));
+    for (const j of journeysAll) {
+      const a = el('a', 'lp-card lp-card--journey'); a.href = `configure.html?j=${encodeURIComponent(j.id)}`;
+      const media = el('div', 'lp-media'); media.innerHTML = placeholderSVG(j.title || j.id);
+      const body = el('div', 'lp-cardbody', { html: `<div class="lp-cardtitle">${j.title || j.id}</div><div class="lp-blurb">${j.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Begin')} <span aria-hidden="true">→</span></div>` });
+      if (controlPanel) {   // the telltale that a journey is a COMPOSITE: machines threaded × phases
+        const vit = el('div', 'lp-vitals'); body.insertBefore(vit, body.querySelector('.lp-enter'));
+        loadJourney(j.id).then((doc) => { if (!doc) return; const nm = (doc.models || []).length, np = (doc.phases || []).length; vit.textContent = `${L('threadsLabel', 'threads')} ${nm} ${L('machinesUnit', 'machines')} · ${np} ${L('phasesUnit', 'phases')}`; }).catch(() => {});
+      }
+      a.append(media, body);
+      if (j.hero) resolveImage(j.hero).then((u) => { if (!u) return; const im = new Image(); im.onload = () => { media.innerHTML = `<img src="${u}" alt="">`; }; im.src = u; }).catch(() => {});
+      if (!features.studio) { grid.appendChild(a); continue; }
+      const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
+      const jname = j.title || j.id; const jid = encodeURIComponent(j.id);
+      const acts = el('div', 'lp-actions'); acts.setAttribute('role', 'group'); acts.setAttribute('aria-label', `Canvases for ${jname}`);
+      const mk = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${jname}`); return x; };
+      acts.append(
+        mk(L('canvasLabel', 'Canvas'), `journey.html?j=${jid}`, `${L('canvasLabel', 'Canvas')} — journey loom`),
+        mk(L('composeLabel', 'Compose'), `journey-create.html?j=${jid}`, L('composeLabel', 'Compose')),
+      );
+      cw.appendChild(acts); grid.appendChild(cw);
+    }
+    return section;
+  };
+  try { const js = buildJourneys(); if (js) wrap.appendChild(js); } catch (_) { /* no journeys */ }
+
   // the library toolbar: a search box, plus type-filter chips when there is more than
   // one top-level category. Both drive renderCatalogue over the already-derived registry.
   const anyModels = reg ? modelsUnder(reg, here).length > 0 : catModels.length > 0;
@@ -382,38 +413,6 @@ import { count as savedCount, onChange as savedOnChange, openSavedModal } from '
   }
   wrap.appendChild(catHost);
   renderCatalogue();
-
-  // ---- composed journeys (reachable + feature-gated) ----
-  if (features.journeys) {
-    try {
-      const journeys = journeysAll;   // fetched once up front (also feeds the fleet roster)
-      if (journeys.length) {
-        const { section, grid } = sectionOf(L('journeysTitle', 'Journeys'), '⇄', null, L('journeyDescriptor', ''));
-        for (const j of journeys) {
-          const a = el('a', 'lp-card lp-card--journey'); a.href = `configure.html?j=${encodeURIComponent(j.id)}`;
-          a.appendChild(el('div', 'lp-cardbody', { html: `<div class="lp-cardtitle">${j.title || j.id}</div><div class="lp-blurb">${j.blurb || ''}</div><div class="lp-enter">${L('cardCta', 'Begin')} <span aria-hidden="true">→</span></div>` }));
-          // the telltale that a journey is a COMPOSITE: how many machines it threads + its phases.
-          const jbody = a.querySelector('.lp-cardbody');
-          if (controlPanel && jbody) {
-            const vit = el('div', 'lp-vitals'); jbody.insertBefore(vit, jbody.querySelector('.lp-enter'));
-            loadJourney(j.id).then((doc) => { if (!doc) return; const nm = (doc.models || []).length, np = (doc.phases || []).length; vit.textContent = `${L('threadsLabel', 'threads')} ${nm} ${L('machinesUnit', 'machines')} · ${np} ${L('phasesUnit', 'phases')}`; }).catch(() => {});
-          }
-          if (!features.studio) { grid.appendChild(a); continue; }
-          // a journey is a composed machine — the card runs it; the bar opens its canvases.
-          const cw = el('div', 'lp-cardwrap'); cw.appendChild(a);
-          const jname = j.title || j.id; const jid = encodeURIComponent(j.id);
-          const acts = el('div', 'lp-actions'); acts.setAttribute('role', 'group'); acts.setAttribute('aria-label', `Canvases for ${jname}`);
-          const mk = (label, href, aria) => { const x = el('a', 'lp-action', { href, text: label }); x.setAttribute('aria-label', `${aria} — ${jname}`); return x; };
-          acts.append(
-            mk(L('canvasLabel', 'Canvas'), `journey.html?j=${jid}`, `${L('canvasLabel', 'Canvas')} — journey loom`),
-            mk(L('composeLabel', 'Compose'), `journey-create.html?j=${jid}`, L('composeLabel', 'Compose')),
-          );
-          cw.appendChild(acts); grid.appendChild(cw);
-        }
-        wrap.appendChild(section);
-      }
-    } catch (_) { /* no journeys */ }
-  }
 
   const foot = el('footer', 'lp-foot');
   foot.innerHTML = `<span>${L('footerName', '')}</span><span>${L('footerNote', '')}</span>`;
