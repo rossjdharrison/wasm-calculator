@@ -17,8 +17,11 @@
 
 export const ORDER_EVENTS = ['Started', 'Set', 'Committed', 'Entered', 'StepDone'];
 
-export function startOrder(orderId, journeyId, journeyVersion) {
-  return [{ type: 'Started', orderId, journeyId, journeyVersion: journeyVersion ?? null }];
+export function startOrder(orderId, journeyId, journeyVersion, modelVersions) {
+  // journeyVersion + modelVersions are provenance metadata (not derived values) — safe to
+  // fold. They record which model bytecode the offer was priced against, so offer.mjs can
+  // detect an expired offer on resume. Both default null (legacy events / omitted args).
+  return [{ type: 'Started', orderId, journeyId, journeyVersion: journeyVersion ?? null, modelVersions: modelVersions ?? null }];
 }
 
 export function fold(events) {
@@ -26,10 +29,10 @@ export function fold(events) {
   // MONOTONIC set of every phase ever Entered — a set only grows, so an out-of-order
   // or duplicate Entered can never shrink it. Reachability is derived from `reached`,
   // NOT from a prefix of the scalar `phase` (which a backward Entered would regress).
-  const o = { orderId: null, journeyId: null, journeyVersion: null, phase: null, reached: {}, configByAlias: {}, committed: {}, steps: {}, seq: (events || []).length };
+  const o = { orderId: null, journeyId: null, journeyVersion: null, modelVersions: null, phase: null, reached: {}, configByAlias: {}, committed: {}, steps: {}, seq: (events || []).length };
   for (const e of events || []) {
     switch (e.type) {
-      case 'Started': o.orderId = e.orderId; o.journeyId = e.journeyId; o.journeyVersion = e.journeyVersion ?? null; break;
+      case 'Started': o.orderId = e.orderId; o.journeyId = e.journeyId; o.journeyVersion = e.journeyVersion ?? null; o.modelVersions = e.modelVersions ?? null; break;
       case 'Set': if (!o.committed[e.alias]) (o.configByAlias[e.alias] = o.configByAlias[e.alias] || {})[e.field] = e.value; break;
       case 'Committed': o.committed[e.alias] = e.hash ?? true; break;
       case 'Entered': o.phase = e.phase; o.reached[e.phase] = true; break;

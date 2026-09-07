@@ -95,7 +95,7 @@
           "test": { "op": "gt", "args": [{ "op": "field", "args": ["mode"] }, 0] }
         }
       },
-      { "id": "sign", "phase": "agree_sign", "kind": "ceremony", "activity": "agreement", "outcome": "sign", "meaning": "Signing assents to your configured build and the sale contract. Nothing is charged until settlement.", "prompt": "Type your name to assent to this build and the sale contract", "actionLabel": "Sign & agree ▸" },
+      { "id": "sign", "phase": "agree_sign", "kind": "ceremony", "activity": "agreement", "outcome": "sign", "meaning": "Signing assents to your configured build and the sale contract. Nothing is charged until settlement.", "prompt": "Type your name to assent to this build and the sale contract", "actionLabel": "Sign & agree ▸", "sealsOffer": true },
       { "id": "settle", "phase": "exchange_settlement", "kind": "ceremony", "activity": "transfer_of_ownership", "outcome": "transfer_of_ownership", "meaning": "Settlement transfers ownership to you — paid in full, or drawn down through the financing plan you arranged.", "prompt": "Name the person settling the order", "actionLabel": "Confirm settlement ▸", "enters": [{ "individual": "shopping#spec", "category": "Owned", "role": "owner", "label": "Ownership" }] },
       { "id": "deliver", "phase": "fulfilment", "kind": "ceremony", "activity": "transfer_of_possession", "outcome": "transfer_of_possession", "meaning": "The vehicle is handed over (or shipped per your Shipping choice) and possession passes to the keeper.", "prompt": "Name the person receiving the vehicle", "actionLabel": "Confirm handover ▸", "enters": [{ "individual": "shopping#spec", "category": "Possessed", "role": "keeper", "label": "Possession" }] }
     ]

@@ -67,6 +67,7 @@ const FILES = [
   [join(ROOT, 'web', 'journey.schema.json'), 'journey.schema.json'],
   [join(ROOT, 'web', 'order.mjs'), 'order.mjs'],
   [join(ROOT, 'web', 'order-store.mjs'), 'order-store.mjs'],
+  [join(ROOT, 'web', 'offer.mjs'), 'offer.mjs'],
   [join(ROOT, 'web', 'category-render.mjs'), 'category-render.mjs'],
   [join(ROOT, 'web', 'phase-stepper.mjs'), 'phase-stepper.mjs'],
   [join(ROOT, 'web', 'order-picker.mjs'), 'order-picker.mjs'],

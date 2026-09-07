@@ -12,8 +12,9 @@ import { mountShowroom } from './showroom-view.mjs';
 import { EngineHost } from './compose.mjs';
 import { mountJourney } from './journey-view.mjs';
 import { mountOrderPicker } from './order-picker.mjs';
-import { listOrders, deleteOrder } from './order-store.mjs';
+import { listOrders, deleteOrder, loadEvents } from './order-store.mjs';
 import { ordersForJourney } from './order.mjs';
+import { checkOffer } from './offer.mjs';
 import { resolve as resolveImage } from './assets.mjs';
 import { takeRestore } from './saved.mjs';
 import { studioRoutes } from './studio-shell.mjs';
@@ -69,16 +70,21 @@ async function bootJourney() {
     catch (e) { return fatal(`Journey model "${m.ref}" is invalid: ${e.message}`); }
   }
   const app = document.getElementById('app');
-  const mount = (resumeOrderId) => mountJourney(app, { journey, models, host, brand, resolveImage, links: LINKS, resumeOrderId, phases, labels });
+  const mount = (resumeOrderId) => mountJourney(app, { journey, models, host, brand, resolveImage, links: LINKS, resumeOrderId, phases, labels, onRestart: () => mount(null) });
   // no ?o= and saved orders exist → offer a picker; otherwise resume ?o= (sanitised) or start fresh.
-  const showPicker = () => {
+  const showPicker = async () => {
     const saved = ordersForJourney(listOrders(), JOURNEY_ID);
     if (!saved.length) return mount(null);
+    // precompute an offer verdict per saved order so expired offers are badged in the list.
+    const verdicts = {};
+    await Promise.all(saved.map(async (o) => { try { verdicts[o.id] = await checkOffer(loadEvents(o.id), journey, models, host); } catch (_) { verdicts[o.id] = null; } }));
     mountOrderPicker(app, {
       journeyName: journey.title,
       orders: saved,
       phases,
+      verdicts,
       onResume: (id) => { const u = new URL(location.href); u.searchParams.set('o', id); location.href = u.toString(); },
+      onReprice: () => mount(null),
       onStartNew: () => mount(null),
       onDelete: (id) => { deleteOrder(id); showPicker(); },
     });
