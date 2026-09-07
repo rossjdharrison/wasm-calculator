@@ -13,8 +13,8 @@
 // Run `npm run asbuild:release` first (npm run build does both).
 // Cross-platform: pure Node, no shell assumptions.
 
-import { rm, mkdir, copyFile, access, readdir, cp } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { rm, mkdir, copyFile, access, readdir, cp, readFile } from 'node:fs/promises';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,6 +41,7 @@ const FILES = [
   [join(ROOT, 'web', 'presentation-editor.js'), 'presentation-editor.js'],
   [join(ROOT, 'web', 'assembler.mjs'), 'assembler.mjs'],
   [join(ROOT, 'web', 'store.mjs'), 'store.mjs'],
+  [join(ROOT, 'web', 'live-tables.mjs'), 'live-tables.mjs'],
   [join(ROOT, 'web', 'publish.mjs'), 'publish.mjs'],
   [join(ROOT, 'web', 'expr.mjs'), 'expr.mjs'],
   [join(ROOT, 'web', 'rule.mjs'), 'rule.mjs'],
@@ -140,7 +141,26 @@ async function main() {
     await mkdir(join(DIST, dir), { recursive: true });
     for (const n of imgs) { await copyFile(join(src, n), join(DIST, dir, n)); console.log(`  + dist/${dir}/${n}`); }
   }
+  await verifyImports();   // fail loudly if a copied module imports something not in dist
   console.log('✓ dist/ ready to deploy');
+}
+
+// Guard against the FILES list drifting from the code: every RELATIVE import/export in a
+// shipped .mjs/.js must resolve to a file actually in dist. A missing entry (e.g. a new
+// module not added to FILES) would otherwise ship a 404 that the SPA serves as HTML,
+// breaking module loading site-wide — so we hard-fail the build instead.
+async function verifyImports() {
+  const files = (await readdir(DIST, { recursive: true })).filter((f) => /\.(mjs|js)$/.test(f));
+  const re = /(?:import|export)[^"'`]*?from\s*["'`](\.[^"'`]+)["'`]|import\s*\(\s*["'`](\.[^"'`]+)["'`]\s*\)/g;
+  const missing = [];
+  for (const f of files) {
+    const src = await readFile(join(DIST, f), 'utf8');
+    for (const m of src.matchAll(re)) {
+      const spec = m[1] || m[2];
+      try { await access(resolve(dirname(join(DIST, f)), spec)); } catch { missing.push(`${f} -> ${spec}`); }
+    }
+  }
+  if (missing.length) { console.error('✗ unresolved imports in dist (add to FILES in build-site.mjs):\n  ' + missing.join('\n  ')); process.exit(1); }
 }
 
 main().catch((err) => {
