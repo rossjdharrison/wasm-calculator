@@ -47,8 +47,17 @@ test('isA is a catalogue lookup: transitive up the derived nodes INTO the frozen
 
 test('childrenOf(root) are the leaf classes; modelsUnder surfaces the configurators', () => {
   assert.deepEqual(childrenOf(reg, reg.root).sort(), ['ArtworkClass', 'BatteryClass', 'FinancePlan', 'InsurancePolicy', 'ShippingService', 'SolarArrayClass', 'VehicleClass']);
-  assert.deepEqual(modelsUnder(reg, reg.root).map((r) => r.model).sort(), ['antiques', 'financing', 'insurance', 'shipping', 'solar-array', 'solar-battery', 'vehicles']);
+  assert.deepEqual(modelsUnder(reg, reg.root).map((r) => r.model).sort(), ['antiques', 'cargo', 'financing', 'insurance', 'shipping', 'solar-array', 'solar-battery', 'vehicles']);
   assert.deepEqual(modelsUnder(reg, 'VehicleClass').map((r) => r.model), ['vehicles']);
+});
+
+test('insurance types group under a shared InsurancePolicy node (motor + cargo are separate models)', () => {
+  // InsurancePolicy is now an intermediate GROUP (no model of its own); the two
+  // insurance products specialize it, so the catalogue nests them under Insurance.
+  assert.equal(nodeOf(reg, 'InsurancePolicy').model, undefined, 'InsurancePolicy is a group, not a configurator');
+  assert.equal(rowKind(reg, 'InsurancePolicy'), 'catalogue');
+  assert.deepEqual(childrenOf(reg, 'InsurancePolicy').sort(), ['CargoPolicy', 'MotorPolicy']);
+  assert.deepEqual(modelsUnder(reg, 'InsurancePolicy').map((r) => r.model).sort(), ['cargo', 'insurance']);
 });
 
 test('rowKind is derived: a model-bearing leaf is a model, a money class is not surfaced as a group', () => {

@@ -1,0 +1,32 @@
+{
+  "name": "Cargo insurance",
+  "brand": { "mark": "ROWBLAA", "rest": "MARINE", "descriptor": "Cargo", "tagline": "Haarlem" },
+  "sections": [
+    { "id": "cover", "label": "Cover", "order": 1 },
+    { "id": "route", "label": "Route", "order": 2 }
+  ],
+  "fields": [
+    { "id": "coverType", "label": "Cover basis", "control": "buttons", "section": "cover", "width": "full", "options": [
+      { "id": "allRisks", "label": "All risks (ICC A)" },
+      { "id": "namedPerils", "label": "Named perils (ICC B)" },
+      { "id": "totalLoss", "label": "Total loss only (ICC C)" }
+    ] },
+    { "id": "shipmentValue", "label": "Insured value of goods", "control": "stepper", "section": "cover", "width": "half", "decimals": 0 },
+    { "id": "transport", "label": "Transport mode", "control": "buttons", "section": "route", "width": "full", "options": [
+      { "id": "sea", "label": "Sea" },
+      { "id": "air", "label": "Air" },
+      { "id": "road", "label": "Road" },
+      { "id": "rail", "label": "Rail" }
+    ] },
+    { "id": "region", "label": "Route", "control": "buttons", "section": "route", "width": "full", "options": [
+      { "id": "domestic", "label": "Domestic" },
+      { "id": "europe", "label": "Europe" },
+      { "id": "intercontinental", "label": "Intercontinental" },
+      { "id": "highRisk", "label": "High-risk" }
+    ] }
+  ],
+  "outputs": [
+    { "id": "premium", "label": "Cargo premium", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "effRate", "label": "Rate on value", "spec": true, "format": { "type": "unit", "unit": "%", "decimals": 2 } }
+  ]
+}
