@@ -47,7 +47,30 @@ confirm live at booking.
 Kong First-Registration Tax, NL BPM, Swiss road tax. These often dwarf the shipping
 cost but are not "customs & excise on import".
 
-## To refresh
+## Live refresh (no redeploy) — the `roro-shipping` rate card
+`destBase`, `dutyRate` and `vatRate` are tagged `"source": "roro-shipping"`, so they are
+**live-sourced**: the browser overlays values from `GET /api/rates/roro-shipping` onto these
+tables before assemble (see `web/live-tables.mjs` + `web/store.mjs applyLiveTables`). The
+baked maps here remain the **fallback** — if the API is absent/slow/partial/out-of-bounds,
+each table degrades to the baked value, so the app never breaks. `methodFactor` is NOT
+tagged, so it stays purely baked.
+
+Update the live figures without a redeploy (authorised with the SEPARATE `RATES_TOKEN`,
+not the models/journeys `PUBLISH_TOKEN`):
+
+```
+curl -X PUT https://quote.rowblaa.com/api/rates/roro-shipping \
+  -H "authorization: Bearer $RATES_TOKEN" -H "content-type: application/json" \
+  -d '{ "asOf": "2026-10-01", "source": "Q4 broker refresh",
+        "tables": { "destBase": { "map": { "uk": 410, "usa": 1820 } } } }'
+```
+
+Only keys already present in the baked map are overlaid (partial payloads are fine — unlisted
+keys keep their baked value), each checked against the table's `bounds`. `DELETE` the key to
+revert to the baked snapshot. Seeded to KV as an exact mirror of the baked maps by
+`scripts/seed-kv.mjs` (key `rates:roro-shipping`).
+
+## To refresh the BAKED snapshot
 Re-run the research (or pull fresh broker/customs quotes) and edit the three tables in
 `data-model.json`; bump the model `version` and update the date above. Full sourcing
 is in the session's `roro-shipping-rates` workflow output.

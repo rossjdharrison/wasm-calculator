@@ -24,10 +24,10 @@
     { "id": "vehicleValue", "type": "number", "default": 50000, "min": 0, "step": 500, "category": "ImportCharge" }
   ],
   "tables": {
-    "destBase": { "kind": "1d", "map": { "nl": 150, "uk": 375, "usa": 1750, "uae": 1200, "ch": 1300, "sg": 1450, "hk": 1450, "jp": 1750 } },
+    "destBase": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 100000 }, "map": { "nl": 150, "uk": 375, "usa": 1750, "uae": 1200, "ch": 1300, "sg": 1450, "hk": 1450, "jp": 1750 } },
     "methodFactor": { "kind": "1d", "map": { "collect": 0, "roro": 1, "container": 1.4, "express": 4 } },
-    "dutyRate": { "kind": "1d", "map": { "nl": 0, "uk": 0.10, "usa": 0.15, "uae": 0.05, "ch": 0.04, "sg": 0.20, "hk": 0, "jp": 0 } },
-    "vatRate": { "kind": "1d", "map": { "nl": 0, "uk": 0.20, "usa": 0, "uae": 0.05, "ch": 0.081, "sg": 0.09, "hk": 0, "jp": 0.10 } }
+    "dutyRate": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 1 }, "map": { "nl": 0, "uk": 0.10, "usa": 0.15, "uae": 0.05, "ch": 0.04, "sg": 0.20, "hk": 0, "jp": 0 } },
+    "vatRate": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 1 }, "map": { "nl": 0, "uk": 0.20, "usa": 0, "uae": 0.05, "ch": 0.081, "sg": 0.09, "hk": 0, "jp": 0.10 } }
   },
   "computed": [
     { "id": "baseRate", "label": "Base route rate", "category": "ShippingCost", "formula": { "op": "lookup", "args": ["destBase", { "op": "field", "args": ["destination"] }] } },
