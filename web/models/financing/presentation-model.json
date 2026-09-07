@@ -1,8 +1,14 @@
 {
   "name": "Financing",
-  "brand": { "mark": "ROWBLAA", "rest": "FINANCE" },
+  "brand": { "mark": "ROWBLAA", "rest": "FINANCE", "descriptor": "Finance", "tagline": "Haarlem" },
   "sections": [{ "id": "terms", "label": "Terms", "order": 1 }],
   "fields": [
+    { "id": "loanType", "label": "Loan type", "section": "terms", "width": "full", "options": [
+      { "id": "personal", "label": "Personal loan" },
+      { "id": "auto", "label": "Auto finance" },
+      { "id": "mortgage", "label": "Mortgage" },
+      { "id": "business", "label": "Business loan" }
+    ] },
     { "id": "price", "label": "Amount", "section": "terms" },
     { "id": "deposit", "label": "Deposit", "section": "terms", "render": "track" },
     { "id": "termMonths", "label": "Term (months)", "section": "terms" },
@@ -11,6 +17,8 @@
   "outputs": [
     { "id": "monthly", "label": "Monthly payment", "role": "recurring", "format": { "type": "currency", "decimals": 2, "currencyCode": "EUR" } },
     { "id": "financeCharge", "label": "Cost of financing", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "aprPct", "label": "Representative APR", "spec": true, "format": { "type": "unit", "unit": "% APR", "decimals": 1 } },
+    { "id": "ltv", "label": "Loan to value", "spec": true, "visibleWhen": { "op": "eq", "args": [{ "op": "field", "args": ["loanType"] }, "mortgage"] }, "format": { "type": "unit", "unit": "%", "decimals": 0 } },
     { "id": "residualValue", "label": "Residual value (lease-end)", "visibleWhen": { "op": "eq", "args": [{ "op": "field", "args": ["mode"] }, 2] }, "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
     { "id": "totalPayable", "label": "Total payable", "role": "subtotal", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
   ]
