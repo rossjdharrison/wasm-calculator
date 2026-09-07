@@ -11,12 +11,17 @@
   "fields": [
     { "id": "price", "type": "number", "default": 0, "min": 0, "category": "LoanPrincipal" },
     { "id": "deposit", "type": "number", "default": 0, "min": 0 },
-    { "id": "termMonths", "type": "number", "default": 36, "min": 12, "max": 84, "step": 12 }
+    { "id": "termMonths", "type": "number", "default": 36, "min": 12, "max": 84, "step": 12 },
+    { "id": "mode", "type": "number", "default": 1, "min": 0, "max": 2, "visibleWhen": { "op": "eq", "args": [0, 1] } }
   ],
   "computed": [
     { "id": "fees", "label": "Arrangement fee", "formula": 495 },
     { "id": "rate", "label": "Monthly rate", "formula": { "op": "div", "args": [0.079, 12] } },
-    { "id": "financed", "label": "Amount financed", "category": "LoanPrincipal", "formula": { "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["deposit"] }] }] } },
+    { "id": "financed", "label": "Amount financed", "category": "LoanPrincipal", "formula": { "op": "if", "args": [
+      { "op": "gt", "args": [{ "op": "field", "args": ["mode"] }, 0] },
+      { "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["price"] }, { "op": "field", "args": ["deposit"] }] }] },
+      0
+    ] } },
     { "id": "monthly", "label": "Monthly payment", "category": "MonthlyPayment", "formula": { "op": "if", "args": [
       { "op": "gt", "args": [{ "op": "field", "args": ["financed"] }, 0] },
       { "op": "div", "args": [
@@ -26,9 +31,13 @@
       0
     ] } },
     { "id": "totalPayable", "label": "Total payable", "category": "LoanPrincipal", "formula": { "op": "add", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["monthly"] }, { "op": "field", "args": ["termMonths"] }] }, { "op": "field", "args": ["deposit"] }] } },
-    { "id": "financeCharge", "label": "Cost of financing", "category": "FinanceCharge", "formula": { "op": "add", "args": [
-      { "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["totalPayable"] }, { "op": "field", "args": ["price"] }] }] },
-      { "op": "field", "args": ["fees"] }
+    { "id": "financeCharge", "label": "Cost of financing", "category": "FinanceCharge", "formula": { "op": "if", "args": [
+      { "op": "gt", "args": [{ "op": "field", "args": ["mode"] }, 0] },
+      { "op": "add", "args": [
+        { "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["totalPayable"] }, { "op": "field", "args": ["price"] }] }] },
+        { "op": "field", "args": ["fees"] }
+      ] },
+      0
     ] } }
   ]
 }

@@ -33,10 +33,19 @@
       "from": "shopping",
       "to": "shipping",
       "contract": {
-        "provides": [{ "as": "weight", "l0": "physical_quantity", "source": "output:weight" }],
-        "requires": [{ "name": "vehicleWeight", "l0": "physical_quantity", "target": "field:vehicleWeight" }]
+        "provides": [
+          { "as": "weight", "l0": "physical_quantity", "source": "output:weight" },
+          { "as": "otr", "l0": "amount_of_money", "source": "output:otr" }
+        ],
+        "requires": [
+          { "name": "vehicleWeight", "l0": "physical_quantity", "target": "field:vehicleWeight" },
+          { "name": "vehicleValue", "l0": "amount_of_money", "target": "field:vehicleValue" }
+        ]
       },
-      "mapping": [{ "to": "vehicleWeight", "from": { "op": "field", "args": ["weight"] } }]
+      "mapping": [
+        { "to": "vehicleWeight", "from": { "op": "field", "args": ["weight"] } },
+        { "to": "vehicleValue", "from": { "op": "field", "args": ["otr"] } }
+      ]
     },
     {
       "id": "value-to-insurance",
@@ -53,10 +62,19 @@
       "from": "shopping",
       "to": "financing",
       "contract": {
-        "provides": [{ "as": "otr", "l0": "amount_of_money", "source": "output:otr" }],
-        "requires": [{ "name": "price", "l0": "amount_of_money", "target": "field:price" }]
+        "provides": [
+          { "as": "otr", "l0": "amount_of_money", "source": "output:otr" },
+          { "as": "paymentMode", "source": "field:paymentMode" }
+        ],
+        "requires": [
+          { "name": "price", "l0": "amount_of_money", "target": "field:price" },
+          { "name": "mode", "target": "field:mode" }
+        ]
       },
-      "mapping": [{ "to": "price", "from": { "op": "field", "args": ["otr"] } }]
+      "mapping": [
+        { "to": "price", "from": { "op": "field", "args": ["otr"] } },
+        { "to": "mode", "from": { "op": "field", "args": ["paymentMode"] } }
+      ]
     }
   ],
   "process": {
