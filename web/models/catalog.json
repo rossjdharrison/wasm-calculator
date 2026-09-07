@@ -36,9 +36,15 @@
     },
     {
       "id": "insurance",
-      "title": "Insurance",
-      "descriptor": "Cover",
+      "title": "Motor insurance",
+      "descriptor": "Motor cover",
       "blurb": "Motor cover by level and excess, with optional transit protection while shipped."
+    },
+    {
+      "id": "cargo",
+      "title": "Cargo insurance",
+      "descriptor": "Cargo",
+      "blurb": "Goods-in-transit cover — ICC cover basis, priced on shipment value, transport mode and route."
     },
     {
       "id": "financing",

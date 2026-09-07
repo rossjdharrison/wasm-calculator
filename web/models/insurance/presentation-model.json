@@ -1,6 +1,6 @@
 {
-  "name": "Insurance",
-  "brand": { "mark": "ROWBLAA", "rest": "ASSURANCE", "descriptor": "Cover", "tagline": "Haarlem" },
+  "name": "Motor insurance",
+  "brand": { "mark": "ROWBLAA", "rest": "ASSURANCE", "descriptor": "Motor cover", "tagline": "Haarlem" },
   "sections": [
     { "id": "cover", "label": "Cover", "order": 1 },
     { "id": "terms", "label": "Terms", "order": 2 }
