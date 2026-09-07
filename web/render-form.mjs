@@ -15,13 +15,15 @@
 
 import { formatOutput } from './ui.mjs';
 import { decodeValue } from './assembler.mjs';
+import { blockingOf } from './compose.mjs';
 
 const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 const setChecked = (b, on) => { b.setAttribute('aria-checked', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
 const setPressed = (b, on) => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('is-selected', on); };
 
-export function mountConfigurator(root, { model, ir, engine, onEdit, initialConfig, lockedFields, onConfigChange, onRequest, ctaLabel }) {
+export function mountConfigurator(root, { model, ir, engine, onEdit, initialConfig, lockedFields, onConfigChange, onRequest, ctaLabel, gate }) {
   const controls = {}, wraps = {}, errs = {}, outEls = {}, secEls = {};
+  let ctaEl = null, ctaReasonEl = null;   // optional step-gate: the CTA + its "why disabled" line
   // fields written by an upstream binding (single-authority): rendered disabled +
   // seeded from the injected value, and never editable. Optional/domain-agnostic.
   const lockedSet = lockedFields instanceof Set ? lockedFields : new Set(lockedFields || []);
@@ -91,7 +93,12 @@ export function mountConfigurator(root, { model, ir, engine, onEdit, initialConf
   }
   summary.appendChild(outputs);
   // optional CTA (journey downstream capture): advance the sale with the current inputs.
-  if (onRequest) { const cta = el('button', 'qc-cta'); cta.type = 'button'; cta.textContent = ctaLabel || 'Confirm ▸'; cta.addEventListener('click', () => onRequest(readInputs())); summary.appendChild(cta); }
+  if (onRequest) {
+    const cta = el('button', 'qc-cta'); cta.type = 'button'; cta.textContent = ctaLabel || 'Confirm ▸';
+    cta.addEventListener('click', () => { if (cta.disabled) return; onRequest(readInputs()); });
+    summary.appendChild(cta); ctaEl = cta;
+    if (gate) { const reason = el('div', 'qc-cta-reason'); reason.hidden = true; reason.setAttribute('aria-live', 'polite'); summary.appendChild(reason); ctaReasonEl = reason; }
+  }
   form.append(formCol, summary);
   root.appendChild(form);
 
@@ -206,6 +213,15 @@ export function mountConfigurator(root, { model, ir, engine, onEdit, initialConf
       const msg = res.messages.find((m) => m.targetSlot === f.slot && m.severity === 2);
       wrap.classList.toggle('is-invalid', !!msg);
       errs[f.id].textContent = msg ? msg.message : ''; errs[f.id].hidden = !msg;
+    }
+    // step-gate: disable the CTA (and say why) until the step's requirements are met.
+    // The caller (journey runner) decides ok/reason; we pass it this step's live
+    // config + the model's firing validations (blocking) so the decision is synchronous
+    // with the paint (no async recompute lag). Default (no gate) leaves the CTA enabled.
+    if (ctaEl && gate) {
+      const g = gate(readInputs(), blockingOf(ir, res, lockedSet)) || { ok: true };
+      ctaEl.disabled = !g.ok;
+      if (ctaReasonEl) { ctaReasonEl.textContent = g.ok ? '' : (g.reason || ''); ctaReasonEl.hidden = g.ok; }
     }
     for (let i = 0; i < ir.outputs.length; i++) {
       const o = ir.outputs[i], r = res.outputs[i];

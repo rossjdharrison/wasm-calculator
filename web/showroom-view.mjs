@@ -20,10 +20,11 @@ import { loadRates } from './fx.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 import { save as savedSave, remove as savedRemove, findByConfig as savedFindByConfig, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
-export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig, onConfigChange, onRequest, lockedFields, ctaLabel }) {
+export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig, onConfigChange, onRequest, lockedFields, ctaLabel, gate }) {
   // fields written by an upstream binding (single-authority): shown read-only and
   // never writable — the injected value stays authoritative. Domain-agnostic.
   const lockedFieldSet = lockedFields instanceof Set ? lockedFields : new Set(lockedFields || []);
+  let ctaReason = null;   // optional step-gate "why the CTA is disabled" line (created below)
   brand = brand || { mark: 'ROWBLAA', rest: 'LUXURY', tagline: '' };
   resolveImage = resolveImage || (async () => null);
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -613,13 +614,23 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   function render() {
     const res = compute(state); Object.assign(state, res.st);
     carousel.update(); renderStage(); renderRail(res); renderSpecs(res); syncSaveBtn();
+    // step-gate (journey): disable the CTA until the step's info is acceptable. `blocking`
+    // = this model's firing error-validations on visible, non-locked fields (the honest
+    // signal); the runner decides ok/reason. Synchronous with the render (no lag).
+    if (gate && ctaReason) {
+      const blocking = (res.msgs || []).filter((m) => m.severity === 'error' && m.field && res.vis[m.field] === true && !lockedFieldSet.has(m.field)).map((m) => ({ field: m.field, message: m.message }));
+      const g = gate({ ...state }, blocking) || { ok: true };
+      const cta = $('sh-cta'); cta.disabled = !g.ok; cta.classList.toggle('is-disabled', !g.ok);
+      ctaReason.textContent = g.ok ? '' : (g.reason || ''); ctaReason.hidden = g.ok;
+    }
     if (onConfigChange) onConfigChange({ ...state });   // journey shell observes the live config
   }
 
   $('sh-cta').textContent = ctaLabel || brand.cta || 'Request this build ▸';
   if (!onRequest) $('sh-cta').setAttribute('aria-haspopup', 'dialog');
   // In a journey the CTA advances the sale (freeze + next phase); standalone it opens the basket breakdown.
-  $('sh-cta').addEventListener('click', () => (onRequest ? onRequest({ ...state }) : openBreakdown()));
+  $('sh-cta').addEventListener('click', () => { if ($('sh-cta').disabled) return; return onRequest ? onRequest({ ...state }) : openBreakdown(); });
+  if (gate) { ctaReason = document.createElement('p'); ctaReason.className = 'sh-cta-reason'; ctaReason.setAttribute('aria-live', 'polite'); ctaReason.hidden = true; $('sh-cta').insertAdjacentElement('afterend', ctaReason); }
   $('sh-save').addEventListener('click', () => { toggleSaveBuild(); syncSaveBtn(); });
   savedOnChange(syncSaveBtn);   // keep in sync if a build is removed from the saved dialog
 

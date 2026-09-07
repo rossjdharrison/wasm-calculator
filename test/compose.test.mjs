@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { assemble, mergeModel } from '../web/assembler.mjs';
-import { EngineHost, evaluateJourney, orderModels, boundTargetsOf } from '../web/compose.mjs';
+import { EngineHost, evaluateJourney, orderModels, boundTargetsOf, blockingOf } from '../web/compose.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const wasm = await readFile(join(here, '..', 'build', 'quote.wasm'));
@@ -114,4 +114,26 @@ test('swap-test: a MONEY-FREE model composes — line rendered by its category, 
 test('orderModels rejects a cross-model cycle', () => {
   const cyc = { models: [{ as: 'a' }, { as: 'b' }], bindings: [{ from: 'a', to: 'b' }, { from: 'b', to: 'a' }] };
   assert.throws(() => orderModels(cyc), /cycle/i);
+});
+
+test('blockingOf reports only severity-2 messages on visible, non-locked FIELDS', () => {
+  const ir = { fields: [{ id: 'a', slot: 0 }, { id: 'b', slot: 1 }, { id: 'c', slot: 2 }] };
+  const res = {
+    visible: { a: true, b: true, c: false },
+    messages: [
+      { severity: 2, targetSlot: 0, message: 'A bad' },   // visible field → blocks
+      { severity: 1, targetSlot: 1, message: 'B warn' },   // severity 1 (warning) → ignored
+      { severity: 2, targetSlot: 2, message: 'C hidden' }, // hidden field → ignored (fail-open)
+      { severity: 2, targetSlot: 9, message: 'computed' }, // non-field slot → ignored (fail-open)
+    ],
+  };
+  assert.deepEqual(blockingOf(ir, res), [{ field: 'a', message: 'A bad' }]);
+  assert.deepEqual(blockingOf(ir, res, new Set(['a'])), [], 'a locked (upstream-authoritative) field is never blocking');
+});
+
+test('evaluateJourney surfaces a per-alias blocking list (empty for the valid defaults)', async () => {
+  const host = new EngineHost(wasm);
+  const r = await evaluateJourney(journey, models, host, { shopping: shopCfg, financing: { deposit: 8000, termMonths: 36 } });
+  assert.ok(Array.isArray(r.byAlias.shopping.blocking), 'blocking is present per alias');
+  assert.equal(r.byAlias.shopping.blocking.length, 0, 'a valid config has no blocking errors');
 });

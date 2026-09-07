@@ -67,6 +67,22 @@ export function analyzeJourney(journey, models) {
   // cross-model feedback is outside the frozen one-pass numeric scope. A populated
   // triggers[] is rejected by the shape gate (journey-schema.mjs), so nothing to run here.
 
+  // step `requires`: each named field must be a plain INPUT of the step's model. A BARE
+  // requires whose field default already "reads as filled" is a silent no-op (every field
+  // is pre-seeded), so steer the author to { field, notEqual } or a model error-validation.
+  const filled = (v) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0);
+  for (const s of ((journey.process && journey.process.steps) || [])) {
+    if (!s.requires) continue;
+    const M = s.model && models[s.model];
+    if (!M) { add('step-requires', 'error', `step "${s.id}": "requires" needs a model, but "${s.model}" did not load`); continue; }
+    for (const req of s.requires) {
+      const id = typeof req === 'string' ? req : (req && req.field);
+      const f = ((M.merged.fields) || []).find((x) => x.id === id);
+      if (!f) { add('step-requires', 'error', `step "${s.id}": required field "${id}" is not an input of model "${s.model}"`); continue; }
+      if (typeof req === 'string' && filled(f.default)) add('step-requires', 'warn', `step "${s.id}": required field "${id}" has a default (${JSON.stringify(f.default)}) that already reads as filled — the presence gate is a no-op; use { field, notEqual } or a model error-validation`);
+    }
+  }
+
   const counts = { error: 0, warn: 0, info: 0 };
   for (const f of findings) counts[f.severity]++;
   return { findings, counts };

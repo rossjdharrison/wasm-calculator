@@ -54,6 +54,23 @@ export function boundTargetsOf(journey, alias) {
   return out;
 }
 
+// the fields whose severity-2 (error) validation is CURRENTLY firing on a VISIBLE,
+// non-locked input — the honest "this step's info isn't acceptable yet" signal (NOT
+// the fault bitfield `status`). Non-field / computed targets and hidden fields are
+// excluded (fail-open: a computed-target error never deadlocks a gate with a cause
+// the user cannot act on). Pure, DOM-free; the runner + render-form both reuse it.
+export function blockingOf(ir, res, locked = new Set()) {
+  const idOfSlot = {}; for (const f of (ir.fields || [])) idOfSlot[f.slot] = f.id;
+  const out = [];
+  for (const m of (res.messages || [])) {
+    if (m.severity !== 2) continue;
+    const field = idOfSlot[m.targetSlot];
+    if (!field || res.visible[field] !== true || locked.has(field)) continue;
+    out.push({ field, message: m.message });
+  }
+  return out;
+}
+
 // a synthetic micro-model that computes a binding's mapping targets from its
 // provided values — so the mapping/condition expressions are evaluated by the
 // real assembler+oracle, never an ad-hoc interpreter.
@@ -89,7 +106,7 @@ export async function evaluateJourney(journey, models, host, configByAlias = {})
     const cfg = { ...(configByAlias[alias] || {}), ...(injected[alias] || {}) };
     const engine = await host.acquire(alias, M.assembled);
     const res = engine.evaluate(cfg);
-    byAlias[alias] = { config: cfg, valueById: res.valueById, outputs: res.outputs, status: res.status, individuals: projectIndividuals(M.merged, res.valueById, cfg) };
+    byAlias[alias] = { config: cfg, valueById: res.valueById, outputs: res.outputs, status: res.status, blocking: blockingOf(M.assembled.ir, res, boundTargetsOf(journey, alias)), individuals: projectIndividuals(M.merged, res.valueById, cfg) };
     for (const b of (journey.bindings || []).filter((x) => x.from === alias)) {
       const provided = {};
       for (const p of (b.contract.provides || [])) { const id = (p.source || '').split(':')[1] || p.as; provided[p.as] = res.valueById[id]; }

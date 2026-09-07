@@ -72,7 +72,10 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   grid.append(stepHost, phaseHost, railHost);
   root.appendChild(grid);
 
-  const reached = () => { const o = order.fold(events); const i = phaseIds.indexOf(o.phase || phaseIds[0]); return phaseIds.slice(0, i + 1); };
+  // reachable = the first phase (always) + every phase in the MONOTONIC reached set
+  // (order.mjs). Never a prefix of the scalar o.phase — a backward Entered can no
+  // longer shrink this, so a completed downstream phase can't silently re-lock.
+  const reached = () => { const o = order.fold(events); return phaseIds.filter((id, i) => i === 0 || o.reached[id]); };
   const stepper = mountStepper(stepHost, { phases: phasesUsed, activeId: order.fold(events).phase || phaseIds[0], reachedIds: reached(), onSelect: gotoPhase });
 
   let currentConfig = { ...(order.fold(events).configByAlias[captureAlias] || {}) };
@@ -176,6 +179,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
         model: cm.merged, ir: cm.assembled.ir, engine, brand: cm.merged.brand || brand, resolveImage, links, modelId: step.model,
         initialConfig: Object.keys(currentConfig).length ? currentConfig : undefined,
         ctaLabel: step.commitLabel,   // authored step CTA ("Lock this design ▸") instead of the showroom default
+        gate: stepGate(step),         // hold the CTA until the step's required info is valid/present
         onConfigChange: (cfg) => { currentConfig = cfg; recompute(); },
         onRequest: (cfg) => completeCapture(step, cfg),
       });
@@ -185,7 +189,10 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   function completeCapture(step, cfg) {
     currentConfig = cfg;
     for (const [f, v] of Object.entries(cfg)) cmd({ type: 'set', alias: step.model, field: f, value: v });
-    cmd({ type: 'commit', alias: step.model, hash: configKey(cfg) });
+    const c = cmd({ type: 'commit', alias: step.model, hash: configKey(cfg) });
+    // if the commit was REJECTED (e.g. another tab already committed this alias) do
+    // NOT advance — firing `enter` regardless is what regressed the phase pointer.
+    if (c.error) { recompute(); gotoPhase(step.phase); return; }
     const to = nextPhase(step.phase);
     cmd({ type: 'enter', phase: to, at: Date.now() });
     recompute();
@@ -226,6 +233,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
         model: M.merged, ir: M.assembled.ir, engine,
         initialConfig: Object.keys(init).length ? init : undefined,
         lockedFields: locked, ctaLabel: step.actionLabel,
+        gate: stepGate(step),         // hold the CTA until the step's required info is valid/present
         onConfigChange: (cfg) => { downstreamConfig[alias] = freeOnly(cfg, locked); recompute(); },
         onRequest: (cfg) => completeDownstream(step, cfg),
       });
@@ -236,11 +244,42 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // binding) — these are the ones locked; everything else is the user's to set.
   const lockedFor = (alias) => new Set(Object.keys((lastResult && lastResult.injected && lastResult.injected[alias]) || {}));
 
+  // ---- step-gate: "certain information must be provided before this step advances" ----
+  // Two DATA-driven inputs feed ONE predicate: (1) `blocking` — the model's firing
+  // error-validations on visible, non-locked fields, handed in synchronously by the mount
+  // (the honest validity signal, not the fault bitfield); (2) the step's `requires` — an
+  // authored field list that must be filled. The reason text is generic (L()) + field
+  // labels from the model's presentation data, so no domain token enters this module.
+  const isFilled = (v) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0);
+  const fieldLabel = (alias, id) => { const f = ((models[alias] && models[alias].merged.fields) || []).find((x) => x.id === id); return (f && f.label) || id; };
+  const requiresMissing = (step, cfg) => {
+    const alias = step.model; const locked = lockedFor(alias); const out = [];
+    for (const req of (step.requires || [])) {
+      const id = typeof req === 'string' ? req : (req && req.field);
+      if (!id || locked.has(id)) continue;   // an upstream-authoritative field is never the user's to fill
+      const v = cfg[id];
+      const unmet = (req && typeof req === 'object' && 'notEqual' in req) ? (!isFilled(v) || v === req.notEqual) : !isFilled(v);
+      if (unmet) out.push(fieldLabel(alias, id));
+    }
+    return out;
+  };
+  // returns the gate closure a mount calls each paint: (cfg, blocking) -> { ok, reason }.
+  const stepGate = (step) => (cfg, blocking) => {
+    const missing = requiresMissing(step, cfg);
+    if (!(blocking && blocking.length) && !missing.length) return { ok: true, reason: '' };
+    const reason = (blocking && blocking.length)
+      ? blocking.map((b) => b.message).filter(Boolean).join(' · ')       // the validation says why
+      : `${L('gateFill', 'Complete these to continue')}: ${missing.join(', ')}`;
+    return { ok: false, reason };
+  };
+
   function completeDownstream(step, cfg) {
     const alias = step.model; const free = freeOnly(cfg, lockedFor(alias));
     downstreamConfig[alias] = free;
     for (const [f, v] of Object.entries(free)) cmd({ type: 'set', alias, field: f, value: v });
-    cmd({ type: 'commit', alias, hash: configKey(free) });
+    const c = cmd({ type: 'commit', alias, hash: configKey(free) });
+    // commit rejected (already committed elsewhere) — do NOT record the step or advance.
+    if (c.error) { recompute(); gotoPhase(step.phase); return; }
     cmd({ type: 'complete', step: step.id, payload: { outcome: step.outcome, label: step.label, value: `Ref ${orderId}-${step.id}`, at: Date.now(), enters: step.enters } });
     const to = nextPhase(step.phase);
     if (to !== step.phase) cmd({ type: 'enter', phase: to, at: Date.now() });

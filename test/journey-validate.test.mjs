@@ -59,3 +59,28 @@ test('a cross-model cycle is an error finding', () => {
     mapping: [{ to: 'deposit', from: { op: 'field', args: ['monthly'] } }] });
   assert.ok(analyzeJourney(j, models).findings.some((f) => f.kind === 'cross-model-cycle'));
 });
+
+test('step.requires: a field that is not a model input is an error', () => {
+  const j = clone(baseJourney);
+  const step = j.process.steps.find((s) => s.model && models[s.model]);
+  step.requires = ['notARealField'];
+  const fs = analyzeJourney(j, models).findings;
+  assert.ok(fs.some((f) => f.kind === 'step-requires' && f.severity === 'error' && /not an input/.test(f.message)));
+});
+
+test('step.requires: a bare requires on a field with a filled default WARNS (no-op gate)', () => {
+  const j = clone(baseJourney);
+  const step = j.process.steps.find((s) => s.model && models[s.model]);
+  const f = models[step.model].merged.fields.find((x) => x.default != null);
+  step.requires = [f.id];
+  const fs = analyzeJourney(j, models).findings;
+  assert.ok(fs.some((x) => x.kind === 'step-requires' && x.severity === 'warn' && /no-op/.test(x.message)));
+});
+
+test('step.requires: { field, notEqual } on a real field is accepted (no finding)', () => {
+  const j = clone(baseJourney);
+  const step = j.process.steps.find((s) => s.model && models[s.model]);
+  const f = models[step.model].merged.fields.find((x) => x.default != null);
+  step.requires = [{ field: f.id, notEqual: '__sentinel_never__' }];
+  assert.ok(!analyzeJourney(j, models).findings.some((x) => x.kind === 'step-requires'));
+});
