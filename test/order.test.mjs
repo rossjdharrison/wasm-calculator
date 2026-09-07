@@ -89,3 +89,49 @@ test('completing the same step twice is rejected', () => {
   const r = apply(ev, { type: 'complete', step: 'sign', payload: {} });
   assert.ok(r.error && /already done/.test(r.error));
 });
+
+test('fold accumulates a monotonic reached set alongside the phase pointer', () => {
+  let ev = startOrder('O-reach', 'j');
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p1' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p2' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p3' }));
+  const o = fold(ev);
+  assert.equal(o.phase, 'p3', 'phase is the last entered (frontier)');
+  assert.deepEqual(o.reached, { p1: true, p2: true, p3: true }, 'reached is the union of every Entered');
+});
+
+test('distinct forward enters still append one Entered each (no behaviour change on the happy path)', () => {
+  let ev = startOrder('O-fwd', 'j');
+  const base = ev.length;
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p1' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p2' }));
+  assert.equal(ev.length, base + 2, 'each new phase appends exactly one Entered');
+});
+
+test('re-entering an already-reached phase is an idempotent no-op (no duplicate Entered)', () => {
+  let ev = startOrder('O-dup', 'j');
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p1' }));
+  const afterFirst = ev.length;
+  const r = apply(ev, { type: 'enter', phase: 'p1' });
+  assert.equal(r.error, null, 'a duplicate enter is accepted, not an error');
+  assert.equal(r.events.length, afterFirst, 'but appends nothing (no-op)');
+});
+
+test('a BACKWARD enter cannot regress the frontier or shrink reached (the cross-tab bug)', () => {
+  let ev = startOrder('O-back', 'j');
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p1' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p2' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p3' }));
+  const r = apply(ev, { type: 'enter', phase: 'p1' });   // stale tab tries to re-enter an earlier phase
+  assert.equal(r.events.length, ev.length, 'backward enter appends nothing');
+  const o = fold(r.events);
+  assert.equal(o.phase, 'p3', 'frontier pointer stays at p3 (no regression)');
+  assert.deepEqual(o.reached, { p1: true, p2: true, p3: true }, 'reached set does not shrink');
+});
+
+test('contractOf exposes the reached set for downstream consumers', () => {
+  let ev = startOrder('O-cr', 'j');
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p1' }));
+  ({ events: ev } = apply(ev, { type: 'enter', phase: 'p2' }));
+  assert.deepEqual(contractOf(fold(ev)).reached, { p1: true, p2: true });
+});

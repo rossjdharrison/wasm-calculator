@@ -657,3 +657,7 @@
 .sign-box .sign-input:focus { outline: none; border-color: var(--accent); }
 .sign-box .sign-go { align-self: flex-start; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
 .sign-box .sign-go:disabled { opacity: .4; cursor: default; }
+/* step-gate: the forward CTA is held disabled until the step's required info is
+   valid/present, with a one-line reason underneath (capture showroom + downstream form). */
+.qc-cta:disabled, #sh-cta:disabled, #sh-cta.is-disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.qc-cta-reason, .sh-cta-reason { margin: 8px 2px 0; font-size: 12.5px; line-height: 1.45; color: var(--accent); }

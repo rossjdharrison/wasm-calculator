@@ -22,13 +22,17 @@ export function startOrder(orderId, journeyId, journeyVersion) {
 }
 
 export function fold(events) {
-  const o = { orderId: null, journeyId: null, journeyVersion: null, phase: null, configByAlias: {}, committed: {}, steps: {}, seq: (events || []).length };
+  // `phase` = the last phase Entered (the frontier / active pointer). `reached` = the
+  // MONOTONIC set of every phase ever Entered — a set only grows, so an out-of-order
+  // or duplicate Entered can never shrink it. Reachability is derived from `reached`,
+  // NOT from a prefix of the scalar `phase` (which a backward Entered would regress).
+  const o = { orderId: null, journeyId: null, journeyVersion: null, phase: null, reached: {}, configByAlias: {}, committed: {}, steps: {}, seq: (events || []).length };
   for (const e of events || []) {
     switch (e.type) {
       case 'Started': o.orderId = e.orderId; o.journeyId = e.journeyId; o.journeyVersion = e.journeyVersion ?? null; break;
       case 'Set': if (!o.committed[e.alias]) (o.configByAlias[e.alias] = o.configByAlias[e.alias] || {})[e.field] = e.value; break;
       case 'Committed': o.committed[e.alias] = e.hash ?? true; break;
-      case 'Entered': o.phase = e.phase; break;
+      case 'Entered': o.phase = e.phase; o.reached[e.phase] = true; break;
       case 'StepDone': o.steps[e.step] = { ...(e.payload || {}), done: true }; break;
     }
   }
@@ -51,6 +55,11 @@ export function apply(events, cmd) {
       out.push({ type: 'Committed', alias: cmd.alias, hash: cmd.hash ?? null });
       break;
     case 'enter':
+      // idempotent + monotonic: entering an already-reached phase is a NO-OP, so a
+      // duplicate or backward Entered can never append (which would regress the
+      // frontier / shrink reachability). Keyed on set MEMBERSHIP, never phase ordering,
+      // so order.mjs stays phase-order-free / domain-neutral.
+      if (o.reached[cmd.phase]) return { events, error: null };
       // `at` (a point_in_time) is passed IN by the caller (journey-view stamps
       // Date.now); order.mjs stays pure/clock-free. Defaults null for legacy events.
       out.push({ type: 'Entered', phase: cmd.phase, at: cmd.at ?? null });
@@ -107,5 +116,5 @@ export function temporalOf(events) {
 // the single-authority contract a downstream context consumes (frozen config +
 // completed steps). Derived values are NOT here — they are recomputed.
 export function contractOf(order) {
-  return { configByAlias: order.configByAlias, committed: order.committed, phase: order.phase, steps: order.steps };
+  return { configByAlias: order.configByAlias, committed: order.committed, phase: order.phase, reached: order.reached, steps: order.steps };
 }

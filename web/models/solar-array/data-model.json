@@ -26,5 +26,23 @@
     { "id": "annualKwh", "label": "Annual generation", "category": "AnnualGeneration", "formula": { "op": "div", "args": [{ "op": "mul", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["systemKwp"] }, 950] }, { "op": "lookup", "args": ["orientationPct", { "op": "field", "args": ["orientation"] }] }] }, 100] } },
     { "id": "co2Avoided", "label": "CO2 avoided", "category": "AnnualGeneration", "formula": { "op": "div", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["annualKwh"] }, 4] }, 10] } },
     { "id": "systemCost", "label": "System cost", "category": "InstallCost", "formula": { "op": "add", "args": [{ "op": "mul", "args": [{ "op": "field", "args": ["panels"] }, { "op": "lookup", "args": ["panelCost", { "op": "field", "args": ["panelType"] }] }] }, 1800] } }
+  ],
+  "validations": [
+    {
+      "id": "orientation_needs_roof",
+      "field": "roofArea",
+      "severity": "error",
+      "message": "East–West and flat roofs need at least 15 m² of usable area to be worthwhile — add roof area or choose South.",
+      "when": {
+        "op": "and",
+        "args": [
+          { "op": "or", "args": [
+            { "op": "eq", "args": [{ "op": "field", "args": ["orientation"] }, "eastWest"] },
+            { "op": "eq", "args": [{ "op": "field", "args": ["orientation"] }, "flat"] }
+          ] },
+          { "op": "lt", "args": [{ "op": "field", "args": ["roofArea"] }, 15] }
+        ]
+      }
+    }
   ]
 }

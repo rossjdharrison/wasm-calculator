@@ -134,8 +134,15 @@ export function validateJourneyShape(journey, opts = {}) {
             else if (!categories.includes(s[k])) W(`${sid}: "${k}" = "${s[k]}" is not a core HQDM category (ok if a domain type declares it)`);
           }
         }
-        for (const k of ['prompt', 'actionLabel', 'commitLabel', 'label']) if (k in s && typeof s[k] !== 'string') W(`${sid}: "${k}" should be a string`);
+        for (const k of ['prompt', 'actionLabel', 'commitLabel', 'label', 'meaning']) if (k in s && typeof s[k] !== 'string') W(`${sid}: "${k}" should be a string`);
         if ('enters' in s && !Array.isArray(s.enters)) E(`${sid}: "enters" must be an array`);
+        // `requires` (optional): fields that must be filled before the step advances.
+        // Each entry is a field-id string, or { field, notEqual } (a sentinel escape hatch
+        // for choice/number fields whose default already reads as filled).
+        if ('requires' in s) {
+          if (!Array.isArray(s.requires)) E(`${sid}: "requires" must be an array`);
+          else s.requires.forEach((r, ri) => { if (isStr(r)) return; if (!isObj(r) || !isStr(r.field)) E(`${sid}: requires[${ri}] must be a field-id string or { field, notEqual }`); });
+        }
       });
     }
   }
