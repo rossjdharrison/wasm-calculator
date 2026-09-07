@@ -46,7 +46,7 @@ test('configuredClassOf reads the `configures` tag; falls back to the neutral cl
 });
 
 test('purchasePriceOf picks the emphasised amount_of_money — both models', () => {
-  assert.equal(purchasePriceOf(V.data, V.pres).localId, 'grandTotal');
+  assert.equal(purchasePriceOf(V.data, V.pres).localId, 'otr');
   assert.ok(purchasePriceOf(A.data, A.pres), 'antiques surfaces an amount_of_money too');
 });
 
@@ -58,14 +58,14 @@ test('projectIndividuals yields a priced spec payload from an evaluation', () =>
   const p = projectIndividuals(merged, res.valueById, cfg);
   assert.equal(p.model, V.data.id);
   assert.ok(p.price && typeof p.price.amount === 'number' && p.price.amount > 0, 'price carries a numeric amount');
-  assert.equal(p.price.localId, 'grandTotal');
+  assert.equal(p.price.localId, 'otr');
   assert.ok(p.spec && p.spec.parts && ('model' in p.spec.parts), 'spec carries its part values from the config');
   assert.equal(refOf('x', 'y'), 'x#y');
 });
 
 test('categoryOf reads field & computed tags; shipped models have no unknown categories', () => {
   assert.equal(categoryOf(V.data, 'model'), 'VehicleClass');
-  assert.equal(categoryOf(V.data, 'grandTotal'), 'PurchasePrice');
+  assert.equal(categoryOf(V.data, 'otr'), 'PurchasePrice');
   assert.deepEqual(unknownCategories(V.data), []);
   assert.deepEqual(unknownCategories(A.data), []);
 });

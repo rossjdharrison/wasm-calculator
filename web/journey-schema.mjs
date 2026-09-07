@@ -143,6 +143,17 @@ export function validateJourneyShape(journey, opts = {}) {
           if (!Array.isArray(s.requires)) E(`${sid}: "requires" must be an array`);
           else s.requires.forEach((r, ri) => { if (isStr(r)) return; if (!isObj(r) || !isStr(r.field)) E(`${sid}: requires[${ri}] must be a field-id string or { field, notEqual }`); });
         }
+        // `availableWhen` (optional): a conditional guard — the step is skipped when its
+        // test is false. `reads` pull upstream values; `test` is an expression over them.
+        if ('availableWhen' in s) {
+          const aw = s.availableWhen;
+          if (!isObj(aw)) E(`${sid}: "availableWhen" must be an object`);
+          else {
+            if (!Array.isArray(aw.reads)) E(`${sid}: availableWhen.reads must be an array`);
+            else aw.reads.forEach((r, ri) => { if (!isObj(r) || !isStr(r.as) || !isStr(r.from) || !isStr(r.source)) E(`${sid}: availableWhen.reads[${ri}] needs { as, from, source }`); });
+            if (!('test' in aw) || !isExpr(aw.test)) E(`${sid}: availableWhen.test must be an expression`);
+          }
+        }
       });
     }
   }

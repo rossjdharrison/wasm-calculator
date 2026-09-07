@@ -25,9 +25,17 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // process phases come from DATA (the domain/journey), never a baked-in constant.
   const PH = (phases && phases.length) ? phases : phasesOf(journey);
   const L = (k, d) => (labels && labels[k]) || (journey.labels && journey.labels[k]) || d;   // domain/journey label vocabulary
-  const phaseIds = PH.filter((p) => steps.some((s) => s.phase === p.id)).map((p) => p.id);
-  const phasesUsed = PH.filter((p) => phaseIds.includes(p.id));
+  const allPhaseIds = PH.filter((p) => steps.some((s) => s.phase === p.id)).map((p) => p.id);
   const stepFor = (phaseId) => steps.find((s) => s.phase === phaseId);
+  // a step can be conditionally SKIPPED via its `availableWhen` guard (evaluated in
+  // compose → lastResult.stepGuards). An inactive step's phase drops OUT of the live
+  // flow, so the stepper, nextPhase and reachability all operate over the ACTIVE phases.
+  const guards = () => (lastResult && lastResult.stepGuards) || {};
+  const phaseActive = (id) => { const s = stepFor(id); return !s || !s.availableWhen || guards()[s.id] !== false; };
+  const phaseIds = () => allPhaseIds.filter(phaseActive);
+  const phasesUsed = () => PH.filter((p) => phaseIds().includes(p.id));
+  const firstPhase = () => phaseIds()[0] || allPhaseIds[0];
+  let lastResult = null;   // the latest evaluateJourney result (guards()/reached()/rail read it); declared here so firstPhase() below is safe
   const captureStep = steps.find((s) => s.kind === 'capture') || steps[0] || {};
   const captureAlias = captureStep.model;
   const aliasLabel = (a) => (models[a] && models[a].merged.name) || a;
@@ -36,7 +44,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // journey's own declared types (e.g. lifecycle states specializing `state`).
   const mergedTypes = () => ({ ...typesOf(captureAlias), ...(journey.types || {}) });
   const fmt = (ms) => { try { return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (_) { return ''; } };
-  const nextPhase = (id) => { const i = phaseIds.indexOf(id); return phaseIds[Math.min(phaseIds.length - 1, i + 1)]; };
+  const nextPhase = (id) => { const ids = phaseIds(); const i = ids.indexOf(id); return ids[Math.min(ids.length - 1, i + 1)]; };
 
   // ---- order (event-sourced): resume or start fresh ----
   let events;
@@ -75,12 +83,21 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   // reachable = the first phase (always) + every phase in the MONOTONIC reached set
   // (order.mjs). Never a prefix of the scalar o.phase — a backward Entered can no
   // longer shrink this, so a completed downstream phase can't silently re-lock.
-  const reached = () => { const o = order.fold(events); return phaseIds.filter((id, i) => i === 0 || o.reached[id]); };
-  const stepper = mountStepper(stepHost, { phases: phasesUsed, activeId: order.fold(events).phase || phaseIds[0], reachedIds: reached(), onSelect: gotoPhase });
+  const reached = () => { const o = order.fold(events); return phaseIds().filter((id, i) => i === 0 || o.reached[id]); };
+  // the stepper is (re)mounted whenever the ACTIVE phase set changes (a guard flipped),
+  // so a conditionally-skipped step appears/disappears live; otherwise setActive suffices.
+  let stepper = null, stepperKey = '';
+  let viewed = order.fold(events).phase || firstPhase();
+  function renderStepper(activeId) {
+    if (activeId) viewed = activeId;
+    stepHost.innerHTML = '';
+    stepper = mountStepper(stepHost, { phases: phasesUsed(), activeId: viewed, reachedIds: reached(), onSelect: gotoPhase });
+    stepperKey = phaseIds().join(',');
+  }
 
   let currentConfig = { ...(order.fold(events).configByAlias[captureAlias] || {}) };
   const downstreamConfig = {};   // alias → the user's FREE (non-bound) inputs, live
-  let lastResult = null;
+  renderStepper();   // initial mount (guards resolve to all-active until the first recompute)
 
   async function recompute() {
     const o = order.fold(events);
@@ -90,6 +107,10 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     // field is re-injected authoritatively inside evaluateJourney, so it always wins).
     for (const a in downstreamConfig) if (!o.committed[a]) configByAlias[a] = { ...(o.configByAlias[a] || {}), ...downstreamConfig[a] };
     try { lastResult = await evaluateJourney(journey, models, host, configByAlias); } catch (_) { lastResult = null; }
+    // a flipped availableWhen guard changes the active phase set → re-mount the stepper
+    // so the conditional step appears/disappears; otherwise just refresh reached/active.
+    if (phaseIds().join(',') !== stepperKey) renderStepper();
+    else if (stepper) stepper.setActive(viewed, reached());
     renderRail();
   }
 
@@ -136,8 +157,8 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     const t = order.temporalOf(events);
     const byPhase = {};
     for (const pe of t.phaseEntries) if (!(pe.phase in byPhase)) byPhase[pe.phase] = pe.at; // earliest per phase
-    const cur = o.phase || phaseIds[0];
-    const parts = phaseIds.filter((id) => id in byPhase || id === cur)
+    const cur = o.phase || firstPhase();
+    const parts = phaseIds().filter((id) => id in byPhase || id === cur)
       .map((id) => ({ label: (PH.find((p) => p.id === id) || {}).label || id, at: byPhase[id] != null ? fmt(byPhase[id]) : null, current: id === cur }));
     if (parts.length) railHost.appendChild(renderByCategory('period_of_time', { label: L('lifecycleLabel', 'Lifecycle'), parts }, mergedTypes()));
     for (const [, entries] of Object.entries(t.statesByIndividual)) {
@@ -148,6 +169,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
 
   // ---- generic step rendering ----
   function gotoPhase(id) {
+    viewed = id;
     stepper.setActive(id, reached());
     phaseHost.innerHTML = '';
     const step = stepFor(id);
@@ -368,13 +390,13 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     const fresh = loadEvents(orderId);
     if (fresh.length > events.length && order.fold(fresh).orderId === orderId) {
       events = fresh;
-      stepper.setActive(order.fold(events).phase || phaseIds[0], reached());
+      stepper.setActive(order.fold(events).phase || firstPhase(), reached());
       recompute();
     }
   });
 
   // compute the journey once BEFORE mounting the active phase, so a phase that
   // resumes straight into a downstream capture/preview has its injected figures ready.
-  recompute().then(() => gotoPhase(order.fold(events).phase || phaseIds[0]));
+  recompute().then(() => gotoPhase(order.fold(events).phase || firstPhase()));
   return { recompute, orderId, destroy: stopSync };
 }

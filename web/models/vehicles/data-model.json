@@ -674,117 +674,6 @@
           "id": "lease"
         }
       ]
-    },
-    {
-      "id": "term",
-      "type": "choice",
-      "default": "t36",
-      "options": [
-        {
-          "id": "t24"
-        },
-        {
-          "id": "t36"
-        },
-        {
-          "id": "t48"
-        },
-        {
-          "id": "t60"
-        }
-      ]
-    },
-    {
-      "id": "deposit",
-      "type": "number",
-      "min": {
-        "op": "mul",
-        "args": [
-          {
-            "op": "field",
-            "args": [
-              "otr"
-            ]
-          },
-          0.1
-        ]
-      },
-      "max": {
-        "op": "field",
-        "args": [
-          "otr"
-        ]
-      },
-      "step": 100,
-      "unit": "GBP"
-    },
-    {
-      "id": "annualMileage",
-      "type": "number",
-      "default": 10000,
-      "min": 5000,
-      "max": 30000,
-      "step": 1000,
-      "unit": "mi"
-    },
-    {
-      "id": "fulfilment",
-      "type": "choice",
-      "default": "collect",
-      "options": [
-        {
-          "id": "collect"
-        },
-        {
-          "id": "deliver"
-        }
-      ]
-    },
-    {
-      "id": "destination",
-      "type": "choice",
-      "default": "nl",
-      "options": [
-        {
-          "id": "nl"
-        },
-        {
-          "id": "uk"
-        },
-        {
-          "id": "usa"
-        },
-        {
-          "id": "uae"
-        },
-        {
-          "id": "ch"
-        },
-        {
-          "id": "sg"
-        },
-        {
-          "id": "hk"
-        },
-        {
-          "id": "jp"
-        }
-      ]
-    },
-    {
-      "id": "serviceAddons",
-      "type": "multichoice",
-      "options": [
-        {
-          "id": "insurance"
-        },
-        {
-          "id": "vipHandover"
-        },
-        {
-          "id": "securityDetail"
-        }
-      ]
     }
   ],
   "effects": [
@@ -978,24 +867,6 @@
         "w20": 0.94
       }
     },
-    "termMonths": {
-      "kind": "1d",
-      "map": {
-        "t24": 24,
-        "t36": 36,
-        "t48": 48,
-        "t60": 60
-      }
-    },
-    "leaseResidual": {
-      "kind": "1d",
-      "map": {
-        "t24": 0.62,
-        "t36": 0.55,
-        "t48": 0.48,
-        "t60": 0.42
-      }
-    },
     "specHp": {
       "kind": "1d",
       "map": {
@@ -1123,19 +994,6 @@
         "sport": 0.96,
         "luxury": 1,
         "offRoad": 1.05
-      }
-    },
-    "shippingRates": {
-      "kind": "1d",
-      "map": {
-        "nl": 0,
-        "uk": 2200,
-        "usa": 3800,
-        "uae": 4200,
-        "ch": 1500,
-        "sg": 5200,
-        "hk": 5400,
-        "jp": 4900
       }
     }
   },
@@ -1482,255 +1340,6 @@
       "category": "PurchasePrice"
     },
     {
-      "id": "monthlyPayment",
-      "label": "Monthly payment",
-      "currency": true,
-      "formula": {
-        "op": "if",
-        "args": [
-          {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "financing"
-                ]
-              },
-              "finance"
-            ]
-          },
-          {
-            "op": "div",
-            "args": [
-              {
-                "op": "mul",
-                "args": [
-                  {
-                    "op": "sub",
-                    "args": [
-                      {
-                        "op": "field",
-                        "args": [
-                          "otr"
-                        ]
-                      },
-                      {
-                        "op": "field",
-                        "args": [
-                          "deposit"
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "op": "div",
-                    "args": [
-                      0.079,
-                      12
-                    ]
-                  }
-                ]
-              },
-              {
-                "op": "sub",
-                "args": [
-                  1,
-                  {
-                    "op": "pow",
-                    "args": [
-                      {
-                        "op": "add",
-                        "args": [
-                          1,
-                          {
-                            "op": "div",
-                            "args": [
-                              0.079,
-                              12
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "op": "mul",
-                        "args": [
-                          -1,
-                          {
-                            "op": "lookup",
-                            "args": [
-                              "termMonths",
-                              {
-                                "op": "field",
-                                "args": [
-                                  "term"
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "op": "if",
-            "args": [
-              {
-                "op": "eq",
-                "args": [
-                  {
-                    "op": "field",
-                    "args": [
-                      "financing"
-                    ]
-                  },
-                  "lease"
-                ]
-              },
-              {
-                "op": "add",
-                "args": [
-                  {
-                    "op": "div",
-                    "args": [
-                      {
-                        "op": "sub",
-                        "args": [
-                          {
-                            "op": "field",
-                            "args": [
-                              "otr"
-                            ]
-                          },
-                          {
-                            "op": "mul",
-                            "args": [
-                              {
-                                "op": "field",
-                                "args": [
-                                  "otr"
-                                ]
-                              },
-                              {
-                                "op": "lookup",
-                                "args": [
-                                  "leaseResidual",
-                                  {
-                                    "op": "field",
-                                    "args": [
-                                      "term"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "op": "lookup",
-                        "args": [
-                          "termMonths",
-                          {
-                            "op": "field",
-                            "args": [
-                              "term"
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "op": "mul",
-                    "args": [
-                      {
-                        "op": "add",
-                        "args": [
-                          {
-                            "op": "field",
-                            "args": [
-                              "otr"
-                            ]
-                          },
-                          {
-                            "op": "mul",
-                            "args": [
-                              {
-                                "op": "field",
-                                "args": [
-                                  "otr"
-                                ]
-                              },
-                              {
-                                "op": "lookup",
-                                "args": [
-                                  "leaseResidual",
-                                  {
-                                    "op": "field",
-                                    "args": [
-                                      "term"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "op": "div",
-                        "args": [
-                          0.079,
-                          24
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "op": "mul",
-                    "args": [
-                      {
-                        "op": "max",
-                        "args": [
-                          0,
-                          {
-                            "op": "sub",
-                            "args": [
-                              {
-                                "op": "field",
-                                "args": [
-                                  "annualMileage"
-                                ]
-                              },
-                              10000
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "op": "div",
-                        "args": [
-                          0.02,
-                          12
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              0
-            ]
-          }
-        ]
-      },
-      "category": "PurchasePrice"
-    },
-    {
       "id": "range",
       "label": "Range / economy",
       "formula": {
@@ -1991,7 +1600,8 @@
       "category": "SpecFigure"
     },
     {
-      "id": "shippingCost",
+      "id": "paymentMode",
+      "label": "Payment mode",
       "formula": {
         "op": "if",
         "args": [
@@ -2001,246 +1611,37 @@
               {
                 "op": "field",
                 "args": [
-                  "fulfilment"
+                  "financing"
                 ]
               },
-              "collect"
+              "cash"
             ]
           },
           0,
           {
-            "op": "lookup",
-            "args": [
-              "shippingRates",
-              {
-                "op": "field",
-                "args": [
-                  "destination"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "currency": true
-    },
-    {
-      "id": "addonsCost",
-      "formula": {
-        "op": "add",
-        "args": [
-          {
             "op": "if",
             "args": [
               {
-                "op": "has",
-                "args": [
-                  "serviceAddons",
-                  "insurance"
-                ]
-              },
-              1900,
-              0
-            ]
-          },
-          {
-            "op": "if",
-            "args": [
-              {
-                "op": "has",
-                "args": [
-                  "serviceAddons",
-                  "vipHandover"
-                ]
-              },
-              1200,
-              0
-            ]
-          },
-          {
-            "op": "if",
-            "args": [
-              {
-                "op": "has",
-                "args": [
-                  "serviceAddons",
-                  "securityDetail"
-                ]
-              },
-              3500,
-              0
-            ]
-          }
-        ]
-      },
-      "currency": true
-    },
-    {
-      "id": "fulfilmentTotal",
-      "formula": {
-        "op": "add",
-        "args": [
-          {
-            "op": "field",
-            "args": [
-              "shippingCost"
-            ]
-          },
-          {
-            "op": "field",
-            "args": [
-              "addonsCost"
-            ]
-          }
-        ]
-      },
-      "currency": true
-    },
-    {
-      "id": "grandTotal",
-      "formula": {
-        "op": "add",
-        "args": [
-          {
-            "op": "field",
-            "args": [
-              "otr"
-            ]
-          },
-          {
-            "op": "field",
-            "args": [
-              "fulfilmentTotal"
-            ]
-          }
-        ]
-      },
-      "currency": true,
-      "category": "PurchasePrice"
-    }
-  ],
-  "validations": [
-    {
-      "id": "deposit_min",
-      "field": "deposit",
-      "severity": "error",
-      "message": "Deposit must be at least 10% of the on-the-road price.",
-      "when": {
-        "op": "and",
-        "args": [
-          {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "financing"
-                ]
-              },
-              "finance"
-            ]
-          },
-          {
-            "op": "lt",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "deposit"
-                ]
-              },
-              {
-                "op": "mul",
+                "op": "eq",
                 "args": [
                   {
                     "op": "field",
                     "args": [
-                      "otr"
+                      "financing"
                     ]
                   },
-                  0.1
+                  "finance"
                 ]
-              }
+              },
+              1,
+              2
             ]
           }
         ]
       }
-    },
-    {
-      "id": "deposit_max",
-      "field": "deposit",
-      "severity": "error",
-      "message": "Deposit cannot exceed the on-the-road price.",
-      "when": {
-        "op": "and",
-        "args": [
-          {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "financing"
-                ]
-              },
-              "finance"
-            ]
-          },
-          {
-            "op": "gt",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "deposit"
-                ]
-              },
-              {
-                "op": "field",
-                "args": [
-                  "otr"
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": "mileage_high",
-      "field": "annualMileage",
-      "severity": "warning",
-      "message": "High annual mileage significantly increases lease cost.",
-      "when": {
-        "op": "and",
-        "args": [
-          {
-            "op": "eq",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "financing"
-                ]
-              },
-              "lease"
-            ]
-          },
-          {
-            "op": "gt",
-            "args": [
-              {
-                "op": "field",
-                "args": [
-                  "annualMileage"
-                ]
-              },
-              15000
-            ]
-          }
-        ]
-      }
-    },
+    }
+  ],
+  "validations": [
     {
       "id": "big_wheels_info",
       "field": "wheels",
@@ -2256,6 +1657,29 @@
             ]
           },
           "w20"
+        ]
+      }
+    },
+    {
+      "id": "finance_followup",
+      "field": "financing",
+      "severity": "info",
+      "message": "A financing plan is arranged on a dedicated page after your build.",
+      "when": {
+        "op": "not",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "field",
+                "args": [
+                  "financing"
+                ]
+              },
+              "cash"
+            ]
+          }
         ]
       }
     }

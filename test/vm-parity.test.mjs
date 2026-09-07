@@ -62,9 +62,9 @@ function compare(label, inputs) {
 // ---- named golden scenarios (same as ref-eval) ----
 const scenarios = {
   Ex1: { model: 'hotHatch', trim: 'standard', engine: 'electric', drivetrain: 'fwd', wheels: 'w17', colour: 'solid', packages: [], financing: 'cash' },
-  Ex2: { model: 'ruggedOffroader', trim: 'offRoad', engine: 'hybrid', drivetrain: 'fwd', wheels: 'w18', colour: 'metallic', packages: ['winter', 'tech', 'towing'], financing: 'finance', term: 't48', deposit: 9000 },
-  Ex3: { model: 'gtCoupe', trim: 'sport', engine: 'petrol20turbo', drivetrain: 'awd', wheels: 'w19', colour: 'matte', packages: ['tech', 'performance', 'driverAssist', 'premiumAudio'], financing: 'finance', term: 't36', deposit: 12000 },
-  Ex4: { model: 'hypercar', trim: 'luxury', engine: 'electric', drivetrain: 'awd', wheels: 'w20', colour: 'premium', packages: ['winter', 'tech', 'premiumAudio', 'panoramicRoof'], financing: 'lease', term: 't36', annualMileage: 15000 },
+  Ex2: { model: 'ruggedOffroader', trim: 'offRoad', engine: 'hybrid', drivetrain: 'fwd', wheels: 'w18', colour: 'metallic', packages: ['winter', 'tech', 'towing'], financing: 'finance' },
+  Ex3: { model: 'gtCoupe', trim: 'sport', engine: 'petrol20turbo', drivetrain: 'awd', wheels: 'w19', colour: 'matte', packages: ['tech', 'performance', 'driverAssist', 'premiumAudio'], financing: 'finance' },
+  Ex4: { model: 'hypercar', trim: 'luxury', engine: 'electric', drivetrain: 'awd', wheels: 'w20', colour: 'premium', packages: ['winter', 'tech', 'premiumAudio', 'panoramicRoof'], financing: 'lease' },
 };
 for (const [name, inputs] of Object.entries(scenarios)) {
   test(`parity — ${name}`, () => compare(name, inputs));
@@ -84,8 +84,7 @@ test('parity — 500 random configs', () => {
     const inputs = {
       model: pick(opts('model')), trim: pick(opts('trim')), engine: pick(opts('engine')),
       drivetrain: pick(opts('drivetrain')), wheels: pick(opts('wheels')), colour: pick(opts('colour')),
-      packages, financing: pick(opts('financing')), term: pick(opts('term')),
-      deposit: Math.floor(rnd() * 60000), annualMileage: 5000 + Math.floor(rnd() * 25000),
+      packages, financing: pick(opts('financing')),
     };
     compare(`fuzz#${n} ${JSON.stringify(inputs)}`, inputs);
   }

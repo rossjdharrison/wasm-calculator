@@ -1,0 +1,27 @@
+{
+  "name": "Insurance",
+  "brand": { "mark": "ROWBLAA", "rest": "ASSURANCE", "descriptor": "Cover", "tagline": "Haarlem" },
+  "sections": [
+    { "id": "cover", "label": "Cover", "order": 1 },
+    { "id": "terms", "label": "Terms", "order": 2 }
+  ],
+  "fields": [
+    { "id": "cover", "label": "Level of cover", "control": "buttons", "section": "cover", "width": "full", "options": [
+      { "id": "thirdParty", "label": "Third party" },
+      { "id": "comprehensive", "label": "Comprehensive" },
+      { "id": "premium", "label": "Premium (agreed value)" }
+    ] },
+    { "id": "excess", "label": "Voluntary excess", "control": "buttons", "section": "terms", "width": "full", "options": [
+      { "id": "e250", "label": "€250" },
+      { "id": "e500", "label": "€500" },
+      { "id": "e1000", "label": "€1,000" }
+    ] },
+    { "id": "transitCover", "label": "Add transit cover while the vehicle is shipped", "control": "switch", "section": "terms", "width": "full" },
+    { "id": "vehicleValue", "label": "Insured value (from your build)", "control": "stepper", "section": "terms", "width": "half", "decimals": 0 }
+  ],
+  "outputs": [
+    { "id": "totalPremium", "label": "Insurance premium", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "basePremium", "label": "Annual road cover", "role": "subtotal", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "transitAdd", "label": "Transit cover", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+  ]
+}

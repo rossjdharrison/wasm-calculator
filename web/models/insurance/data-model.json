@@ -1,0 +1,49 @@
+{
+  "$schema": "../../data.schema.json",
+  "id": "insurance-configurator",
+  "version": "1.0.0",
+  "currency": "EUR",
+  "configures": "InsurancePolicy",
+  "types": {
+    "InsurancePolicy": { "specializes": ["class_of_physical_object"] },
+    "InsurancePremium": { "specializes": ["amount_of_money"] },
+    "InsuredValue": { "specializes": ["amount_of_money"] }
+  },
+  "fields": [
+    { "id": "cover", "type": "choice", "default": "comprehensive", "options": [
+      { "id": "thirdParty" },
+      { "id": "comprehensive" },
+      { "id": "premium" }
+    ] },
+    { "id": "excess", "type": "choice", "default": "e500", "options": [
+      { "id": "e250" }, { "id": "e500" }, { "id": "e1000" }
+    ] },
+    { "id": "transitCover", "type": "boolean", "default": false },
+    { "id": "vehicleValue", "type": "number", "default": 50000, "min": 0, "step": 500, "category": "InsuredValue" }
+  ],
+  "tables": {
+    "coverRate": { "kind": "1d", "map": { "thirdParty": 0.012, "comprehensive": 0.022, "premium": 0.032 } },
+    "excessFactor": { "kind": "1d", "map": { "e250": 1.12, "e500": 1, "e1000": 0.9 } }
+  },
+  "computed": [
+    { "id": "basePremium", "label": "Annual road cover", "category": "InsurancePremium", "formula": { "op": "mul", "args": [
+      { "op": "mul", "args": [{ "op": "field", "args": ["vehicleValue"] }, { "op": "lookup", "args": ["coverRate", { "op": "field", "args": ["cover"] }] }] },
+      { "op": "lookup", "args": ["excessFactor", { "op": "field", "args": ["excess"] }] }
+    ] } },
+    { "id": "transitAdd", "label": "Transit cover (shipping)", "category": "InsurancePremium", "formula": { "op": "if", "args": [
+      { "op": "field", "args": ["transitCover"] },
+      { "op": "mul", "args": [{ "op": "field", "args": ["vehicleValue"] }, 0.006] },
+      0
+    ] } },
+    { "id": "totalPremium", "label": "Insurance premium", "category": "InsurancePremium", "formula": { "op": "add", "args": [{ "op": "field", "args": ["basePremium"] }, { "op": "field", "args": ["transitAdd"] }] } }
+  ],
+  "validations": [
+    {
+      "id": "premium_cover_note",
+      "field": "cover",
+      "severity": "info",
+      "message": "Premium cover adds agreed-value protection and a courtesy vehicle.",
+      "when": { "op": "eq", "args": [{ "op": "field", "args": ["cover"] }, "premium"] }
+    }
+  ]
+}

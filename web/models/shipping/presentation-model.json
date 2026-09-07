@@ -1,0 +1,32 @@
+{
+  "name": "Shipping",
+  "brand": { "mark": "ROWBLAA", "rest": "LOGISTICS", "descriptor": "Delivery", "tagline": "Haarlem" },
+  "sections": [
+    { "id": "route", "label": "Route", "order": 1 },
+    { "id": "method", "label": "Method", "order": 2 }
+  ],
+  "fields": [
+    { "id": "destination", "label": "Destination", "control": "dropdown", "section": "route", "width": "full", "options": [
+      { "id": "nl", "label": "Netherlands (collection region)" },
+      { "id": "uk", "label": "United Kingdom" },
+      { "id": "usa", "label": "United States" },
+      { "id": "uae", "label": "United Arab Emirates" },
+      { "id": "ch", "label": "Switzerland" },
+      { "id": "sg", "label": "Singapore" },
+      { "id": "hk", "label": "Hong Kong" },
+      { "id": "jp", "label": "Japan" }
+    ] },
+    { "id": "method", "label": "Freight method", "control": "buttons", "section": "method", "width": "full", "options": [
+      { "id": "collect", "label": "Collect in person" },
+      { "id": "roro", "label": "RoRo (roll-on/off)" },
+      { "id": "container", "label": "Enclosed container" },
+      { "id": "express", "label": "Express air freight" }
+    ] },
+    { "id": "vehicleWeight", "label": "Kerb weight (from your build)", "control": "stepper", "section": "method", "width": "half", "decimals": 0 }
+  ],
+  "outputs": [
+    { "id": "shippingCost", "label": "Estimated shipping", "emphasis": true, "role": "total", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "baseRate", "label": "Base route rate", "role": "subtotal", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } },
+    { "id": "weightSurcharge", "label": "Weight surcharge", "format": { "type": "currency", "decimals": 0, "currencyCode": "EUR" } }
+  ]
+}
