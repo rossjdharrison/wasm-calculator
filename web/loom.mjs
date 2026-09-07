@@ -13,7 +13,7 @@
 // the Configurator and the other editors read.
 // =============================================================================
 import { loadEngine, mergeModel, splitModel } from './assembler.mjs';
-import { currentData, currentPres, saveData, savePres, resetModel, MODEL_ID, loadDomain } from './store.mjs';
+import { currentData, currentPres, saveData, savePres, resetModel, MODEL_ID, loadDomain, loadJourneyCatalog, loadJourney } from './store.mjs';
 import { validateFormula, tryAssemble } from './model-validate.mjs';
 import * as edit from './model-edit.mjs';
 import { formatOutput } from './ui.mjs';
@@ -29,6 +29,22 @@ const $ = (s, r = document) => r.querySelector(s);
 // model into the top bar (from the shared studioRoutes, so it can't drift from the shell
 // or the Configurator's Studio menu). The brand lockup links Home.
 (() => { const nav = $('#loomnav'); if (!nav) return; for (const r of studioRoutes(MODEL_ID)) { if (r.key === 'loom') continue; const a = document.createElement('a'); a.href = r.href; a.textContent = r.label; nav.appendChild(a); } })();
+
+// "Zoom out to the journey" (↥): point at the journey that ACTUALLY contains this
+// model, not a hardcoded default. A model can be in more than one journey — the
+// first in catalogue order wins; a model in none zooms out to the collections home.
+// (Runs async after boot; the static href in loom.html is only a fallback.)
+(async () => {
+  const btn = $('#zup'); if (!btn || !MODEL_ID) return;
+  try {
+    const cat = await loadJourneyCatalog();
+    for (const j of (cat.journeys || [])) {
+      const doc = await loadJourney(j.id);
+      if ((doc.models || []).some((m) => m.ref === MODEL_ID)) { btn.href = `journey.html?j=${encodeURIComponent(j.id)}`; btn.title = `Zoom out to ${doc.title || j.title || j.id}`; return; }
+    }
+    btn.href = 'index.html'; btn.title = 'Back to collections';   // not part of any journey
+  } catch { /* leave the static fallback href */ }
+})();
 
 // re-skin the brand from the domain (so a swapped domain re-skins the Loom too).
 loadDomain().then((d) => { const b = d && d.brand; if (!b) return; const el = $('a.brand'); if (el) el.innerHTML = `<b>${b.mark || ''}</b> <i>${b.rest || ''}</i> <em>· Live model canvas</em>`; const name = [b.mark, b.rest].filter(Boolean).join(' '); if (name) document.title = `${name} · Live model canvas`; }).catch(() => {});
