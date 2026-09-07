@@ -19,13 +19,32 @@
       "id": "solar-array",
       "title": "Solar array",
       "descriptor": "Solar",
-      "blurb": "Size a rooftop solar array — its output is energy (annual kWh), not a price."
+      "blurb": "Size a rooftop solar array — its output is energy (annual kWh), not a price.",
+      "hero": "solar/panel-standard.png"
     },
     {
       "id": "solar-battery",
       "title": "Battery storage",
       "descriptor": "Storage",
       "blurb": "Home battery storage to pair with a solar array."
+    },
+    {
+      "id": "shipping",
+      "title": "Shipping",
+      "descriptor": "Transport",
+      "blurb": "RoRo & container freight from Rotterdam, with landed customs & excise per destination."
+    },
+    {
+      "id": "insurance",
+      "title": "Insurance",
+      "descriptor": "Cover",
+      "blurb": "Motor cover by level and excess, with optional transit protection while shipped."
+    },
+    {
+      "id": "financing",
+      "title": "Financing",
+      "descriptor": "Finance",
+      "blurb": "Finance or lease any build — real amortization and residual-value lease maths."
     }
   ]
 }

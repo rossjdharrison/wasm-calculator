@@ -3,7 +3,9 @@
   "id": "financing-configurator",
   "version": "1.1.0",
   "currency": "EUR",
+  "configures": "FinancePlan",
   "types": {
+    "FinancePlan": { "specializes": ["class_of_physical_object"] },
     "LoanPrincipal": { "specializes": ["amount_of_money"] },
     "MonthlyPayment": { "specializes": ["amount_of_money"] },
     "FinanceCharge": { "specializes": ["amount_of_money"] },

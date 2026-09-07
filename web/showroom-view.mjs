@@ -13,14 +13,14 @@
 // the view code consumes, so the wasm/engine stay untouched.
 // =============================================================================
 
-import { el, placeholderSVG as placeholder, money, formatOutput, openModal, mountCarousel, renderSummary, ICONS as ICON } from './ui.mjs';
+import { el, placeholderSVG as placeholder, money, formatOutput, openModal, mountCarousel, renderSummary, ICONS as ICON, getDisplayCurrency, setDisplayCurrency } from './ui.mjs';
 import { decodeValue } from './assembler.mjs';
 import { projectIndividuals } from './individuals.mjs';
 import { loadRates } from './fx.mjs';
 import { add as basketAdd, count as basketCount, onChange as basketOnChange, openBasketModal } from './basket.mjs';
 import { save as savedSave, remove as savedRemove, findByConfig as savedFindByConfig, count as savedCount, onChange as savedOnChange, openSavedModal } from './saved.mjs';
 
-export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig, onConfigChange, onRequest, lockedFields, ctaLabel, gate }) {
+export function mountShowroom(root, { model, ir, engine, brand, resolveImage, links, modelId, initialConfig, onConfigChange, onRequest, lockedFields, ctaLabel, gate, onCurrencyChange }) {
   // fields written by an upstream binding (single-authority): shown read-only and
   // never writable — the injected value stays authoritative. Domain-agnostic.
   const lockedFieldSet = lockedFields instanceof Set ? lockedFields : new Set(lockedFields || []);
@@ -66,7 +66,10 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   // (defaults to the base). fx rates load asynchronously; until then non-base
   // currencies simply render in the base. Conversion happens in formatOutput.
   const baseCurrency = model.currency || 'EUR';
-  let unitSystem = null, displayCurrency = baseCurrency, fxRates = null;
+  // seed the display currency from the shared preference (a choice made anywhere persists),
+  // but only if this model actually offers it; else fall back to the model's base.
+  const _prefCur = getDisplayCurrency();
+  let unitSystem = null, displayCurrency = (_prefCur && (model.currencies || []).includes(_prefCur)) ? _prefCur : baseCurrency, fxRates = null;
   const fmtOpts = () => ({
     units: model.units, unitSystem,
     rates: fxRates ? { base: fxRates.base, ...fxRates.rates } : null,
@@ -178,7 +181,7 @@ export function mountShowroom(root, { model, ir, engine, brand, resolveImage, li
   if ((model.currencies || []).length > 1) {
     const curSel = el('select', 'hd-sel', { 'aria-label': 'Display currency', title: 'Display currency' });
     for (const c of model.currencies) { const op = el('option'); op.value = c; op.textContent = c; if (c === displayCurrency) op.selected = true; curSel.appendChild(op); }
-    curSel.addEventListener('change', () => { displayCurrency = curSel.value; render(); });
+    curSel.addEventListener('change', () => { displayCurrency = curSel.value; setDisplayCurrency(displayCurrency); render(); if (onCurrencyChange) onCurrencyChange(displayCurrency); });
     view.appendChild(curSel);
   }
   if (model.units) {

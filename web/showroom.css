@@ -661,3 +661,6 @@
    valid/present, with a one-line reason underneath (capture showroom + downstream form). */
 .qc-cta:disabled, #sh-cta:disabled, #sh-cta.is-disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 .qc-cta-reason, .sh-cta-reason { margin: 8px 2px 0; font-size: 12.5px; line-height: 1.45; color: var(--accent); }
+/* journey rail: display-currency selector (persists the choice across the whole journey) */
+.rail-cur { margin: 4px 0 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+.rail-cur:focus { outline: none; border-color: var(--accent); }

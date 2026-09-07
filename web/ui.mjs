@@ -44,6 +44,12 @@ export const configKey = (config) => {
 export const money = (v, currency = 'GBP', decimals = 0) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(v);
 
+// display-currency PREFERENCE — a shared view choice so a currency picked anywhere (a
+// showroom, a journey rail) persists across the whole session/journey. Null = base.
+const CUR_KEY = 'qc:displayCurrency:v1';
+export const getDisplayCurrency = () => { try { return localStorage.getItem(CUR_KEY) || null; } catch (_) { return null; } };
+export const setDisplayCurrency = (c) => { try { if (c) localStorage.setItem(CUR_KEY, c); else localStorage.removeItem(CUR_KEY); } catch (_) { /* ignore */ } };
+
 // the unit family (from a model.units map) that contains a given unit id
 const unitFamily = (units, u) => Object.values(units || {}).find((fam) => fam && fam.members && u in fam.members);
 

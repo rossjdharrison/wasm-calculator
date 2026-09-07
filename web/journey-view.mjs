@@ -8,7 +8,8 @@
 // step id + an HQDM category) and are rendered by category-render. The order is
 // event-sourced (order.mjs) — resumable, undoable, single-authority.
 // =============================================================================
-import { el, money, configKey, formatOutput } from './ui.mjs';
+import { el, money, configKey, formatOutput, getDisplayCurrency, setDisplayCurrency } from './ui.mjs';
+import { loadRates } from './fx.mjs';
 import { mountShowroom } from './showroom-view.mjs';
 import { mountConfigurator } from './render-form.mjs';
 import { mountStepper } from './phase-stepper.mjs';
@@ -40,6 +41,16 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
   const captureAlias = captureStep.model;
   const aliasLabel = (a) => (models[a] && models[a].merged.name) || a;
   const typesOf = (a) => (models[a] && models[a].merged.types) || {};
+  // ---- journey-wide DISPLAY CURRENCY: a choice made in any step (a showroom, or the rail
+  // selector) persists across the entire journey (rail totals + downstream figures + later
+  // showroom mounts). FX rates load once; everything money formats through fmtOptsObj().
+  const journeyCurrencies = [...new Set(Object.values(models).flatMap((m) => (m.merged.currencies && m.merged.currencies.length) ? m.merged.currencies : [m.merged.currency || 'EUR']))];
+  const baseCur = (models[captureAlias] && models[captureAlias].merged.currency) || 'EUR';
+  const fxSurcharge = (models[captureAlias] && models[captureAlias].merged.fxSurcharge) || 0;
+  let displayCurrency = (getDisplayCurrency() && journeyCurrencies.includes(getDisplayCurrency())) ? getDisplayCurrency() : baseCur;
+  let fxRates = null;
+  const fmtOptsObj = () => (fxRates && displayCurrency !== baseCur) ? { rates: { base: fxRates.base, ...fxRates.rates }, currency: displayCurrency, fxSurcharge } : {};
+  const fmtMoney = (amount, cur) => formatOutput({ value: amount, format: 'currency', currencyCode: cur || baseCur, decimals: 0, baseCurrency: cur || baseCur }, fmtOptsObj());
   // types for L0 inference of temporal states: the capture model's types + the
   // journey's own declared types (e.g. lifecycle states specializing `state`).
   const mergedTypes = () => ({ ...typesOf(captureAlias), ...(journey.types || {}) });
@@ -118,6 +129,15 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
     const o = order.fold(events);
     railHost.innerHTML = '';
     railHost.appendChild(el('div', 'rail-title', { html: `Your ${L('record', 'record')} <span class="rail-id">${orderId}</span>` }));
+    // currency selector — shown on EVERY step (the rail is always visible), so the display
+    // currency can be changed anywhere in the journey; the choice persists (shared pref) and
+    // re-renders the rail + re-mounts the active step so its figures convert too.
+    if (journeyCurrencies.length > 1) {
+      const cs = el('select', 'rail-cur', { 'aria-label': 'Display currency', title: 'Display currency' });
+      for (const c of journeyCurrencies) { const op = el('option', null, { value: c, text: c }); if (c === displayCurrency) op.selected = true; cs.appendChild(op); }
+      cs.addEventListener('change', () => { displayCurrency = cs.value; setDisplayCurrency(displayCurrency); renderRail(); gotoPhase(viewed); });
+      railHost.appendChild(cs);
+    }
     // stale-snapshot notice: this order was captured against an older journey version.
     if (o.journeyVersion && journey.version && o.journeyVersion !== journey.version) {
       railHost.appendChild(el('div', 'rail-drift', { text: `Started on ${journey.title || journey.id} v${o.journeyVersion}; now v${journey.version}. Figures are recomputed against the current version.` }));
@@ -126,7 +146,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       for (const line of lastResult.lines) {
         // render each line by ITS inferred L0 category (money OR otherwise) — never a
         // hardcoded amount_of_money, so a money-free domain renders correctly.
-        const display = line.amount != null ? money(line.amount, line.currency) : (line.value != null ? String(line.value) : '');
+        const display = line.amount != null ? fmtMoney(line.amount, line.currency) : (line.value != null ? String(line.value) : '');
         railHost.appendChild(renderByCategory(line.category || 'amount_of_money', {
           label: aliasLabel(line.alias), display,
           // origin badge only once the capture is committed — a live/uncommitted line shows no
@@ -139,13 +159,13 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       // the money total is shown only when there ARE money lines (a money-free domain has none).
       const totalEntries = Object.entries(lastResult.totalsByCurrency);
       if (totalEntries.length) {
-        const total = totalEntries.map(([c, v]) => money(v, c)).join(' · ');
+        const total = totalEntries.map(([c, v]) => fmtMoney(v, c)).join(' · ');
         railHost.appendChild(el('div', 'rail-total', { html: `<span>${L('recordTotal', 'Total')}</span><b class="num">${total}</b>` }));
       }
       // recurring commitments (role: recurring) shown apart from the one-off total.
       for (const rc of (lastResult.recurring || [])) {
         if (rc.amount == null) continue;
-        railHost.appendChild(el('div', 'rail-recurring', { html: `<span>${aliasLabel(rc.alias)} · ${rc.label}</span><b class="num">${money(rc.amount, rc.currency)}<span class="rail-per"> recurring</span></b>` }));
+        railHost.appendChild(el('div', 'rail-recurring', { html: `<span>${aliasLabel(rc.alias)} · ${rc.label}</span><b class="num">${fmtMoney(rc.amount, rc.currency)}<span class="rail-per"> recurring</span></b>` }));
       }
     } else {
       railHost.appendChild(el('div', 'rail-empty', { text: L('emptyPrompt', 'Begin to see your record here.') }));
@@ -202,6 +222,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
         initialConfig: Object.keys(currentConfig).length ? currentConfig : undefined,
         ctaLabel: step.commitLabel,   // authored step CTA ("Lock this design ▸") instead of the showroom default
         gate: stepGate(step),         // hold the CTA until the step's required info is valid/present
+        onCurrencyChange: (c) => { displayCurrency = c; renderRail(); },   // showroom currency change → convert the rail too
         onConfigChange: (cfg) => { currentConfig = cfg; recompute(); },
         onRequest: (cfg) => completeCapture(step, cfg),
       });
@@ -256,6 +277,7 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
         initialConfig: Object.keys(init).length ? init : undefined,
         lockedFields: locked, ctaLabel: step.actionLabel,
         gate: stepGate(step),         // hold the CTA until the step's required info is valid/present
+        fmtOpts: fmtOptsObj(),        // downstream figures render in the journey display currency
         onConfigChange: (cfg) => { downstreamConfig[alias] = freeOnly(cfg, locked); recompute(); },
         onRequest: (cfg) => completeDownstream(step, cfg),
       });
@@ -394,6 +416,10 @@ export function mountJourney(root, { journey, models, host, brand, resolveImage,
       recompute();
     }
   });
+
+  // load FX rates for the journey's currencies once (base + any alternates), so the rail
+  // selector works immediately and a persisted non-base currency renders converted.
+  if (journeyCurrencies.length > 1) loadRates({ base: baseCur, symbols: journeyCurrencies }).then((r) => { fxRates = r; renderRail(); }).catch(() => {});
 
   // compute the journey once BEFORE mounting the active phase, so a phase that
   // resumes straight into a downstream capture/preview has its injected figures ready.
