@@ -7,6 +7,7 @@
 // =============================================================================
 import { mergeModel } from './assembler.mjs';
 import { registryFromModels } from './catalogue-build.mjs';
+import { overlayTables, liveSourcesOf } from './live-tables.mjs';
 
 // Active model id from the URL (?m=antiques). Sanitised to a safe path segment.
 // The bootstrap default is a single domain literal (the studio/landing resolve
@@ -29,6 +30,31 @@ const apiModel = (id) => apiJson(`/api/models/${id}`);
 const apiJourneyDoc = (id) => apiJson(`/api/journeys/${id}`);
 const apiCatalog = () => apiJson('/api/catalog');
 const fetchJson = (path) => fetch(path).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+// ---- live reference-data overlay (edge rate cards over the baked model tables) --------
+// A model declares a table as live-sourced with `tables.<name>.source = "<datasetId>"`
+// (+ optional `bounds:{min,max}`). applyLiveTables fetches GET /api/rates/<id> (TIME-BOXED,
+// its own resolver — unlike the un-timed apiJson, so a hung edge can't stall page load) and
+// overlays the values via the pure overlayTables (web/live-tables.mjs) onto a CLONE before
+// assemble. Every failure mode — slow / absent / partial / malformed / poisoned — degrades
+// to the baked table (see live-tables.mjs). Wired only into the two ASSEMBLE-for-quote seams
+// (currentModel, loadModelFiles), never the landing's loadCatalogue (which never quotes).
+const _rates = new Map();   // memoised per page load
+const apiRatesDoc = (id) => {
+  if (!_rates.has(id)) _rates.set(id, (async () => {
+    try { const r = await fetch(`/api/rates/${id}`, { signal: AbortSignal.timeout(800) }); return r.ok ? await r.json() : null; } catch (_) { return null; }
+  })());
+  return _rates.get(id);
+};
+export async function applyLiveTables(data) {
+  try {
+    const sources = liveSourcesOf(data);
+    if (!sources.length) return data;
+    const docs = {};
+    await Promise.all(sources.map(async (s) => { docs[s] = await apiRatesDoc(s); }));
+    return overlayTables(data, docs);
+  } catch (_) { return data; }                                // any failure → baked
+}
 
 // per-MODEL override keys (multi-model aware; a created model has no shipped file).
 const DKEY = (id) => `qc:data:${id}:v1`;
@@ -58,7 +84,7 @@ export const loadDefaultPres = () => fetch(`models/${MODEL_ID}/presentation-mode
 
 export const currentData = async () => getStoredData() ?? await loadDefaultData();
 export const currentPres = async () => getStoredPres() ?? await loadDefaultPres();
-export const currentModel = async () => mergeModel(await currentData(), await currentPres());
+export const currentModel = async () => mergeModel(await applyLiveTables(await currentData()), await currentPres());
 
 // The shipped model catalogue (landing cards). Shared, tiny.
 export const loadCatalog = () => fetch('models/catalog.json').then((r) => r.json());
@@ -130,7 +156,7 @@ export const currentJourney = async (id) => getStoredJourney(id) ?? await loadJo
 // load a referenced model's two files by directory id (journey sub-models use the
 // shipped defaults — per-model browser overrides remain scoped to the main page).
 export const loadModelFiles = async (id) => ({
-  data: await loadModelData(id),
+  data: await applyLiveTables(await loadModelData(id)),   // journey sub-models overlay live tables too
   presentation: await loadModelPres(id),
 });
 

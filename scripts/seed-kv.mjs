@@ -32,5 +32,22 @@ for (const j of jcat.journeys || []) {
 
 entries.push({ key: 'catalog', value: JSON.stringify({ models: catalog.models || [], journeys: jcat.journeys || [] }) });
 
+// live rate cards: mirror the baked table maps of ANY model that declares
+// `tables.<name>.source` into rates:<source>, so KV starts == the baked snapshot
+// (live == baked until someone PUTs an update). Read by functions/api/rates/[id].js;
+// overlaid onto the model tables by web/store.mjs applyLiveTables. Scans every model
+// dir (composed-only models like shipping are not in catalog.models).
+const cards = {};
+for (const d of await readdir(join(ROOT, 'web/models'), { withFileTypes: true })) {
+  if (!d.isDirectory()) continue;
+  let dm; try { dm = await readJson(`web/models/${d.name}/data-model.json`); } catch { continue; }
+  for (const [name, t] of Object.entries(dm.tables || {})) {
+    if (!t || !t.source) continue;
+    const card = (cards[t.source] = cards[t.source] || { id: t.source, source: 'baked snapshot', tables: {} });
+    card.tables[name] = t.map ? { map: t.map } : (t.rows ? { rows: t.rows } : {});
+  }
+}
+for (const [id, card] of Object.entries(cards)) entries.push({ key: `rates:${id}`, value: JSON.stringify(card) });
+
 await writeFile(join(ROOT, 'kv-seed.json'), JSON.stringify(entries, null, 2) + '\n');
-console.log(`✓ kv-seed.json: ${entries.length} keys (${(catalog.models || []).length} models, ${(jcat.journeys || []).length} journeys, 1 catalog)`);
+console.log(`✓ kv-seed.json: ${entries.length} keys (${(catalog.models || []).length} models, ${(jcat.journeys || []).length} journeys, ${Object.keys(cards).length} rate card(s), 1 catalog)`);

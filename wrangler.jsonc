@@ -7,6 +7,13 @@
 	//   model:<id>   -> { data, presentation }   (a whole authored model)
 	//   journey:<id> -> <journey doc>
 	//   catalog      -> { models:[...], journeys:[...] }   (the authored overlay for the landing)
+	//   rates:<id>   -> { tables:{ <name>:{ map|rows } }, asOf?, source? }   (a LIVE reference-data
+	//                    card; functions/api/rates/[id].js serves it, web/store.mjs overlays it onto
+	//                    a model's baked tables before assemble — baked tables are the fallback).
+	// SECRETS (set with `wrangler pages secret put <NAME>`, never in this file):
+	//   PUBLISH_TOKEN  -> authorises model/journey PUT (functions/api/models|journeys)
+	//   RATES_TOKEN    -> authorises rate-card PUT/DELETE (functions/api/rates) — SEPARATE so a
+	//                     rate-writer credential cannot also replace models or the landing catalog.
 	// The Pages Functions in functions/api/* read from this; the browser falls back to the
 	// shipped static files under dist/models|journeys when a key is absent, so the site works
 	// with OR without KV. Replace the id after `wrangler kv namespace create DOCS`

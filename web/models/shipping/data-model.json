@@ -1,12 +1,13 @@
 {
   "$schema": "../../data.schema.json",
   "id": "shipping-configurator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "currency": "EUR",
   "configures": "ShippingService",
   "types": {
     "ShippingService": { "specializes": ["class_of_physical_object"] },
     "ShippingCost": { "specializes": ["amount_of_money"] },
+    "ImportCharge": { "specializes": ["amount_of_money"] },
     "TransitWeight": { "specializes": ["physical_quantity"] }
   },
   "fields": [
@@ -19,23 +20,41 @@
     { "id": "destination", "type": "choice", "default": "nl", "options": [
       { "id": "nl" }, { "id": "uk" }, { "id": "usa" }, { "id": "uae" }, { "id": "ch" }, { "id": "sg" }, { "id": "hk" }, { "id": "jp" }
     ] },
-    { "id": "vehicleWeight", "type": "number", "default": 1800, "min": 0, "max": 5000, "step": 10, "unit": "kg", "category": "TransitWeight" }
+    { "id": "vehicleWeight", "type": "number", "default": 1800, "min": 0, "max": 5000, "step": 10, "unit": "kg", "category": "TransitWeight" },
+    { "id": "vehicleValue", "type": "number", "default": 50000, "min": 0, "step": 500, "category": "ImportCharge" }
   ],
   "tables": {
-    "destBase": { "kind": "1d", "map": { "nl": 250, "uk": 2200, "usa": 3800, "uae": 4200, "ch": 1500, "sg": 5200, "hk": 5400, "jp": 4900 } },
-    "methodFactor": { "kind": "1d", "map": { "collect": 0, "roro": 1, "container": 1.6, "express": 2.4 } }
+    "destBase": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 100000 }, "map": { "nl": 150, "uk": 375, "usa": 1750, "uae": 1200, "ch": 1300, "sg": 1450, "hk": 1450, "jp": 1750 } },
+    "methodFactor": { "kind": "1d", "map": { "collect": 0, "roro": 1, "container": 1.4, "express": 4 } },
+    "dutyRate": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 1 }, "map": { "nl": 0, "uk": 0.10, "usa": 0.15, "uae": 0.05, "ch": 0.04, "sg": 0.20, "hk": 0, "jp": 0 } },
+    "vatRate": { "kind": "1d", "source": "roro-shipping", "bounds": { "min": 0, "max": 1 }, "map": { "nl": 0, "uk": 0.20, "usa": 0, "uae": 0.05, "ch": 0.081, "sg": 0.09, "hk": 0, "jp": 0.10 } }
   },
   "computed": [
     { "id": "baseRate", "label": "Base route rate", "category": "ShippingCost", "formula": { "op": "lookup", "args": ["destBase", { "op": "field", "args": ["destination"] }] } },
     { "id": "weightSurcharge", "label": "Weight surcharge", "category": "ShippingCost", "formula": { "op": "mul", "args": [{ "op": "max", "args": [0, { "op": "sub", "args": [{ "op": "field", "args": ["vehicleWeight"] }, 1800] }] }, 0.9] } },
-    { "id": "shippingCost", "label": "Shipping cost", "category": "ShippingCost", "formula": { "op": "if", "args": [
+    { "id": "freight", "label": "Freight", "category": "ShippingCost", "formula": { "op": "if", "args": [
       { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "collect"] },
       0,
       { "op": "add", "args": [
         { "op": "mul", "args": [{ "op": "field", "args": ["baseRate"] }, { "op": "lookup", "args": ["methodFactor", { "op": "field", "args": ["method"] }] }] },
         { "op": "field", "args": ["weightSurcharge"] }
       ] }
-    ] } }
+    ] } },
+    { "id": "importDuty", "label": "Import duty / excise", "category": "ImportCharge", "formula": { "op": "if", "args": [
+      { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "collect"] },
+      0,
+      { "op": "mul", "args": [{ "op": "field", "args": ["vehicleValue"] }, { "op": "lookup", "args": ["dutyRate", { "op": "field", "args": ["destination"] }] }] }
+    ] } },
+    { "id": "importVat", "label": "Import VAT / GST", "category": "ImportCharge", "formula": { "op": "if", "args": [
+      { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "collect"] },
+      0,
+      { "op": "mul", "args": [
+        { "op": "add", "args": [{ "op": "add", "args": [{ "op": "field", "args": ["vehicleValue"] }, { "op": "field", "args": ["freight"] }] }, { "op": "field", "args": ["importDuty"] }] },
+        { "op": "lookup", "args": ["vatRate", { "op": "field", "args": ["destination"] }] }
+      ] }
+    ] } },
+    { "id": "customs", "label": "Customs & excise", "category": "ImportCharge", "formula": { "op": "add", "args": [{ "op": "field", "args": ["importDuty"] }, { "op": "field", "args": ["importVat"] }] } },
+    { "id": "shippingCost", "label": "Landed shipping total", "category": "ShippingCost", "formula": { "op": "add", "args": [{ "op": "field", "args": ["freight"] }, { "op": "field", "args": ["customs"] }] } }
   ],
   "validations": [
     {
@@ -44,6 +63,13 @@
       "severity": "info",
       "message": "Express (air) freight is the fastest option but carries the highest rate.",
       "when": { "op": "eq", "args": [{ "op": "field", "args": ["method"] }, "express"] }
+    },
+    {
+      "id": "customs_indicative",
+      "field": "destination",
+      "severity": "info",
+      "message": "Freight & customs are indicative RoRo estimates (Rotterdam origin) — confirm live at booking; registration levies (e.g. SG COE/ARF, HK first-registration tax) are excluded.",
+      "when": { "op": "not", "args": [{ "op": "eq", "args": [{ "op": "field", "args": ["destination"] }, "nl"] }] }
     }
   ]
 }

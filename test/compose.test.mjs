@@ -60,8 +60,8 @@ test('the typed seam payload flows: shopping produces a Purchase Price individua
 });
 
 test('D4: boundTargetsOf derives the upstream-authoritative fields of each downstream model', () => {
-  assert.deepEqual([...boundTargetsOf(journey, 'financing')], ['price']);
-  assert.deepEqual([...boundTargetsOf(journey, 'shipping')], ['vehicleWeight']);
+  assert.deepEqual([...boundTargetsOf(journey, 'financing')].sort(), ['mode', 'price']);
+  assert.deepEqual([...boundTargetsOf(journey, 'shipping')].sort(), ['vehicleValue', 'vehicleWeight']);
   assert.deepEqual([...boundTargetsOf(journey, 'insurance')], ['vehicleValue']);
   assert.deepEqual([...boundTargetsOf(journey, 'shopping')], [], 'no inbound binding → no bound fields');
 });
